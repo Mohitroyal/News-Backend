@@ -11,10 +11,11 @@ from app.core.config import settings
 router = APIRouter()
 
 
-@router.post("/image", response_model=dict)
+@router.post("/uploads/image")
 async def upload_image(
     file: UploadFile = File(...),
 ) -> Any:
+    print("UPLOAD ENDPOINT HIT")
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File provided is not an image.")
 

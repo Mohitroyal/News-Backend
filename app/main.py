@@ -134,8 +134,9 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Directly attach the generate router without prefix for /generate endpoint calls
-from app.api.v1.endpoints import generate
+from app.api.v1.endpoints import generate, upload
 app.include_router(generate.router, prefix="/generate", tags=["generation_direct"])
+app.include_router(upload.router, tags=["upload_direct"])
 
 if __name__ == "__main__":
     import uvicorn
