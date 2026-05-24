@@ -1,0 +1,19 @@
+# .gitignore for production_backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.env.local
+*.db
+*.sqlite3
+newscraft.db
+test_temp.db
+static/uploads/
+static/clippings/
+temp_*.png
+temp_*.pdf
+.venv/
+venv/
+env/
+alembic/versions/__pycache__/

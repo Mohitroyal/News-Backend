@@ -1,0 +1,49 @@
+<svg viewBox="0 0 1000 280" xmlns="http://www.w3.org/2000/svg" width="1000" height="280" style="max-height: 120px; width: auto; margin: 0 auto;">
+  <!-- Background transparent -->
+  <g transform="translate(0, 0)">
+    <!-- Outer blue border frame -->
+    <rect x="15" y="15" width="970" height="250" fill="none" stroke="#1d70b8" stroke-width="4" />
+    <rect x="22" y="22" width="956" height="236" fill="none" stroke="#1d70b8" stroke-width="1.5" />
+    
+    <!-- Left Icon: Styled Documents + Fist -->
+    <g transform="translate(50, 40)">
+      <!-- Back sheet -->
+      <path d="M0,10 L110,10 L110,140 L0,140 Z" fill="none" stroke="#1d70b8" stroke-width="6" stroke-linejoin="round" />
+      <path d="M0,10 L60,10 L60,30 L0,30 Z" fill="#1d70b8" />
+      
+      <!-- Front sheet with fold -->
+      <path d="M25,35 L125,35 L150,60 L150,170 L25,170 Z" fill="#ffffff" stroke="#1d70b8" stroke-width="6" stroke-linejoin="round" />
+      <path d="M125,35 L125,60 L150,60 Z" fill="none" stroke="#1d70b8" stroke-width="6" stroke-linejoin="round" />
+      
+      <!-- Vector Fist raised inside the front sheet -->
+      <g transform="translate(60, 55) scale(0.35)">
+        <!-- Fist outline paths -->
+        <path d="M20,130 C15,130 10,120 15,100 C20,80 30,55 35,50 C40,45 50,45 55,50 C60,55 60,65 55,75" fill="none" stroke="#1d70b8" stroke-width="10" stroke-linecap="round" />
+        <!-- Index finger -->
+        <path d="M48,50 C48,25 60,15 70,18 C80,21 82,35 80,50" fill="none" stroke="#1d70b8" stroke-width="10" stroke-linecap="round" />
+        <!-- Middle finger -->
+        <path d="M72,25 C72,12 85,8 92,15 C100,22 96,38 94,50" fill="none" stroke="#1d70b8" stroke-width="10" stroke-linecap="round" />
+        <!-- Ring finger -->
+        <path d="M94,28 C94,18 106,12 114,18 C122,24 118,40 115,55" fill="none" stroke="#1d70b8" stroke-width="10" stroke-linecap="round" />
+        <!-- Pinky finger -->
+        <path d="M115,35 C115,25 125,22 131,28 C137,34 133,50 128,70" fill="none" stroke="#1d70b8" stroke-width="10" stroke-linecap="round" />
+        <!-- Thumb folding over -->
+        <path d="M18,90 C25,75 48,70 65,72 C75,73 80,78 78,85 C75,92 65,96 55,95" fill="none" stroke="#1d70b8" stroke-width="10" stroke-linecap="round" />
+        <!-- Palm and wrist outlines -->
+        <path d="M15,100 C15,130 30,195 32,220 C32,220 105,220 105,220 C105,180 128,95 128,70" fill="none" stroke="#1d70b8" stroke-width="10" stroke-linejoin="round" />
+        <!-- Inner creases -->
+        <path d="M38,105 L52,145" stroke="#1d70b8" stroke-width="8" stroke-linecap="round" />
+        <path d="M75,105 L72,165" stroke="#1d70b8" stroke-width="8" stroke-linecap="round" />
+      </g>
+    </g>
+    
+    <!-- Right side: RTI EXPRESS Text -->
+    <text x="240" y="115" font-family="'Lora', 'Times New Roman', serif" font-weight="900" font-size="105" fill="#1d70b8" letter-spacing="1">RTI</text>
+    <text x="240" y="205" font-family="'Lora', 'Times New Roman', serif" font-weight="900" font-size="95" fill="#1d70b8" letter-spacing="1">EXPRESS</text>
+    
+    <!-- Bottom line: Right to News -->
+    <line x1="240" y1="230" x2="430" y2="230" stroke="#1d70b8" stroke-width="2" />
+    <text x="545" y="238" font-family="'Lora', 'Times New Roman', serif" font-style="italic" font-weight="900" font-size="28" fill="#1d70b8" text-anchor="middle">Right to News</text>
+    <line x1="660" y1="230" x2="930" y2="230" stroke="#1d70b8" stroke-width="2" />
+  </g>
+</svg>

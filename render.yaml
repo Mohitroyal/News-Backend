@@ -1,0 +1,69 @@
+services:
+  - type: web
+    name: newsflow-backend
+    runtime: python
+    region: singapore        # Change to: oregon, frankfurt, ohio, virginia as needed
+    plan: free               # Change to 'starter' ($7/mo) for always-on + more RAM
+
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      playwright install chromium
+      playwright install-deps chromium
+
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    healthCheckPath: /health
+
+    envVars:
+      # ── Runtime ──────────────────────────────────────────────────────────
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+      # ── Security (generate a strong random key before deploying) ─────────
+      - key: SECRET_KEY
+        generateValue: true   # Render auto-generates a secret — or set manually
+
+      # ── Database ──────────────────────────────────────────────────────────
+      # Paste your Supabase PostgreSQL connection string (Session mode port 5432)
+      - key: DATABASE_URL
+        sync: false           # Mark as secret — set manually in Render dashboard
+
+      # ── Supabase ─────────────────────────────────────────────────────────
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: newscraft-clippings
+
+      # ── AI Engine ────────────────────────────────────────────────────────
+      - key: GROK_API_KEY
+        sync: false           # Your Groq (gsk_...) or xAI API key
+
+      # ── CORS / Frontend URL ───────────────────────────────────────────────
+      # Set this to your Vercel/Netlify frontend URL after deploying frontend
+      - key: FRONTEND_URL
+        sync: false           # e.g. https://newsflow.vercel.app
+
+      # ── Stripe (optional) ────────────────────────────────────────────────
+      - key: STRIPE_API_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      # ── Email (optional SMTP) ─────────────────────────────────────────────
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAILS_FROM_EMAIL
+        sync: false

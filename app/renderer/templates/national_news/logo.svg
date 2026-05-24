@@ -1,0 +1,33 @@
+<svg viewBox="0 0 1000 280" xmlns="http://www.w3.org/2000/svg" width="1000" height="280" style="max-height: 120px; width: auto; margin: 0 auto;">
+  <!-- Background purple rectangle -->
+  <rect x="0" y="0" width="1000" height="280" fill="#761c9e" />
+  
+  <!-- Thin outer borders -->
+  <rect x="5" y="5" width="990" height="270" fill="none" stroke="#ffffff" stroke-width="2" />
+  <rect x="10" y="10" width="980" height="260" fill="none" stroke="#000000" stroke-width="1.5" />
+  
+  <!-- Main Telugu Text: నేషనల్ న్యూస్ -->
+  <text x="30" y="172" font-family="'Noto Serif Telugu', 'Kohinoor Telugu', serif" font-weight="900" font-size="135" fill="#ffffff" letter-spacing="1">నేషనల్ న్యూస్</text>
+  
+  <!-- Right skew text: రిపోర్టర్ -->
+  <g transform="translate(870, 200) rotate(-10)">
+    <text x="0" y="0" font-family="'Noto Serif Telugu', serif" font-weight="900" font-size="44" fill="#ffffff" text-anchor="middle">రిపోర్టర్</text>
+  </g>
+
+  <!-- Bottom banners block -->
+  <g transform="translate(30, 185)">
+    <!-- White outer border for the banners -->
+    <rect x="0" y="0" width="720" height="75" fill="#ffffff" />
+    <rect x="3" y="3" width="714" height="69" fill="#000000" />
+    
+    <!-- Left Red Banner -->
+    <rect x="5" y="5" width="455" height="65" fill="#cc2424" />
+    <text x="15" y="44" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="42" fill="#ffffff" letter-spacing="4">NATIONAL</text>
+    <text x="15" y="60" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="12" fill="#000000" letter-spacing="1">RNI:APTEL/25/A2293</text>
+    
+    <!-- Right Blue Banner -->
+    <rect x="465" y="5" width="250" height="65" fill="#1b2e4b" />
+    <text x="475" y="44" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="42" fill="#ffffff" letter-spacing="4">NEWS</text>
+    <text x="475" y="60" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="12" fill="#e28743" letter-spacing="1">REPORTER</text>
+  </g>
+</svg>

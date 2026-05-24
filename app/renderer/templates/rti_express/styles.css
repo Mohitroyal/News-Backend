@@ -1,0 +1,224 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400;1,700&family=Merriweather:ital,wght@0,700;0,900;1,700&family=Noto+Serif+Devanagari:wght@400;700&family=Noto+Serif+Telugu:wght@400;700&family=Noto+Serif+Kannada:wght@400;700&family=Noto+Serif+Tamil:wght@400;700&family=Noto+Serif+Malayalam:wght@400;700&display=swap');
+
+/* Color Theme: Bold Crimson Red, Stark Black, Ash White Paper Background */
+:root {
+    --bg-color: #f5f5f3;
+    --paper-color: #ffffff;
+    --text-color: #0b0b0b;
+    --accent-color: #a30000; /* Bold Red */
+    --border-color: #111111;
+    --column-gap: 26px;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Lora', serif;
+    margin: 0;
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* Multilingual Font Families */
+html[lang="hi"] body, html[lang="hi"] .paragraph, html[lang="hi"] .headline {
+    font-family: 'Noto Serif Devanagari', serif;
+}
+html[lang="te"] body, html[lang="te"] .paragraph, html[lang="te"] .headline {
+    font-family: 'Noto Serif Telugu', serif;
+}
+html[lang="kn"] body, html[lang="kn"] .paragraph, html[lang="kn"] .headline {
+    font-family: 'Noto Serif Kannada', serif;
+}
+html[lang="ta"] body, html[lang="ta"] .paragraph, html[lang="ta"] .headline {
+    font-family: 'Noto Serif Tamil', serif;
+}
+html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
+    font-family: 'Noto Serif Malayalam', serif;
+}
+
+.newspaper-container {
+    width: 1060px; /* Precise broadsheet width */
+    min-height: 1480px; /* Force the newspaper to cover the whole height of the page */
+    background: var(--paper-color);
+    border: 2px solid var(--border-color);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    padding: 40px;
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* HEADER SECTION */
+.header-section {
+    width: 100%;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.logo-container {
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo-container svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* NEWSPAPER META SECTION */
+.meta-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid var(--border-color);
+    border-bottom: 2px solid var(--border-color);
+    padding: 5px 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-top: 8px;
+    color: #111111;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+}
+
+/* HEADLINE SECTION */
+.headline-section {
+    margin: 22px 0 14px 0;
+    text-align: left;
+    border-left: 5px solid var(--accent-color);
+    padding-left: 15px;
+}
+
+.headline {
+    font-family: 'Merriweather', serif;
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1.15;
+    color: var(--text-color);
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+/* SUBHEADLINE SECTION */
+.subheadline-section {
+    border-bottom: 1px solid #dcdcd8;
+    padding-bottom: 15px;
+    margin-bottom: 22px;
+    text-align: left;
+}
+
+.subheadline {
+    font-family: 'Lora', serif;
+    font-size: 19.5px;
+    font-weight: 600;
+    color: #444444;
+    margin: 0;
+    line-height: 1.45;
+}
+
+/* CONTENT CONTAINER */
+.newspaper-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex-grow: 1; /* Make the body grow to push footer to the bottom */
+}
+
+/* IMAGE SECTION */
+.image-section {
+    width: 100%;
+    margin-bottom: 12px;
+    border: 1px solid #c8c8c4;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.article-image {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    max-height: 550px;
+    object-fit: cover;
+    filter: grayscale(20%) contrast(110%);
+}
+
+.image-caption {
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 8px;
+    color: #555;
+    border-top: 1px solid #eee;
+    padding-top: 4px;
+    text-align: left;
+}
+
+/* ARTICLE CONTENT SECTION - MULTI-COLUMN */
+.article-content {
+    columns: {{ layout_columns | default(3) }};
+    column-gap: var(--column-gap);
+    column-rule: 1px solid #dcdcd8;
+    text-align: justify;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #1a1a1a;
+}
+
+.paragraph {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-indent: 20px;
+}
+
+.paragraph:first-of-type {
+    text-indent: 0;
+}
+
+/* Modern clean Drop Cap */
+.paragraph.has-dropcap::first-letter {
+    float: left;
+    font-family: 'Merriweather', 'Lora', serif;
+    font-size: 58px;
+    line-height: 46px;
+    padding-top: 3px;
+    padding-right: 8px;
+    font-weight: 900;
+    color: var(--accent-color);
+}
+
+.byline-section {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    color: var(--accent-color);
+    border-bottom: 1px solid #dcdcd8;
+    padding-bottom: 4px;
+}
+
+/* FOOTER SECTION */
+.footer-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid var(--border-color);
+    padding-top: 12px;
+    margin-top: auto; /* Push the footer to the bottom of the container */
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #444;
+    font-weight: bold;
+}

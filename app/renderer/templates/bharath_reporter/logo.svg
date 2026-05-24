@@ -1,0 +1,28 @@
+<svg viewBox="0 0 1000 280" xmlns="http://www.w3.org/2000/svg" width="1000" height="280" style="max-height: 120px; width: auto; margin: 0 auto;">
+  <!-- Outer double border frame -->
+  <rect x="10" y="10" width="980" height="260" fill="none" stroke="#15a850" stroke-width="5" />
+  <rect x="16" y="16" width="968" height="248" fill="none" stroke="#f28e1c" stroke-width="2" />
+  
+  <!-- Top Left License -->
+  <text x="30" y="45" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="20" fill="#cc3333">Postal Licenced No: HDP/010/2024-2026</text>
+  
+  <!-- Main Telugu Text: భారత్ -->
+  <text x="30" y="182" font-family="'Noto Serif Telugu', 'Kohinoor Telugu', serif" font-weight="900" font-size="160" fill="#15a850" stroke="#000000" stroke-width="4" letter-spacing="2">భారత్</text>
+  
+  <!-- RNI Registration -->
+  <text x="210" y="215" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="16" fill="#1a3b8b">RNI.APTEL/2023/88573</text>
+  
+  <!-- Small Daily tag -->
+  <text x="955" y="200" font-family="'Noto Serif Telugu', serif" font-weight="700" font-size="20" fill="#000000" text-anchor="end">తెలుగు దినపత్రిక</text>
+
+  <!-- Bottom Banner Row -->
+  <g transform="translate(30, 220)">
+    <!-- Orange left strip -->
+    <path d="M0,0 L520,0 L490,40 L0,40 Z" fill="#f28e1c" />
+    <text x="20" y="28" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="28" fill="#ffffff" letter-spacing="1">BHARATH REPORTER</text>
+    
+    <!-- Green right strip -->
+    <path d="M525,0 L920,0 L920,40 L505,40 Z" fill="#15a850" />
+    <text x="730" y="29" font-family="'Noto Serif Telugu', sans-serif" font-weight="900" font-size="26" fill="#ffffff" text-anchor="middle">రిపోర్టర్</text>
+  </g>
+</svg>

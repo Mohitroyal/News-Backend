@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newspaper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Inter:wght@300;400;700;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Telugu:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: {{ primary_color | default('#000000') }};
+            --accent-color: {{ accent_color | default('#333333') }};
+            --bg-color: #fcfcfc;
+            --text-color: #111111;
+            --border-color: #000000;
+            
+            {% if font_family == 'playfair' %}
+                --font-family-chosen: 'Playfair Display', serif;
+            {% elif font_family == 'merriweather' %}
+                --font-family-chosen: 'Merriweather', serif;
+            {% elif font_family == 'inter' %}
+                --font-family-chosen: 'Inter', sans-serif;
+            {% elif font_family == 'courier' %}
+                --font-family-chosen: 'Courier Prime', monospace;
+            {% else %}
+                --font-family-chosen: 'Merriweather', serif;
+            {% endif %}
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family-chosen), 'Noto Sans Telugu', serif;
+            margin: 0;
+            padding: 40px;
+            width: 1120px; /* Broadsheet width */
+            box-sizing: border-box;
+        }
+
+        .newspaper-container {
+            border: 1px solid var(--border-color);
+            padding: 2px;
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            min-height: 1480px;
+        }
+
+        .inner-border {
+            border: 2px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        /* Masthead Section */
+        .masthead {
+            text-align: center;
+            border-bottom: 4px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 5px;
+        }
+
+        .logo-img {
+            max-width: 800px;
+            max-height: 120px;
+            object-fit: contain;
+        }
+
+        .fallback-masthead {
+            font-family: 'Playfair Display', serif;
+            font-size: 80px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+            line-height: 1;
+            color: var(--primary-color);
+        }
+
+        /* Metadata Bar */
+        .metadata-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+            padding: 5px 0;
+            margin-bottom: 30px;
+            font-family: 'Playfair Display', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* Main Content */
+        .headline {
+            font-family: 'Playfair Display', 'Noto Sans Telugu', serif;
+            font-size: 56px;
+            font-weight: 900;
+            line-height: 1.1;
+            text-align: center;
+            margin: 0 0 15px 0;
+            color: var(--text-color);
+        }
+
+        .subtitle {
+            font-family: 'Merriweather', 'Noto Sans Telugu', serif;
+            font-size: 24px;
+            font-style: italic;
+            text-align: center;
+            margin: 0 0 30px 0;
+            color: #444;
+        }
+
+        .article-meta {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .article-meta span {
+            color: var(--primary-color);
+        }
+
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+
+        .featured-image-container {
+            grid-column: 1 / -1; /* Span all columns */
+            margin-bottom: 25px;
+            display: grid;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .featured-image-container.images-1 {
+            grid-template-columns: 1fr;
+        }
+
+        .featured-image-container.images-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .featured-image-container.images-3 {
+            grid-template-columns: 1.5fr 1fr;
+        }
+
+        .featured-image-container.images-3-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-gap: 15px;
+        }
+        
+        .images-3-side {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .images-3-side .featured-image {
+            width: 100%;
+            height: calc(50% - 7.5px);
+            object-fit: contain;
+            object-position: center top;
+        }
+
+        .featured-image {
+            display: block;
+            width: 100%;
+            height: 380px;
+            object-fit: contain;
+            object-position: center top;
+            border: 1px solid var(--border-color);
+            filter: grayscale(20%) contrast(110%);
+        }
+
+        .featured-image-container.images-1 .featured-image {
+            height: 420px;
+            object-fit: contain;
+        }
+
+        /* Column Content */
+        .article-body {
+            grid-column: 1 / -1;
+            columns: {{ layout_columns | default(3) }};
+            column-gap: 30px;
+            column-rule: 1px solid #ccc;
+        }
+
+        .article-body p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        .article-body p:first-of-type::first-letter {
+            font-family: 'Playfair Display', serif;
+            font-size: 60px;
+            float: left;
+            line-height: 0.8;
+            padding-right: 8px;
+            color: var(--primary-color);
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 2px solid var(--border-color);
+            margin-top: auto;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Playfair Display', sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        /* ─── Extra News Specific Styles ──────────────────────────────── */
+        body.extra_news .masthead {
+            background-color: transparent;
+            border-bottom: none;
+            padding: 0;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        body.extra_news .logo-img {
+            max-width: 100%;
+            max-height: 160px;
+            display: inline-block;
+        }
+
+        body.extra_news .metadata-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-top: none;
+            border-bottom: 1px solid var(--border-color);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: normal;
+            color: #000;
+            padding: 10px 0;
+            margin-bottom: 15px;
+        }
+
+        body.extra_news .headline {
+            background-color: transparent;
+            color: #000000;
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            text-align: center;
+            padding: 5px 0;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 38px;
+            line-height: 1.2;
+        }
+
+        body.extra_news .subtitle {
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        /* Extra News Layout */
+        .extra-news-layout {
+            display: block;
+            width: 100%;
+        }
+
+        .extra-image-wrapper {
+            float: left;
+            width: 45%;
+            margin-right: 25px;
+            margin-bottom: 15px;
+            margin-top: 5px;
+        }
+
+        .extra-img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 350px;
+            object-fit: contain;
+            border: 1px solid #ccc;
+            padding: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        .extra-image-wrapper.multi-img {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .extra-image-wrapper.multi-img .extra-img {
+            margin-bottom: 0;
+            max-height: 160px;
+        }
+
+        .extra-image-wrapper.multi-img .extra-img.featured-top {
+            grid-column: span 2;
+            max-height: 200px;
+        }
+
+        .extra-paragraph {
+            text-align: justify;
+            margin-bottom: 15px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body class="{{ template_id }}">
+    <div class="newspaper-container">
+        <div class="inner-border">
+            
+            <!-- Fixed Header Section (Masthead) -->
+            <div class="masthead">
+                {% if logo_url %}
+                    <img src="{{ logo_url }}" class="logo-img" alt="{{ publication_name }}" onerror="this.style.display='none'; document.getElementById('fallback-masthead').style.display='block';">
+                    <h1 id="fallback-masthead" class="fallback-masthead" style="display: none;">{{ publication_name }}</h1>
+                {% else %}
+                    <h1 class="fallback-masthead">{{ publication_name }}</h1>
+                {% endif %}
+            </div>
+
+            <!-- Newspaper Info Bar -->
+            <div class="metadata-bar">
+                <div>Vol. {{ volume | default("CXIV") }} No. {{ edition | default("27") }}</div>
+                <div>{{ publication_date }}</div>
+                <div>{{ location | default("Global Edition") }}</div>
+                <div>Printed in {{ language_name | default("English") }}</div>
+            </div>
+
+            <!-- Main Headline & Subtitle -->
+            <h2 class="headline">{{ headline }}</h2>
+            <h3 class="subtitle">{{ subheadline }}</h3>
+            
+            <div class="article-meta">
+                By <span>{{ byline }}</span> | {{ dateline }}
+            </div>
+
+            <!-- Article Content -->
+            {% if template_id == 'extra_news' %}
+            <div class="extra-news-layout">
+                {% if image_urls and image_urls | length > 0 %}
+                    <div class="extra-image-wrapper {% if image_urls | length > 1 %}multi-img{% endif %}">
+                        {% for img in image_urls %}
+                            <img src="{{ img }}" alt="Featured Image" class="extra-img {% if loop.first and image_urls|length == 3 %}featured-top{% endif %}" />
+                        {% endfor %}
+                    </div>
+                {% elif image_url %}
+                    <div class="extra-image-wrapper">
+                        <img src="{{ image_url }}" alt="Featured Image" class="extra-img" />
+                    </div>
+                {% endif %}
+
+                {% for para in sections %}
+                    <p class="extra-paragraph">
+                        {% if loop.first %}<span class="dateline">{{ dateline }} — </span>{% endif %}
+                        {{ para }}
+                    </p>
+                {% endfor %}
+                <div style="clear: both;"></div>
+            </div>
+            {% else %}
+            <div class="content-wrapper">
+                {% if image_urls and image_urls | length > 0 %}
+                    {% if image_urls | length == 3 %}
+                        <div class="featured-image-container images-3-grid">
+                            <div style="overflow:hidden; max-height:420px; text-align:center;">
+                                <img src="{{ image_urls[0] }}" alt="Featured" style="width:100%; max-height:420px; height:auto; object-fit:contain; object-position:center top; display:inline-block; filter:grayscale(20%) contrast(110%);">
+                            </div>
+                            <div class="images-3-side">
+                                <div style="overflow:hidden; flex:1; max-height:205px; text-align:center;">
+                                    <img src="{{ image_urls[1] }}" alt="Featured" style="width:100%; max-height:205px; height:auto; object-fit:contain; object-position:center top; display:inline-block; filter:grayscale(20%) contrast(110%);">
+                                </div>
+                                <div style="overflow:hidden; flex:1; max-height:205px; text-align:center;">
+                                    <img src="{{ image_urls[2] }}" alt="Featured" style="width:100%; max-height:205px; height:auto; object-fit:contain; object-position:center top; display:inline-block; filter:grayscale(20%) contrast(110%);">
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="featured-image-container images-{{ image_urls | length }}">
+                            {% for img in image_urls %}
+                                <div style="overflow:hidden; {% if image_urls|length > 1 %}max-height:380px;{% endif %} text-align:center;">
+                                    <img src="{{ img }}" alt="Featured" style="width:100%; height:auto; object-fit:{% if image_urls|length == 1 %}contain{% else %}contain{% endif %}; object-position:center top; display:block; filter:grayscale(20%) contrast(110%);">
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% elif image_url %}
+                <div class="featured-image-container images-1">
+                    <div style="overflow:hidden; text-align:center;">
+                        <img src="{{ image_url }}" alt="Featured" style="width:100%; height:auto; object-fit:contain; object-position:center top; display:block; filter:grayscale(20%) contrast(110%);">
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="article-body">
+                    {% for section in sections %}
+                        <p>{{ section }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Footer -->
+            <div class="footer">
+                <div>Page 1</div>
+                <div>&copy; {{ year | default("2024") }} {{ publication_name }}. All rights reserved.</div>
+                <div>Generated by NewsCraft AI</div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>
