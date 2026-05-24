@@ -112,7 +112,7 @@ def root():
 @app.get("/health")
 def health_check():
     """Render health-check endpoint."""
-    return {"status": "ok", "service": settings.PROJECT_NAME}
+    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v2_cors_fixed"}
 
 
 # ── Static files ──────────────────────────────────────────────────────────────
