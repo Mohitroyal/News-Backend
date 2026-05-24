@@ -87,8 +87,9 @@ app = FastAPI(
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
-    "http://localhost:3000",
     "https://news-frount.vercel.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
@@ -98,6 +99,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.options("/{full_path:path}")
+async def preflight_handler(full_path: str):
+    return {"ok": True}
 
 
 @app.get("/")
@@ -127,6 +132,10 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # ── API Router ────────────────────────────────────────────────────────────────
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Directly attach the generate router without prefix for /generate endpoint calls
+from app.api.v1.endpoints import generate
+app.include_router(generate.router, prefix="/generate", tags=["generation_direct"])
 
 if __name__ == "__main__":
     import uvicorn
