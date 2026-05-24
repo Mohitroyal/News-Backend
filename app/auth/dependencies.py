@@ -1,13 +1,11 @@
 import uuid
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.all import TokenPayload
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -65,94 +63,48 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     return new_user
 
 
-import os
-
-def _try_supabase_token(token: str, db: Session):
-    """Attempt to verify token as a Supabase JWT using the JWT secret."""
-    try:
-        supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
-        if not supabase_jwt_secret:
-            print("[AUTH ERROR] SUPABASE_JWT_SECRET not found in environment variables")
-            return None
-            
-        payload = jwt.decode(
-            token,
-            supabase_jwt_secret,
-            algorithms=["HS256"],
-            options={"verify_aud": False}
-        )
-        
-        supabase_id = payload.get("sub")
-        email = payload.get("email")
-        user_metadata = payload.get("user_metadata", {})
-        
-        user_dict = {
-            "id": supabase_id,
-            "email": email,
-            "user_metadata": user_metadata
-        }
-        return _get_or_create_supabase_user(db, user_dict)
-    except Exception as e:
-        print(f"[AUTH ERROR] _try_supabase_token failed: {e}")
-        import traceback; traceback.print_exc()
-    return None
-
+from supabase import create_client
 from fastapi import Request
 
-def get_current_user(
-    request: Request,
-    db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
-) -> User:
-    authorization = request.headers.get("Authorization")
-    print("AUTH HEADER:", authorization)
-    print("TOKEN RECEIVED:", token[:20] if token else None)
-    
-    # ── Path 1: Supabase Google OAuth token ──────────────────────────────────
-    # Supabase tokens are significantly longer than local JWTs (~200+ chars)
-    if token and len(token) > 150:
-        user = _try_supabase_token(token, db)
-        if user:
-            return user
+supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
 
-    # ── Path 2: Local JWT (email/password login) ──────────────────────────────
+async def get_current_user(request: Request):
+    auth = request.headers.get("Authorization")
+
+    if not auth:
+        raise HTTPException(status_code=401, detail="Missing token")
+
+    token = auth.replace("Bearer ", "")
+
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=["HS256"]
-        )
-        token_data = TokenPayload(**payload)
-        user_uuid = uuid.UUID(token_data.sub)
-        user = db.query(User).filter(User.id == user_uuid).first()
-        if user:
-            return user
-    except (JWTError, ValidationError, ValueError, TypeError):
-        pass
+        response = supabase.auth.get_user(token)
+    except Exception as e:
+        print("[AUTH ERROR] Supabase auth.get_user failed:", e)
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-    # ── Path 3: Short token fallback — still try Supabase ────────────────────
-    user = _try_supabase_token(token, db)
-    if user:
-        return user
+    if not response.user:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-    # ── All paths failed ──────────────────────────────────────────────────────
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    return response.user
 
 
 def get_current_active_user(
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ) -> User:
-    if not current_user.is_active:
+    local_user = _get_or_create_supabase_user(db, current_user)
+    if not local_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
+    return local_user
 
 
 def get_current_active_superuser(
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ) -> User:
-    if not current_user.is_superuser:
+    local_user = _get_or_create_supabase_user(db, current_user)
+    if not local_user.is_superuser:
         raise HTTPException(
             status_code=400, detail="The user doesn't have enough privileges"
         )
-    return current_user
+    return local_user
