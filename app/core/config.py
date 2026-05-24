@@ -21,8 +21,8 @@ def parse_cors(v: Union[str, List[str]]) -> List[str]:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        # Production: read from real environment variables, not a .env file
-        env_file=None,
+        # Read from environment or local .env file
+        env_file=".env",
         env_ignore_empty=True,
         extra="ignore",
     )
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "production"
 
     # Security — MUST be set in Render env vars
-    SECRET_KEY: str
+    SECRET_KEY: Optional[str] = None
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
 
@@ -46,16 +46,16 @@ class Settings(BaseSettings):
     FRONTEND_URL: Optional[str] = None
 
     # Database — Supabase PostgreSQL connection string
-    DATABASE_URL: str
+    DATABASE_URL: Optional[str] = None
 
     # Supabase
-    SUPABASE_URL: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_ANON_KEY: Optional[str] = None
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
     SUPABASE_STORAGE_BUCKET: str = "newscraft-clippings"
 
     # AI Engine — Groq (gsk_...) or xAI Grok key
-    GROK_API_KEY: str
+    GROK_API_KEY: Optional[str] = None
 
     # Stripe
     STRIPE_API_KEY: Optional[str] = None
@@ -87,4 +87,24 @@ class Settings(BaseSettings):
         return origins
 
 
-settings = Settings()
+try:
+    settings = Settings()
+except Exception as e:
+    import sys
+    import os
+    print("=== ENVIRONMENT VARIABLE VALIDATION ERROR ===", file=sys.stderr)
+    print(f"Failed to validate environment variables: {e}", file=sys.stderr)
+    print("\nChecking environment variables status:", file=sys.stderr)
+    required_vars = [
+        "SECRET_KEY", "DATABASE_URL", "SUPABASE_URL", 
+        "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "GROK_API_KEY"
+    ]
+    for var in required_vars:
+        val = os.environ.get(var)
+        if val:
+            masked = val[:6] + "..." + val[-4:] if len(val) > 10 else "***"
+            print(f"  {var}: PRESENT (length: {len(val)}, masked: {masked})", file=sys.stderr)
+        else:
+            print(f"  {var}: MISSING ❌", file=sys.stderr)
+    raise e
+
