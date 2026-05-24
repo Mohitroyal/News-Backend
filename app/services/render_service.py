@@ -1,9 +1,42 @@
 import os
+import glob
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
 from typing import Dict, Any
 from app.core.config import settings
+
+
+def _get_chromium_executable() -> str | None:
+    """
+    Locate the Chromium executable installed by Playwright.
+
+    On Render the browser cache is stored at PLAYWRIGHT_BROWSERS_PATH which is
+    set to /opt/render/project/.playwright so it survives between build and
+    runtime containers.  We glob for the real chrome binary rather than
+    relying on Playwright's internal path resolution, which breaks when the
+    env-var path differs from the compile-time default.
+
+    Returns None on localhost (Playwright will use its own default path).
+    """
+    browsers_path = os.getenv("PLAYWRIGHT_BROWSERS_PATH")
+    if not browsers_path:
+        return None  # Local dev — let Playwright find it automatically
+
+    patterns = [
+        os.path.join(browsers_path, "chromium-*/chrome-linux/chrome"),
+        os.path.join(browsers_path, "chromium-*/chrome-linux/chromium"),  # fallback name
+        os.path.join(browsers_path, "chromium-*/chrome"),
+    ]
+    for pattern in patterns:
+        matches = glob.glob(pattern)
+        if matches:
+            print(f"[PLAYWRIGHT] Using Chromium at: {matches[0]}")
+            return matches[0]
+
+    print(f"[PLAYWRIGHT] WARNING: No Chromium found under {browsers_path}. "
+          "Falling back to Playwright default path.")
+    return None
 
 
 class RenderService:
@@ -90,11 +123,21 @@ class RenderService:
 
     async def generate_png(self, html_content: str, output_path: str):
         """Uses Playwright to take a high-quality screenshot of the rendered HTML."""
+        chrome_path = _get_chromium_executable()
+
+        launch_kwargs = {
+            "headless": True,
+            "args": [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+            ],
+        }
+        if chrome_path:
+            launch_kwargs["executable_path"] = chrome_path
+
         async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                # On Render the sandbox is restricted — use --no-sandbox
-                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-            )
+            browser = await p.chromium.launch(**launch_kwargs)
             page = await browser.new_page(
                 viewport={"width": 1200, "height": 1600},
                 device_scale_factor=3,
@@ -142,10 +185,21 @@ class RenderService:
 
     async def generate_pdf(self, html_content: str, output_path: str):
         """Uses Playwright to generate a PDF from the HTML content."""
+        chrome_path = _get_chromium_executable()
+
+        launch_kwargs = {
+            "headless": True,
+            "args": [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+            ],
+        }
+        if chrome_path:
+            launch_kwargs["executable_path"] = chrome_path
+
         async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-            )
+            browser = await p.chromium.launch(**launch_kwargs)
             page = await browser.new_page()
             if html_content.startswith("http://") or html_content.startswith("https://"):
                 await page.goto(html_content, wait_until="networkidle")

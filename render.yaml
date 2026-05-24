@@ -7,9 +7,10 @@ services:
 
     buildCommand: |
       pip install --upgrade pip
-      pip install -r requirements.txt
-      playwright install chromium
-      playwright install-deps chromium
+      mkdir -p /opt/render/project/.playwright
+      PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright pip install -r requirements.txt
+      PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright python -m playwright install chromium
+      PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright python -m playwright install-deps chromium
 
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
@@ -21,6 +22,8 @@ services:
         value: production
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/project/.playwright
 
       # ── Security (generate a strong random key before deploying) ─────────
       - key: SECRET_KEY
