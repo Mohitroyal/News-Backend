@@ -65,29 +65,51 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     return new_user
 
 
+import os
+
 def _try_supabase_token(token: str, db: Session):
-    """Attempt to verify token as a Supabase JWT using the service role."""
+    """Attempt to verify token as a Supabase JWT using the JWT secret."""
     try:
-        from supabase import create_client
-        supabase_client = create_client(
-            settings.SUPABASE_URL,
-            settings.SUPABASE_SERVICE_ROLE_KEY
+        supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+        if not supabase_jwt_secret:
+            print("[AUTH ERROR] SUPABASE_JWT_SECRET not found in environment variables")
+            return None
+            
+        payload = jwt.decode(
+            token,
+            supabase_jwt_secret,
+            algorithms=["HS256"],
+            options={"verify_aud": False}
         )
-        response = supabase_client.auth.get_user(token)
-        if response and response.user:
-            return _get_or_create_supabase_user(db, response.user)
+        
+        supabase_id = payload.get("sub")
+        email = payload.get("email")
+        user_metadata = payload.get("user_metadata", {})
+        
+        user_dict = {
+            "id": supabase_id,
+            "email": email,
+            "user_metadata": user_metadata
+        }
+        return _get_or_create_supabase_user(db, user_dict)
     except Exception as e:
         print(f"[AUTH ERROR] _try_supabase_token failed: {e}")
         import traceback; traceback.print_exc()
     return None
 
+from fastapi import Request
 
 def get_current_user(
+    request: Request,
     db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
 ) -> User:
+    authorization = request.headers.get("Authorization")
+    print("AUTH HEADER:", authorization)
+    print("TOKEN RECEIVED:", token[:20] if token else None)
+    
     # ── Path 1: Supabase Google OAuth token ──────────────────────────────────
     # Supabase tokens are significantly longer than local JWTs (~200+ chars)
-    if len(token) > 150:
+    if token and len(token) > 150:
         user = _try_supabase_token(token, db)
         if user:
             return user
