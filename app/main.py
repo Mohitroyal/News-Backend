@@ -87,9 +87,12 @@ app = FastAPI(
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
+    "https://news-front.vercel.app",
     "https://news-frount.vercel.app",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 app.add_middleware(
@@ -117,7 +120,7 @@ def root():
 @app.get("/health")
 def health_check():
     """Render health-check endpoint."""
-    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v2_cors_fixed"}
+    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v3_schema_sync"}
 
 
 # ── Static files ──────────────────────────────────────────────────────────────

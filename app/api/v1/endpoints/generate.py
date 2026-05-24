@@ -28,7 +28,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             clipping_id = uuid.UUID(clipping_id)
         except Exception:
             pass
-            
+
     is_external_db = db is not None
     if not is_external_db:
         from app.db.session import SessionLocal
@@ -46,7 +46,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
         db.commit()
 
         # 2. Render HTML
-        owner = db.query(User).filter(User.id == clipping.owner_id).first()
+        owner = db.query(User).filter(User.id == clipping.user_id).first()
         is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
 
         render_data = {
@@ -59,13 +59,12 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             "language": clipping.language,
             "layout_columns": clipping.layout_columns,
             "font_family": clipping.font_family or "playfair",
-            "logo_id": clipping.logo_id or clipping.template_id,  # use logo_id for branding
+            "logo_id": clipping.logo_id or clipping.template_id,
             "is_premium": is_premium,
         }
-        
+
         if clipping.template_id == "custom":
             if not clipping.custom_layout:
-                # Custom layout is empty (initial generation). Stop here, wait for user to save layout.
                 clipping.status = "completed"
                 db.commit()
                 return
@@ -75,7 +74,6 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
         else:
             html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
 
-        
         # 3. Generate PNG
         temp_png = f"temp_{clipping_id}.png"
         await render_service.generate_png(html, temp_png)
@@ -97,7 +95,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
         # Send email update
         try:
             from app.services.email_service import email_service
-            owner = db.query(User).filter(User.id == clipping.owner_id).first()
+            owner = db.query(User).filter(User.id == clipping.user_id).first()
             if owner and owner.email:
                 email_service.send_clipping_status_email(
                     user_email=owner.email,
@@ -114,10 +112,9 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             clipping.status = "failed"
             db.commit()
 
-            # Send email update on failure
             try:
                 from app.services.email_service import email_service
-                owner = db.query(User).filter(User.id == clipping.owner_id).first()
+                owner = db.query(User).filter(User.id == clipping.user_id).first()
                 if owner and owner.email:
                     email_service.send_clipping_status_email(
                         user_email=owner.email,
@@ -133,11 +130,13 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
         if not is_external_db:
             db.close()
 
+
 def process_clipping_task(clipping_id: Any, db: Session = None):
     """Background task wrapper to handle asyncio event loop policy on Windows."""
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     asyncio.run(_async_process_clipping_task(clipping_id, db))
+
 
 @router.post("/", response_model=dict)
 async def create_clipping(
@@ -164,7 +163,7 @@ async def create_clipping(
 
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     generations_count = db.query(Clipping).filter(
-        Clipping.owner_id == current_user.id,
+        Clipping.user_id == current_user.id,
         Clipping.created_at >= thirty_days_ago
     ).count()
 
@@ -175,7 +174,7 @@ async def create_clipping(
         )
 
     clipping = Clipping(
-        owner_id=current_user.id,
+        user_id=current_user.id,
         headline=clipping_in.headline,
         article_content=clipping_in.article_content,
         language=clipping_in.language,
@@ -195,12 +194,13 @@ async def create_clipping(
     db.refresh(clipping)
 
     background_tasks.add_task(process_clipping_task, clipping.id)
-    
+
     return jsonable_encoder({
         "success": True,
         "data": clipping,
         "message": "Generation started successfully"
     })
+
 
 @router.get("/", response_model=dict)
 def get_all_clippings(
@@ -210,9 +210,9 @@ def get_all_clippings(
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
     skip = (page - 1) * pageSize
-    clippings = db.query(Clipping).filter(Clipping.owner_id == current_user.id).order_by(Clipping.created_at.desc()).offset(skip).limit(pageSize).all()
-    total = db.query(Clipping).filter(Clipping.owner_id == current_user.id).count()
-    
+    clippings = db.query(Clipping).filter(Clipping.user_id == current_user.id).order_by(Clipping.created_at.desc()).offset(skip).limit(pageSize).all()
+    total = db.query(Clipping).filter(Clipping.user_id == current_user.id).count()
+
     return jsonable_encoder({
         "success": True,
         "data": {
@@ -225,13 +225,14 @@ def get_all_clippings(
         "message": "Clippings retrieved successfully"
     })
 
+
 @router.get("/{id}", response_model=dict)
 def get_clipping(
     id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
-    clipping = db.query(Clipping).filter(Clipping.id == id, Clipping.owner_id == current_user.id).first()
+    clipping = db.query(Clipping).filter(Clipping.id == id, Clipping.user_id == current_user.id).first()
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
     return jsonable_encoder({
@@ -239,6 +240,7 @@ def get_clipping(
         "data": clipping,
         "message": "Clipping retrieved successfully"
     })
+
 
 @router.get("/{id}/public", response_model=dict)
 def get_clipping_public(
@@ -255,26 +257,32 @@ def get_clipping_public(
         "message": "Clipping retrieved successfully"
     })
 
+
 @router.delete("/{id}", response_model=dict)
 def delete_clipping(
     id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
-    clipping = db.query(Clipping).filter(Clipping.id == id, Clipping.owner_id == current_user.id).first()
+    clipping = db.query(Clipping).filter(Clipping.id == id, Clipping.user_id == current_user.id).first()
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
-    
+
     db.delete(clipping)
+    db.commit()
     return jsonable_encoder({
         "success": True,
         "data": None,
         "message": "Clipping deleted successfully"
     })
 
+
 from pydantic import BaseModel
+
+
 class LayoutUpdate(BaseModel):
     custom_layout: dict
+
 
 @router.put("/{id}/layout", response_model=dict)
 def update_clipping_layout(
@@ -284,20 +292,18 @@ def update_clipping_layout(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
-    clipping = db.query(Clipping).filter(Clipping.id == id, Clipping.owner_id == current_user.id).first()
+    clipping = db.query(Clipping).filter(Clipping.id == id, Clipping.user_id == current_user.id).first()
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
-    
+
     clipping.custom_layout = layout_in.custom_layout
-    clipping.status = "rendering" # Trigger re-render
+    clipping.status = "rendering"
     db.commit()
-    
-    # Re-trigger background task to generate new PDF/PNG
+
     background_tasks.add_task(process_clipping_task, clipping.id)
-    
+
     return jsonable_encoder({
         "success": True,
         "data": clipping,
         "message": "Layout saved and re-rendering started"
     })
-

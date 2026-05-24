@@ -9,23 +9,17 @@ class UserBase(BaseModel):
     full_name: Optional[str] = None
 
 class UserCreate(UserBase):
-    password: str
-    firstName: Optional[str] = None
-    lastName: Optional[str] = None
+    pass
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-class UserUpdate(UserBase):
-    password: Optional[str] = None
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
 
 class User(UserBase):
     id: UUID
     is_active: bool
     subscription_plan: str
     subscription_status: str
-    created_at: datetime
+    created_at: Optional[datetime] = None
     plan: str
     credits: int
 
@@ -39,7 +33,7 @@ class ClippingBase(BaseModel):
     language: str = "en"
     tone: str = "formal"
     template_id: str = Field(alias="templateId")
-    logo_id: Optional[str] = Field(None, alias="logoId")  # logo/brand identity separate from layout
+    logo_id: Optional[str] = Field(None, alias="logoId")
     image_url: Optional[str] = Field(None, alias="imageUrl")
     image_urls: List[str] = Field(default=[], alias="imageUrls")
     publication_name: str = Field(alias="publicationName")
@@ -60,7 +54,7 @@ class ClippingUpdate(BaseModel):
 
 class Clipping(BaseModel):
     id: UUID
-    owner_id: UUID = Field(alias="userId")
+    user_id: UUID = Field(alias="userId")
     headline: str
     article_content: str = Field(alias="articleContent")
     language: str
@@ -68,7 +62,7 @@ class Clipping(BaseModel):
     template_id: str = Field(alias="templateId")
     image_url: Optional[str] = Field(None, alias="imageUrl")
     image_urls: List[str] = Field(default=[], alias="imageUrls")
-    png_url: Optional[str] = Field(None, alias="previewUrl") # Map PNG to previewUrl
+    png_url: Optional[str] = Field(None, alias="previewUrl")
     pdf_url: Optional[str] = None
     status: str
     layout_columns: int = Field(3, alias="layoutColumns")
@@ -86,3 +80,8 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
+
+# ─── Login/Signup (local) — kept for backward compat ─────────────
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
