@@ -51,3 +51,4 @@ gunicorn>=22.0.0
 # weasyprint                    Replaced by Playwright for PDF generation
 # pytest                        Dev only
 # pytest-asyncio                Dev only
+email-validator
