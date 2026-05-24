@@ -66,6 +66,9 @@ async def lifespan(app: FastAPI):
     print(f"=== {settings.PROJECT_NAME.upper()} STARTUP SUCCESSFUL ===")
     print("  Application startup sequence complete.")
     print("  Swagger documentation is served at /docs")
+    print(f"  Backend Environment: {settings.ENVIRONMENT}")
+    print(f"  Active Allowed Origins: {origins}")
+    print("  Server Startup Confirmed!")
     print("="*60 + "\n")
 
     yield
@@ -81,10 +84,16 @@ app = FastAPI(
 
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-# Uses CORS_ORIGINS env var + optional FRONTEND_URL env var for flexible config.
+from fastapi.middleware.cors import CORSMiddleware
+
+origins = [
+    "http://localhost:3000",
+    "https://news-frount.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins(),
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
