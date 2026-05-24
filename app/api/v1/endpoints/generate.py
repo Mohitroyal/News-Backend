@@ -8,7 +8,7 @@ from app.models.clipping import Clipping
 from app.schemas.all import ClippingCreate, Clipping as ClippingSchema
 from app.services.grok_service import grok_service
 from app.services.render_service import render_service
-from app.services.storage_service import storage_service
+from app.services.storage_service import storage_service, _rewrite_to_absolute
 from app.auth.dependencies import get_current_active_user
 from app.core.config import settings
 from app.models.user import User
@@ -49,13 +49,20 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
         owner = db.query(User).filter(User.id == clipping.user_id).first()
         is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
 
+        # ── Rewrite image URLs to absolute so Playwright can load them ──────
+        # Locally-uploaded images may have been saved as /static/uploads/...
+        # which Playwright cannot resolve when running on Render. We rewrite
+        # them to full Supabase Storage HTTPS URLs here.
+        safe_image_url = _rewrite_to_absolute(clipping.image_url or "")
+        safe_image_urls = [_rewrite_to_absolute(u) for u in (clipping.image_urls or [])]
+
         render_data = {
             **formatted,
             "id": str(clipping_id),
             "publication_name": clipping.publication_name,
             "publication_date": clipping.publication_date,
-            "image_url": clipping.image_url,
-            "image_urls": clipping.image_urls or [],
+            "image_url": safe_image_url,
+            "image_urls": safe_image_urls,
             "language": clipping.language,
             "layout_columns": clipping.layout_columns,
             "font_family": clipping.font_family or "playfair",
