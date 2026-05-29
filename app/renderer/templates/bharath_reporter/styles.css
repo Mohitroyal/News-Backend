@@ -14,7 +14,7 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Old Standard TT', serif;
+    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
     margin: 0;
     padding: 30px;
     display: flex;
@@ -104,7 +104,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 }
 
 .headline {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
     font-size: 54px;
     font-weight: 900;
     line-height: 1.15;
@@ -122,7 +122,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 }
 
 .subheadline {
-    font-family: 'Old Standard TT', serif;
+    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
     font-size: 20px;
     font-style: italic;
     color: #555555;
@@ -152,7 +152,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     display: block;
     margin: 0 auto;
     width: 100%;
-    max-height: 550px;
+    max-height: 450px;
     object-fit: contain;
     filter: grayscale(10%) contrast(105%);
     border: 1px solid #ddd;
@@ -191,7 +191,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 /* Classic Drop Cap */
 .paragraph.has-dropcap::first-letter {
     float: left;
-    font-family: 'Cinzel', 'Playfair Display', serif;
+    font-family: 'Cinzel', 'Playfair Display', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
     font-size: 55px;
     line-height: 44px;
     padding-top: 4px;
