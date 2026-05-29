@@ -51,6 +51,11 @@ class RenderService:
 
     async def render_html(self, data: Dict[str, Any], template_name: str = "classic.html") -> str:
         """Renders the newspaper template with user data."""
+        if not data.get("headline"):
+            data["headline"] = "Generated Headline"
+        if not data.get("sections") or len(data.get("sections", [])) == 0:
+            data["sections"] = ["Missing article content."]
+            
         template_key = template_name.replace(".html", "")
 
         branding = {

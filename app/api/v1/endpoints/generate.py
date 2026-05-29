@@ -34,108 +34,151 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
         from app.db.session import SessionLocal
         db = SessionLocal()
 
-    try:
-        clipping = db.query(Clipping).filter(Clipping.id == clipping_id).first()
-        if not clipping:
-            return
-
-        # 1. AI Formatting
-        formatted = await grok_service.format_article(clipping.article_content, clipping.language)
-        clipping.content_formatted = formatted
-        clipping.status = "rendering"
-        db.commit()
-
-        # 2. Render HTML
-        owner = db.query(User).filter(User.id == clipping.user_id).first()
-        is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
-
-        # ── Rewrite image URLs to absolute so Playwright can load them ──────
-        # Locally-uploaded images may have been saved as /static/uploads/...
-        # which Playwright cannot resolve when running on Render. We rewrite
-        # them to full Supabase Storage HTTPS URLs here.
-        safe_image_url = _rewrite_to_absolute(clipping.image_url or "")
-        safe_image_urls = [_rewrite_to_absolute(u) for u in (clipping.image_urls or [])]
-
-        render_data = {
-            **formatted,
-            "id": str(clipping_id),
-            "publication_name": clipping.publication_name,
-            "publication_date": clipping.publication_date,
-            "image_url": safe_image_url,
-            "image_urls": safe_image_urls,
-            "language": clipping.language,
-            "layout_columns": clipping.layout_columns,
-            "font_family": clipping.font_family or "playfair",
-            "logo_id": clipping.logo_id or clipping.template_id,
-            "is_premium": is_premium,
-        }
-
-        if clipping.template_id == "custom":
-            if not clipping.custom_layout:
-                clipping.status = "completed"
-                db.commit()
+    max_retries = 1
+    for attempt in range(max_retries + 1):
+        stage = "initialization"
+        try:
+            clipping = db.query(Clipping).filter(Clipping.id == clipping_id).first()
+            if not clipping:
                 return
-            import os as _os
-            _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
-            html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
-        else:
-            html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
 
-        # 3. Generate PNG
-        temp_png = f"temp_{clipping_id}.png"
-        await render_service.generate_png(html, temp_png)
-        png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
-        os.remove(temp_png)
+            stage = "image_processing"
+            print(f"[STEP 1] Image Processing Started (Attempt {attempt + 1})")
+            from app.services.image_service import image_service
+            safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
+            safe_image_urls = [image_service.process_and_resize(u) for u in (clipping.image_urls or [])]
+            print(f"[STEP 2] Image Processing Success")
 
-        # 4. Generate PDF
-        temp_pdf = f"temp_{clipping_id}.pdf"
-        await render_service.generate_pdf(html, temp_pdf)
-        pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
-        os.remove(temp_pdf)
+            stage = "article_generation"
+            print(f"[STEP 3] Article Generation Started")
+            formatted = await grok_service.format_article(clipping.article_content, clipping.language)
+            clipping.content_formatted = formatted
+            clipping.status = "rendering"
+            db.commit()
+            print(f"[STEP 4] Article Generation Success")
 
-        # 5. Update Record
-        clipping.png_url = png_url
-        clipping.pdf_url = pdf_url
-        clipping.status = "completed"
-        db.commit()
-
-        # Send email update
-        try:
-            from app.services.email_service import email_service
+            stage = "template_rendering"
+            print(f"[STEP 5] Template Rendering Started")
             owner = db.query(User).filter(User.id == clipping.user_id).first()
-            if owner and owner.email:
-                email_service.send_clipping_status_email(
-                    user_email=owner.email,
-                    headline=clipping.headline,
-                    status="completed",
-                    png_url=png_url,
-                    pdf_url=pdf_url
-                )
-        except Exception as mail_err:
-            print(f"Failed to send success mail: {mail_err}")
+            is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
+            
+            # Rewrite image URLs to absolute so Playwright can load them
+            safe_image_url = _rewrite_to_absolute(safe_image_url)
+            safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
 
-    except Exception as e:
-        try:
-            clipping.status = "failed"
+            render_data = {
+                **formatted,
+                "id": str(clipping_id),
+                "publication_name": clipping.publication_name,
+                "publication_date": clipping.publication_date,
+                "image_url": safe_image_url,
+                "image_urls": safe_image_urls,
+                "language": clipping.language,
+                "layout_columns": clipping.layout_columns,
+                "font_family": clipping.font_family or "playfair",
+                "logo_id": clipping.logo_id or clipping.template_id,
+                "is_premium": is_premium,
+            }
+
+            if clipping.template_id == "custom":
+                if not clipping.custom_layout:
+                    clipping.status = "completed"
+                    db.commit()
+                    return
+                import os as _os
+                _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
+                html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
+            else:
+                html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
+            print(f"[STEP 6] Template Rendering Success")
+
+            stage = "screenshot_generation"
+            print(f"[STEP 7] Screenshot Generation Started")
+            temp_png = f"temp_{clipping_id}.png"
+            try:
+                await render_service.generate_png(html, temp_png)
+            except Exception as e:
+                raise Exception(f"Playwright timeout or rendering failed: {e}")
+            png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
+            import os
+            os.remove(temp_png)
+            print(f"[STEP 8] PNG Uploaded")
+
+            stage = "pdf_generation"
+            print(f"[STEP 9] PDF Generation Started")
+            temp_pdf = f"temp_{clipping_id}.pdf"
+            await render_service.generate_pdf(html, temp_pdf)
+            pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
+            os.remove(temp_pdf)
+            print(f"[STEP 10] PDF Uploaded")
+
+            # Success
+            clipping.png_url = png_url
+            clipping.pdf_url = pdf_url
+            clipping.status = "completed"
+            
+            # Clear previous custom_layout errors
+            if clipping.custom_layout and "error" in clipping.custom_layout:
+                del clipping.custom_layout["error"]
+                if "stage" in clipping.custom_layout:
+                    del clipping.custom_layout["stage"]
+                # Must re-assign to trigger SQLAlchemy JSON mutation detection if not using mutable JSON
+                temp_layout = dict(clipping.custom_layout)
+                clipping.custom_layout = temp_layout
+
             db.commit()
 
             try:
                 from app.services.email_service import email_service
-                owner = db.query(User).filter(User.id == clipping.user_id).first()
                 if owner and owner.email:
                     email_service.send_clipping_status_email(
                         user_email=owner.email,
                         headline=clipping.headline,
-                        status="failed"
+                        status="completed",
+                        png_url=png_url,
+                        pdf_url=pdf_url
                     )
             except Exception as mail_err:
-                print(f"Failed to send failure mail: {mail_err}")
-        except Exception:
-            pass
-        print(f"Error processing clipping {clipping_id}: {repr(e)}")
-    finally:
-        if not is_external_db:
-            db.close()
+                print(f"Failed to send success mail: {mail_err}")
+                
+            break # Break out of retry loop on success
+
+        except Exception as e:
+            error_msg = str(e)
+            print(f"[ERROR] Stage: {stage} | Reason: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            
+            if attempt < max_retries:
+                print(f"[RETRY] Attempting retry {attempt + 1} of {max_retries}...")
+                import asyncio
+                await asyncio.sleep(2)
+                continue
+
+            try:
+                clipping.status = "failed"
+                temp_layout = clipping.custom_layout or {}
+                temp_layout["stage"] = stage
+                temp_layout["error"] = error_msg
+                clipping.custom_layout = temp_layout
+                db.commit()
+
+                try:
+                    from app.services.email_service import email_service
+                    owner = db.query(User).filter(User.id == clipping.user_id).first()
+                    if owner and owner.email:
+                        email_service.send_clipping_status_email(
+                            user_email=owner.email,
+                            headline=clipping.headline,
+                            status="failed"
+                        )
+                except Exception as mail_err:
+                    print(f"Failed to send failure mail: {mail_err}")
+            except Exception:
+                pass
+            
+    if not is_external_db:
+        db.close()
 
 
 def process_clipping_task(clipping_id: Any, db: Session = None):
@@ -242,9 +285,17 @@ def get_clipping(
     clipping = db.query(Clipping).filter(Clipping.id == id, Clipping.user_id == current_user.id).first()
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
+
+    resp_data = jsonable_encoder(clipping)
+    if clipping.status == "failed" and clipping.custom_layout:
+        if "error" in clipping.custom_layout:
+            resp_data["error"] = clipping.custom_layout["error"]
+        if "stage" in clipping.custom_layout:
+            resp_data["stage"] = clipping.custom_layout["stage"]
+
     return jsonable_encoder({
         "success": True,
-        "data": clipping,
+        "data": resp_data,
         "message": "Clipping retrieved successfully"
     })
 
