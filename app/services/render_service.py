@@ -143,22 +143,29 @@ class RenderService:
                 device_scale_factor=3,
             )
             if html_content.startswith("http://") or html_content.startswith("https://"):
-                await page.goto(html_content, wait_until="networkidle")
+                await page.goto(html_content, wait_until="networkidle", timeout=15000)
             else:
                 await page.set_content(html_content)
 
-            await page.wait_for_load_state("networkidle")
+            try:
+                await page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception:
+                pass
             await page.evaluate("""
                 async () => {
-                    await document.fonts.ready;
-                    await Promise.all(
-                        Array.from(document.images)
-                        .filter(img => !img.complete)
-                        .map(img => new Promise(resolve => {
-                            img.onload = resolve;
-                            img.onerror = resolve;
-                        }))
-                    );
+                    const timeout = new Promise(resolve => setTimeout(resolve, 8000));
+                    const loadPromise = (async () => {
+                        await document.fonts.ready;
+                        await Promise.all(
+                            Array.from(document.images)
+                            .filter(img => !img.complete)
+                            .map(img => new Promise(resolve => {
+                                img.onload = resolve;
+                                img.onerror = resolve;
+                            }))
+                        );
+                    })();
+                    await Promise.race([loadPromise, timeout]);
                 }
             """)
             await asyncio.sleep(0.5)
@@ -211,21 +218,28 @@ class RenderService:
             browser = await p.chromium.launch(**launch_kwargs)
             page = await browser.new_page()
             if html_content.startswith("http://") or html_content.startswith("https://"):
-                await page.goto(html_content, wait_until="networkidle")
+                await page.goto(html_content, wait_until="networkidle", timeout=15000)
             else:
                 await page.set_content(html_content)
-            await page.wait_for_load_state("networkidle")
+            try:
+                await page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception:
+                pass
             await page.evaluate("""
                 async () => {
-                    await document.fonts.ready;
-                    await Promise.all(
-                        Array.from(document.images)
-                        .filter(img => !img.complete)
-                        .map(img => new Promise(resolve => {
-                            img.onload = resolve;
-                            img.onerror = resolve;
-                        }))
-                    );
+                    const timeout = new Promise(resolve => setTimeout(resolve, 8000));
+                    const loadPromise = (async () => {
+                        await document.fonts.ready;
+                        await Promise.all(
+                            Array.from(document.images)
+                            .filter(img => !img.complete)
+                            .map(img => new Promise(resolve => {
+                                img.onload = resolve;
+                                img.onerror = resolve;
+                            }))
+                        );
+                    })();
+                    await Promise.race([loadPromise, timeout]);
                 }
             """)
             await asyncio.sleep(0.5)
