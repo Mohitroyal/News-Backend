@@ -148,10 +148,19 @@ class RenderService:
                 await page.set_content(html_content)
 
             await page.wait_for_load_state("networkidle")
-            try:
-                await page.evaluate("document.fonts.ready")
-            except Exception:
-                pass
+            await page.evaluate("""
+                async () => {
+                    await document.fonts.ready;
+                    await Promise.all(
+                        Array.from(document.images)
+                        .filter(img => !img.complete)
+                        .map(img => new Promise(resolve => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        }))
+                    );
+                }
+            """)
             await asyncio.sleep(0.5)
 
             await page.evaluate("""
@@ -206,10 +215,19 @@ class RenderService:
             else:
                 await page.set_content(html_content)
             await page.wait_for_load_state("networkidle")
-            try:
-                await page.evaluate("document.fonts.ready")
-            except Exception:
-                pass
+            await page.evaluate("""
+                async () => {
+                    await document.fonts.ready;
+                    await Promise.all(
+                        Array.from(document.images)
+                        .filter(img => !img.complete)
+                        .map(img => new Promise(resolve => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        }))
+                    );
+                }
+            """)
             await asyncio.sleep(0.5)
             await page.pdf(
                 path=output_path,

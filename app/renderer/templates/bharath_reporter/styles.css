@@ -41,9 +41,10 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 
 .newspaper-container {
     width: 1060px; /* Precise broadsheet width */
-    min-height: 1480px; /* Force the newspaper to cover the whole height of the page */
+    height: auto;
+    min-height: 500px;
     background: var(--paper-color);
-    border: 1px solid #d3cbb8;
+    border: 2px solid var(--border-color);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
     padding: 35px;
     box-sizing: border-box;
@@ -152,17 +153,18 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     margin: 0 auto;
     width: 100%;
     max-height: 550px;
-    object-fit: cover;
+    object-fit: contain;
     filter: grayscale(10%) contrast(105%);
     border: 1px solid #ddd;
 }
 
 .image-caption {
-    font-size: 12px;
+    font-size: 13px;
     font-style: italic;
-    margin-top: 6px;
+    margin-top: 8px;
     color: #555;
-    text-align: left;
+    text-align: center;
+    line-height: 1.4;
 }
 
 /* ARTICLE CONTENT SECTION - MULTI-COLUMN */
@@ -215,6 +217,8 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    word-wrap: break-word;
     border-top: 1px solid var(--border-color);
     padding-top: 10px;
     margin-top: auto; /* Push the footer to the bottom of the container */
