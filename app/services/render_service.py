@@ -51,12 +51,39 @@ class RenderService:
 
     async def render_html(self, data: Dict[str, Any], template_name: str = "classic.html") -> str:
         """Renders the newspaper template with user data."""
+        # 1. Headline safety fallback
         if not data.get("headline"):
-            data["headline"] = "Generated Headline"
-        if not data.get("sections") or len(data.get("sections", [])) == 0:
-            data["sections"] = ["Missing article content."]
-            
+            data["headline"] = "NEWSFLASH: Special Report"
+
+        # 2. Article safety fallback (check sections, article_content, content)
+        if not data.get("sections"):
+            if data.get("article_content"):
+                data["sections"] = [data["article_content"]]
+            elif data.get("content"):
+                data["sections"] = [data["content"]]
+            else:
+                data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
+        elif len(data.get("sections", [])) == 0:
+            data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
+
+        # 3. Image safety fallback
+        if not data.get("image_url") and not data.get("image_urls"):
+            fallback_img = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80"
+            data["image_url"] = fallback_img
+            data["image_urls"] = [fallback_img]
+        elif data.get("image_urls") and not data.get("image_url"):
+            data["image_url"] = data["image_urls"][0]
+        elif data.get("image_url") and not data.get("image_urls"):
+            data["image_urls"] = [data["image_url"]]
+
+        # 4. Logo/template safety fallback
         template_key = template_name.replace(".html", "")
+        if not data.get("logo_id"):
+            data["logo_id"] = template_key or "classic"
+
+        # Inject service_url absolutely for loading local assets (like local fonts via @font-face)
+        service_url = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000").rstrip("/")
+        data["service_url"] = service_url
 
         branding = {
             "bharath_reporter": {
@@ -141,68 +168,86 @@ class RenderService:
         if chrome_path:
             launch_kwargs["executable_path"] = chrome_path
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(**launch_kwargs)
-            page = await browser.new_page(
-                viewport={"width": 1200, "height": 1600},
-                device_scale_factor=3,
-            )
-            if html_content.startswith("http://") or html_content.startswith("https://"):
-                await page.goto(html_content, wait_until="networkidle", timeout=15000)
-            else:
-                await page.set_content(html_content)
-
+        max_attempts = 2
+        for attempt in range(max_attempts):
             try:
-                await page.wait_for_load_state("networkidle", timeout=10000)
-            except Exception:
-                pass
-            await page.evaluate("""
-                async () => {
-                    const timeout = new Promise(resolve => setTimeout(resolve, 8000));
-                    const loadPromise = (async () => {
-                        await document.fonts.ready;
-                        await Promise.all(
-                            Array.from(document.images)
-                            .filter(img => !img.complete)
-                            .map(img => new Promise(resolve => {
-                                img.onload = resolve;
-                                img.onerror = resolve;
-                            }))
-                        );
-                    })();
-                    await Promise.race([loadPromise, timeout]);
-                }
-            """)
-            await asyncio.sleep(0.5)
+                print(f"[8] Playwright Launch: Started (Attempt {attempt + 1})")
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(**launch_kwargs)
+                    page = await browser.new_page(
+                        viewport={"width": 1200, "height": 1600},
+                        device_scale_factor=3,
+                    )
+                    
+                    # Increased navigation timeout to 120 seconds
+                    if html_content.startswith("http://") or html_content.startswith("https://"):
+                        await page.goto(html_content, wait_until="networkidle", timeout=120000)
+                    else:
+                        await page.set_content(html_content, timeout=120000)
 
-            await page.evaluate("""
-                () => {
-                    const container = document.querySelector('.newspaper-container');
-                    if (container) {
-                        let current = container.offsetHeight;
-                        if (current < 1450) {
-                            let scale = 1.0;
-                            const maxScale = 1.6;
-                            const article = document.querySelector('.article-body') || document.querySelector('.extra-news-layout') || document.querySelector('.columns');
-                            if (article) {
-                                while (current < 1450 && scale < maxScale) {
-                                    scale += 0.02;
-                                    article.style.fontSize = (16 * scale) + 'px';
-                                    article.style.lineHeight = (1.6 * scale);
-                                    current = container.offsetHeight;
+                    # Explicit wait for networkidle increased to 120 seconds
+                    await page.wait_for_load_state("networkidle", timeout=120000)
+                    print(f"[8] Playwright Launch: SUCCESS")
+
+                    print(f"[7] Font Loading: Started")
+                    # Wait for all fonts and images to load completely (110s timeout internally)
+                    await page.evaluate("""
+                        async () => {
+                            const timeout = new Promise(resolve => setTimeout(resolve, 110000));
+                            const loadPromise = (async () => {
+                                await document.fonts.ready;
+                                await Promise.all(
+                                    Array.from(document.images)
+                                    .filter(img => !img.complete)
+                                    .map(img => new Promise(resolve => {
+                                        img.onload = resolve;
+                                        img.onerror = resolve;
+                                    }))
+                                );
+                            })();
+                            await Promise.race([loadPromise, timeout]);
+                        }
+                    """)
+                    print(f"[7] Font Loading: SUCCESS")
+
+                    await page.evaluate("""
+                        () => {
+                            const container = document.querySelector('.newspaper-container');
+                            if (container) {
+                                let current = container.offsetHeight;
+                                if (current < 1450) {
+                                    let scale = 1.0;
+                                    const maxScale = 1.6;
+                                    const article = document.querySelector('.article-body') || document.querySelector('.extra-news-layout') || document.querySelector('.columns');
+                                    if (article) {
+                                        while (current < 1450 && scale < maxScale) {
+                                            scale += 0.02;
+                                            article.style.fontSize = (16 * scale) + 'px';
+                                            article.style.lineHeight = (1.6 * scale);
+                                            current = container.offsetHeight;
+                                        }
+                                    }
+                                    if (current < 1480) {
+                                        container.style.minHeight = '1480px';
+                                    }
                                 }
                             }
-                            if (current < 1480) {
-                                container.style.minHeight = '1480px';
-                            }
+                            document.body.style.minHeight = '1600px';
                         }
-                    }
-                    document.body.style.minHeight = '1600px';
-                }
-            """)
-            await asyncio.sleep(0.3)
-            await page.screenshot(path=output_path, full_page=True, type="png")
-            await browser.close()
+                    """)
+                    await asyncio.sleep(0.5)
+
+                    print(f"[9] Screenshot Creation: Started")
+                    # Increased screenshot timeout to 120 seconds
+                    await page.screenshot(path=output_path, full_page=True, type="png", timeout=120000)
+                    await browser.close()
+                    print(f"[9] Screenshot Creation: SUCCESS")
+                    return
+            except Exception as e:
+                print(f"[PLAYWRIGHT WARNING] generate_png attempt {attempt + 1} failed: {e}")
+                if attempt == max_attempts - 1:
+                    print(f"[9] Screenshot Creation: FAILED (Reason: {e})")
+                    raise
 
     async def generate_pdf(self, html_content: str, output_path: str):
         """Uses Playwright to generate a PDF from the HTML content."""
@@ -219,43 +264,65 @@ class RenderService:
         if chrome_path:
             launch_kwargs["executable_path"] = chrome_path
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(**launch_kwargs)
-            page = await browser.new_page()
-            if html_content.startswith("http://") or html_content.startswith("https://"):
-                await page.goto(html_content, wait_until="networkidle", timeout=15000)
-            else:
-                await page.set_content(html_content)
+        max_attempts = 2
+        for attempt in range(max_attempts):
             try:
-                await page.wait_for_load_state("networkidle", timeout=10000)
-            except Exception:
-                pass
-            await page.evaluate("""
-                async () => {
-                    const timeout = new Promise(resolve => setTimeout(resolve, 8000));
-                    const loadPromise = (async () => {
-                        await document.fonts.ready;
-                        await Promise.all(
-                            Array.from(document.images)
-                            .filter(img => !img.complete)
-                            .map(img => new Promise(resolve => {
-                                img.onload = resolve;
-                                img.onerror = resolve;
-                            }))
-                        );
-                    })();
-                    await Promise.race([loadPromise, timeout]);
-                }
-            """)
-            await asyncio.sleep(0.5)
-            await page.pdf(
-                path=output_path,
-                width="1120px",
-                height="1600px",
-                print_background=True,
-                margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
-            )
-            await browser.close()
+                print(f"[8] Playwright Launch (PDF): Started (Attempt {attempt + 1})")
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(**launch_kwargs)
+                    page = await browser.new_page()
+                    
+                    # Increased navigation timeout to 120 seconds
+                    if html_content.startswith("http://") or html_content.startswith("https://"):
+                        await page.goto(html_content, wait_until="networkidle", timeout=120000)
+                    else:
+                        await page.set_content(html_content, timeout=120000)
+
+                    # Explicit wait for networkidle increased to 120 seconds
+                    await page.wait_for_load_state("networkidle", timeout=120000)
+                    print(f"[8] Playwright Launch (PDF): SUCCESS")
+
+                    print(f"[7] Font Loading (PDF): Started")
+                    # Wait for all fonts and images to load completely (110s timeout internally)
+                    await page.evaluate("""
+                        async () => {
+                            const timeout = new Promise(resolve => setTimeout(resolve, 110000));
+                            const loadPromise = (async () => {
+                                await document.fonts.ready;
+                                await Promise.all(
+                                    Array.from(document.images)
+                                    .filter(img => !img.complete)
+                                    .map(img => new Promise(resolve => {
+                                        img.onload = resolve;
+                                        img.onerror = resolve;
+                                    }))
+                                );
+                            })();
+                            await Promise.race([loadPromise, timeout]);
+                        }
+                    """)
+                    print(f"[7] Font Loading (PDF): SUCCESS")
+
+                    await asyncio.sleep(0.5)
+
+                    print(f"[11] PDF Creation: Started")
+                    # Increased PDF creation timeout to 120 seconds
+                    await page.pdf(
+                        path=output_path,
+                        width="1120px",
+                        height="1600px",
+                        print_background=True,
+                        margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
+                        timeout=120000,
+                    )
+                    await browser.close()
+                    print(f"[11] PDF Creation: SUCCESS")
+                    return
+            except Exception as e:
+                print(f"[PLAYWRIGHT WARNING] generate_pdf attempt {attempt + 1} failed: {e}")
+                if attempt == max_attempts - 1:
+                    print(f"[11] PDF Creation: FAILED (Reason: {e})")
+                    raise
 
 
 render_service = RenderService()

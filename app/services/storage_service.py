@@ -42,16 +42,32 @@ def _rewrite_to_absolute(url: str) -> str:
 
 class StorageService:
     def __init__(self):
-        self.supabase: Client = create_client(
-            settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY
-        )
+        if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+            self.supabase: Client = create_client(
+                settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY
+            )
+        else:
+            self.supabase = None
         self.bucket = settings.SUPABASE_STORAGE_BUCKET
+
+    def validate_storage(self):
+        """
+        Verifies Supabase connection, bucket existence, and permissions.
+        Throws exception if unhealthy.
+        """
+        if not self.supabase:
+            raise Exception("Supabase credentials missing from configuration")
+        try:
+            self.supabase.storage.get_bucket(self.bucket)
+        except Exception as e:
+            raise Exception(f"Supabase connection/permissions failed for bucket '{self.bucket}': {e}")
 
     def upload_file(self, file_path: str, destination_path: str) -> str:
         """
         Upload a file to Supabase Storage and return its guaranteed-absolute public URL.
-        Falls back to local static path (dev only) if Supabase is unavailable.
+        Raises an exception if the upload fails to ensure silent failures do not happen.
         """
+        self.validate_storage()
         try:
             with open(file_path, "rb") as f:
                 self.supabase.storage.from_(self.bucket).upload(
@@ -64,26 +80,14 @@ class StorageService:
             print(f"[STORAGE] Uploaded to Supabase → {url}")
             return url
         except Exception as e:
-            print(f"[STORAGE] Supabase upload failed: {e}. Falling back to local storage.")
-            local_dest = os.path.join(
-                os.path.dirname(__file__), "..", "..", "static", destination_path
-            )
-            os.makedirs(os.path.dirname(local_dest), exist_ok=True)
-            shutil.copy(file_path, local_dest)
-            service_url = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000").rstrip("/")
-            fallback_url = f"{service_url}/static/{destination_path}"
-            print(f"[STORAGE] Fallback local URL → {fallback_url}")
-            return fallback_url
+            print(f"[STORAGE] Supabase upload failed: {e}")
+            raise Exception(f"Supabase upload failed: {e}")
 
     def delete_file(self, path: str):
         try:
             self.supabase.storage.from_(self.bucket).remove([path])
-        except Exception:
-            local_dest = os.path.join(
-                os.path.dirname(__file__), "..", "..", "static", path
-            )
-            if os.path.exists(local_dest):
-                os.remove(local_dest)
+        except Exception as e:
+            print(f"[STORAGE] Supabase delete warning: {e}")
 
 
 storage_service = StorageService()

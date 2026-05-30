@@ -7,7 +7,10 @@ from app.models.user import User
 from supabase import create_client
 
 # ── Supabase client (uses anon key to call get_user) ──────────────────────────
-supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+if settings.SUPABASE_URL and settings.SUPABASE_ANON_KEY:
+    supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+else:
+    supabase = None
 
 
 def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
@@ -94,6 +97,8 @@ async def get_current_user(request: Request):
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
+    if not supabase:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Supabase client is not configured on the server")
     try:
         response = supabase.auth.get_user(token)
     except Exception as e:

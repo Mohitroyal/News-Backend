@@ -26,16 +26,35 @@ def _supabase_public_url(destination_path: str) -> str:
 async def upload_image(
     file: UploadFile = File(...),
 ) -> Any:
-    print("UPLOAD ENDPOINT HIT")
+    # --- [1] Image Upload ---
+    print("\n[1] Image Upload: Started")
+    try:
+        file_bytes = await file.read()
+        await file.seek(0)
+        print(f"[1] Image Upload: SUCCESS (Received file: {file.filename}, Size: {len(file_bytes)} bytes)")
+    except Exception as e:
+        print(f"[1] Image Upload: FAILED (Reason: {e})")
+        raise HTTPException(status_code=500, detail=f"Image upload failed: {e}")
+
+    # --- [2] Image Validation ---
+    print("[2] Image Validation: Started")
     if not file.content_type or not file.content_type.startswith("image/"):
+        print(f"[2] Image Validation: FAILED (Reason: content type '{file.content_type}' is not an image)")
         raise HTTPException(status_code=400, detail="File provided is not an image.")
+
+    content_type = file.content_type.lower()
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if content_type not in allowed_types:
+        print(f"[2] Image Validation: FAILED (Reason: content type '{content_type}' is not supported. Supported: {', '.join(allowed_types)})")
+        raise HTTPException(status_code=400, detail=f"Unsupported image format: {content_type}. Supported formats: jpeg, png, webp")
+
+    print("[2] Image Validation: SUCCESS")
 
     file_ext = os.path.splitext(file.filename or "upload")[1] or ".jpg"
     filename = f"upload_{uuid.uuid4().hex}{file_ext}"
-    # Store under uploads/ prefix inside the bucket
     destination_path = f"uploads/{filename}"
 
-    # ── Production path: Supabase Storage (always preferred) ─────────────────
+    # ── Production path: Supabase Storage ─────────────────
     if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
         try:
             supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
@@ -45,7 +64,6 @@ async def upload_image(
                 file=file_bytes,
                 file_options={"content-type": file.content_type, "x-upsert": "true"},
             )
-            # Always build the URL ourselves — guaranteed absolute HTTPS URL
             public_url = _supabase_public_url(destination_path)
             print(f"[UPLOAD] Supabase upload success → {public_url}")
             return jsonable_encoder({
@@ -57,9 +75,6 @@ async def upload_image(
             print(f"[UPLOAD] Supabase upload failed: {supabase_err}. Falling back to local static.")
 
     # ── Localhost fallback: local /static/uploads (dev only) ─────────────────
-    # NOTE: This path is EPHEMERAL on Render — images vanish on redeploy.
-    #       Playwright will NOT be able to load these during rendering on Render.
-    #       Ensure SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set in production.
     app_dir = os.path.dirname(os.path.abspath(__file__))
     static_uploads = os.path.join(app_dir, "..", "..", "..", "static", "uploads")
     os.makedirs(static_uploads, exist_ok=True)
@@ -73,7 +88,6 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail="Could not save file to local storage")
 
-    # Use RENDER_EXTERNAL_URL (injected by Render) so Playwright can reach it
     service_url = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000").rstrip("/")
     local_url = f"{service_url}/static/uploads/{filename}"
     print(f"[UPLOAD] Local fallback URL: {local_url}")

@@ -123,6 +123,78 @@ def health_check():
     return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v3_schema_sync"}
 
 
+@app.get("/health/generator")
+async def health_generator():
+    """
+    Diagnostic endpoint to verify all components for NewsCraft Generation are healthy.
+    """
+    # 1. Playwright Check
+    playwright_status = "ok"
+    try:
+        from playwright.async_api import async_playwright
+        from app.services.render_service import _get_chromium_executable
+        async with async_playwright() as p:
+            executable_path = _get_chromium_executable()
+            browser = await p.chromium.launch(headless=True, executable_path=executable_path)
+            await browser.close()
+    except Exception as e:
+        playwright_status = f"failed: {e}"
+
+    # 2. Fonts Check
+    fonts_status = "ok"
+    try:
+        import os
+        static_fonts_dir = os.path.join(os.path.dirname(__file__), "..", "static", "fonts")
+        required_fonts = [
+            "NotoSansTelugu-Regular.ttf",
+            "NotoSansTelugu-Bold.ttf",
+            "NotoSerifTelugu-Regular.ttf",
+            "NotoSerifTelugu-Bold.ttf"
+        ]
+        missing = [f for f in required_fonts if not os.path.exists(os.path.join(static_fonts_dir, f))]
+        if missing:
+            fonts_status = f"failed: missing {', '.join(missing)}"
+    except Exception as e:
+        fonts_status = f"failed: {e}"
+
+    # 3. Storage Check
+    storage_status = "ok"
+    try:
+        from app.services.storage_service import storage_service
+        storage_service.validate_storage()
+    except Exception as e:
+        storage_status = f"failed: {e}"
+
+    # 4. Templates Check
+    templates_status = "ok"
+    try:
+        from app.services.render_service import render_service
+        if not render_service.env:
+            templates_status = "failed: Jinja2 environment not loaded"
+    except Exception as e:
+        templates_status = f"failed: {e}"
+
+    # 5. Image Processing Check
+    image_processing_status = "ok"
+    try:
+        from PIL import Image
+        import io
+        img = Image.new('RGB', (100, 100), color='red')
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='JPEG')
+    except Exception as e:
+        image_processing_status = f"failed: {e}"
+
+    return {
+        "playwright": playwright_status,
+        "fonts": fonts_status,
+        "storage": storage_status,
+        "templates": templates_status,
+        "image_processing": image_processing_status
+    }
+
+
+
 # ── Static files ──────────────────────────────────────────────────────────────
 # On Render, the filesystem is ephemeral between deploys.
 # Uploaded images/PDFs are stored in Supabase Storage; this local static mount

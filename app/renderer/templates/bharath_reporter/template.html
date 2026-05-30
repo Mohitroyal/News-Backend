@@ -50,8 +50,8 @@
             {% if image_urls and image_urls|length > 0 %}
             <div class="image-grid" style="display: flex; gap: 10px; margin-bottom: 0;">
                 {% for url in image_urls %}
-                <div style="flex: 1; overflow: hidden; border: 1px solid #d3cbb8; padding: 4px; box-sizing: border-box; text-align: center;">
-                    <img src="{{ url }}" alt="Article Image" style="width: 100%; height: auto; {% if image_urls|length > 1 %}max-height: 400px;{% endif %} object-fit: contain; display: block;" />
+                <div style="flex: 1; overflow: hidden; border: 1px solid #d3cbb8; padding: 4px; box-sizing: border-box; text-align: center; max-height: {% if image_urls|length > 1 %}400px{% else %}900px{% endif %}; max-width: 100%;">
+                    <img src="{{ url }}" alt="Article Image" style="max-width: 100%; max-height: {% if image_urls|length > 1 %}400px{% else %}900px{% endif %}; width: auto; height: auto; object-fit: contain; display: inline-block;" />
                     {% if image_captions and image_captions|length > loop.index0 %}
                     <div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">{{ image_captions[loop.index0] }}</div>
                     {% endif %}
@@ -59,8 +59,8 @@
                 {% endfor %}
             </div>
             {% elif image_url %}
-            <div style="overflow: hidden; border: 1px solid #d3cbb8; padding: 4px; box-sizing: border-box; margin-bottom: 0; text-align: center;">
-                <img src="{{ image_url }}" alt="Article Image" style="width: 100%; height: auto; object-fit: contain; display: block;" />
+            <div style="overflow: hidden; border: 1px solid #d3cbb8; padding: 4px; box-sizing: border-box; margin-bottom: 0; text-align: center; max-height: 900px; max-width: 100%;">
+                <img src="{{ image_url }}" alt="Article Image" style="max-width: 100%; max-height: 900px; width: auto; height: auto; object-fit: contain; display: inline-block;" />
                 {% if image_captions and image_captions|length > 0 %}
                 <div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">{{ image_captions[0] }}</div>
                 {% endif %}
