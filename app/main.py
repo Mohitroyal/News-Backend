@@ -61,7 +61,19 @@ async def lifespan(app: FastAPI):
         print(f"  [ERROR] Database connection check FAILED: {e}")
     print("="*60 + "\n")
 
-    # 3. Startup Success Log
+    # 3. Telugu Fonts Check and Auto-Download Failsafe
+    print("\n" + "="*60)
+    print("=== TELUGU FONTS AUTO-DOWNLOAD CHECK ===")
+    try:
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from download_fonts import download_fonts
+        download_fonts()
+        print("  [SUCCESS] Telugu fonts check and auto-download completed successfully.")
+    except Exception as fe:
+        print(f"  [WARNING] Telugu fonts auto-download failed or skipped: {fe}")
+    print("="*60 + "\n")
+
+    # 4. Startup Success Log
     print("\n" + "="*60)
     print(f"=== {settings.PROJECT_NAME.upper()} STARTUP SUCCESSFUL ===")
     print("  Application startup sequence complete.")
@@ -153,7 +165,14 @@ async def health_generator():
         ]
         missing = [f for f in required_fonts if not os.path.exists(os.path.join(static_fonts_dir, f))]
         if missing:
-            fonts_status = f"failed: missing {', '.join(missing)}"
+            print("Fonts missing during diagnostic health check. Attempting to download...")
+            import sys
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from download_fonts import download_fonts
+            download_fonts()
+            missing = [f for f in required_fonts if not os.path.exists(os.path.join(static_fonts_dir, f))]
+            if missing:
+                fonts_status = f"failed: missing {', '.join(missing)}"
     except Exception as e:
         fonts_status = f"failed: {e}"
 
