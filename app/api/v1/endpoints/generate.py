@@ -14,12 +14,15 @@ from app.core.config import settings
 from app.models.user import User
 import uuid
 import os
+import logging
 from datetime import datetime, timedelta
 
 router = APIRouter()
 
 import sys
 import asyncio
+
+logger = logging.getLogger(__name__)
 
 async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
     """Core asynchronous logic for formatting and rendering with explicit step-by-step instrumentation and auto-recovery."""
@@ -40,170 +43,138 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
         try:
             clipping = db.query(Clipping).filter(Clipping.id == clipping_id).first()
             if not clipping:
-                print("[13] Database Update: FAILED (Clipping record not found)")
+                logger.error("Database Update: FAILED (Clipping record not found)")
                 return
 
             print(f"\n--- GENERATION PIPELINE START (Attempt {attempt + 1}/{max_retries + 1}) ---")
 
-            # --- [3] Image Resize ---
-            stage = "image_resize"
-            print(f"[3] Image Resize: Started")
+            # --- [2] Image Processing ---
+            stage = "Image Processing"
+            logger.info(f"Stage: {stage}")
             from app.services.image_service import image_service
-            try:
-                safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
-                safe_image_urls = [image_service.process_and_resize(u) for u in (clipping.image_urls or [])]
-                print(f"[3] Image Resize: SUCCESS")
-            except Exception as img_err:
-                print(f"[3] Image Resize: FAILED ({img_err})")
-                raise Exception(f"Image dimensions exceeded limits or processing failed: {img_err}")
+            safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
+            safe_image_urls = [image_service.process_and_resize(u) for u in (clipping.image_urls or [])]
 
-            # --- [4] OCR/Article Processing ---
-            stage = "article_processing"
-            print(f"[4] OCR/Article Processing: Started")
-            try:
-                formatted = await grok_service.format_article(clipping.article_content, clipping.language)
-                clipping.content_formatted = formatted
-                clipping.status = "rendering"
-                db.commit()
-                print(f"[4] OCR/Article Processing: SUCCESS")
-            except Exception as ocr_err:
-                print(f"[4] OCR/Article Processing: FAILED ({ocr_err})")
-                raise Exception(f"Article processing failed: {ocr_err}")
+            # --- [4] Content Generation & Translation ---
+            stage = "Translation" if clipping.language and clipping.language.lower() != "en" else "Content Generation"
+            logger.info(f"Stage: {stage}")
+            formatted = await grok_service.format_article(clipping.article_content, clipping.language)
+            clipping.content_formatted = formatted
+            
+            # --- Save to rendering ---
+            stage = "Database Save"
+            logger.info(f"Stage: {stage}")
+            clipping.status = "rendering"
+            db.commit()
 
             # --- [5] Template Selection ---
-            stage = "template_selection"
-            print(f"[5] Template Selection: Started")
-            try:
-                # Selecting the template
-                template_id = clipping.template_id or "classic"
-                print(f"[5] Template Selection: SUCCESS (Selected: {template_id})")
-            except Exception as temp_err:
-                print(f"[5] Template Selection: FAILED ({temp_err})")
-                raise Exception(f"Template selection failed: {temp_err}")
+            stage = "Template Selection"
+            logger.info(f"Stage: {stage}")
+            template_id = clipping.template_id or "classic"
 
-            # --- [6] HTML Generation ---
-            stage = "html_generation"
-            print(f"[6] HTML Generation: Started")
-            try:
-                owner = db.query(User).filter(User.id == clipping.user_id).first()
-                is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
-                
-                # Rewrite image URLs to absolute so Playwright can load them
-                safe_image_url = _rewrite_to_absolute(safe_image_url)
-                safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
+            # --- [7] HTML Generation & [6] Layout Rendering ---
+            stage = "HTML Generation"
+            logger.info(f"Stage: {stage}")
+            owner = db.query(User).filter(User.id == clipping.user_id).first()
+            is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
+            
+            safe_image_url = _rewrite_to_absolute(safe_image_url)
+            safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
 
-                render_data = {
-                    **formatted,
-                    "id": str(clipping_id),
-                    "publication_name": clipping.publication_name,
-                    "publication_date": clipping.publication_date,
-                    "image_url": safe_image_url,
-                    "image_urls": safe_image_urls,
-                    "language": clipping.language,
-                    "layout_columns": clipping.layout_columns,
-                    "font_family": clipping.font_family or "playfair",
-                    "logo_id": clipping.logo_id or clipping.template_id,
-                    "is_premium": is_premium,
-                }
+            render_data = {
+                **formatted,
+                "id": str(clipping_id),
+                "publication_name": clipping.publication_name,
+                "publication_date": clipping.publication_date,
+                "image_url": safe_image_url,
+                "image_urls": safe_image_urls,
+                "language": clipping.language,
+                "layout_columns": clipping.layout_columns,
+                "font_family": clipping.font_family or "playfair",
+                "logo_id": clipping.logo_id or clipping.template_id,
+                "is_premium": is_premium,
+            }
 
-                if clipping.template_id == "custom":
-                    if not clipping.custom_layout:
-                        clipping.status = "completed"
-                        db.commit()
-                        print(f"[6] HTML Generation: SUCCESS (Custom layout empty, skipping render)")
-                        return
-                    import os as _os
-                    _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
-                    html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
-                else:
-                    html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
-                print(f"[6] HTML Generation: SUCCESS")
-            except Exception as html_err:
-                print(f"[6] HTML Generation: FAILED ({html_err})")
-                raise Exception(f"HTML generation failed: {html_err}")
+            if clipping.template_id == "custom":
+                if not clipping.custom_layout:
+                    clipping.status = "completed"
+                    db.commit()
+                    return
+                import os as _os
+                _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
+                html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
+            else:
+                html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
 
-            # Steps [7] (Font Loading) & [8] (Playwright Launch) & [9] (Screenshot Creation)
-            # are executed internally inside render_service.generate_png
-            stage = "screenshot_generation"
+            # --- [9] Screenshot Generation ---
+            stage = "Screenshot Generation"
+            logger.info(f"Stage: {stage}")
             temp_png = f"temp_{clipping_id}.png"
             try:
                 await render_service.generate_png(html, temp_png)
             except Exception as png_err:
-                # Map internal failures to correct stages
                 err_str = str(png_err)
                 if "[7] Font Loading" in err_str:
-                    stage = "font_loading"
+                    stage = "Font Loading"
                 elif "[8] Playwright Launch" in err_str:
-                    stage = "playwright_launch"
+                    stage = "Layout Rendering"
+                elif "[9] Screenshot Creation" in err_str:
+                    stage = "PNG Creation"
                 else:
-                    stage = "screenshot_generation"
-                raise Exception(f"Playwright timeout or screenshot failed: {png_err}")
+                    stage = "Screenshot Generation"
+                raise png_err
 
-            # --- [10] PNG Upload ---
-            stage = "png_upload"
-            print(f"[10] PNG Upload: Started")
-            try:
-                png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
-                import os
-                if os.path.exists(temp_png):
-                    os.remove(temp_png)
-                print(f"[10] PNG Upload: SUCCESS (URL: {png_url})")
-            except Exception as up_err:
-                print(f"[10] PNG Upload: FAILED ({up_err})")
-                raise Exception(f"Supabase upload failed: {up_err}")
+            # --- [10] Supabase Upload PNG ---
+            stage = "Supabase Upload"
+            logger.info("Stage: Uploading PNG")
+            png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
+            if os.path.exists(temp_png):
+                os.remove(temp_png)
 
-            # Steps [7] (Font Loading) & [8] (Playwright Launch) & [11] (PDF Creation)
-            # are executed internally inside render_service.generate_pdf
-            stage = "pdf_generation"
+            # --- [11] PDF Generation ---
+            stage = "PDF Generation"
+            logger.info(f"Stage: {stage}")
             temp_pdf = f"temp_{clipping_id}.pdf"
             try:
                 await render_service.generate_pdf(html, temp_pdf)
             except Exception as pdf_err:
                 err_str = str(pdf_err)
                 if "[7] Font Loading" in err_str:
-                    stage = "font_loading"
+                    stage = "Font Loading"
                 elif "[8] Playwright Launch" in err_str:
-                    stage = "playwright_launch"
+                    stage = "Layout Rendering"
+                elif "[11] PDF Creation" in err_str:
+                    stage = "PDF Generation"
                 else:
-                    stage = "pdf_generation"
-                raise Exception(f"Playwright timeout or PDF creation failed: {pdf_err}")
+                    stage = "PDF Generation"
+                raise pdf_err
 
-            # --- [12] PDF Upload ---
-            stage = "pdf_upload"
-            print(f"[12] PDF Upload: Started")
-            try:
-                pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
-                import os
-                if os.path.exists(temp_pdf):
-                    os.remove(temp_pdf)
-                print(f"[12] PDF Upload: SUCCESS (URL: {pdf_url})")
-            except Exception as up_err:
-                print(f"[12] PDF Upload: FAILED ({up_err})")
-                raise Exception(f"Supabase upload failed: {up_err}")
+            # --- [12] Supabase Upload PDF ---
+            stage = "Supabase Upload"
+            logger.info("Stage: Uploading PDF")
+            pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
+            if os.path.exists(temp_pdf):
+                os.remove(temp_pdf)
 
-            # --- [13] Database Update ---
-            stage = "database_update"
-            print(f"[13] Database Update: Started")
-            try:
-                clipping.png_url = png_url
-                clipping.pdf_url = pdf_url
-                clipping.status = "completed"
-                
-                # Clear previous custom_layout errors
-                if clipping.custom_layout and "error" in clipping.custom_layout:
-                    del clipping.custom_layout["error"]
-                    if "stage" in clipping.custom_layout:
-                        del clipping.custom_layout["stage"]
-                    temp_layout = dict(clipping.custom_layout)
-                    clipping.custom_layout = temp_layout
+            # --- [13] Database Save ---
+            stage = "Database Save"
+            logger.info(f"Stage: {stage}")
+            clipping.png_url = png_url
+            clipping.pdf_url = pdf_url
+            clipping.status = "completed"
+            
+            if clipping.custom_layout and "error" in clipping.custom_layout:
+                del clipping.custom_layout["error"]
+                if "stage" in clipping.custom_layout:
+                    del clipping.custom_layout["stage"]
+                temp_layout = dict(clipping.custom_layout)
+                clipping.custom_layout = temp_layout
 
-                db.commit()
-                print(f"[13] Database Update: SUCCESS")
-            except Exception as db_err:
-                print(f"[13] Database Update: FAILED ({db_err})")
-                raise Exception(f"Database update failed: {db_err}")
+            db.commit()
 
-            # Send Email
+            # --- [14] Email Notification ---
+            stage = "Email Notification"
+            logger.info(f"Stage: {stage}")
             try:
                 from app.services.email_service import email_service
                 if owner and owner.email:
@@ -215,37 +186,35 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                         pdf_url=pdf_url
                     )
             except Exception as mail_err:
-                print(f"Failed to send success mail: {mail_err}")
+                logger.warning(f"Failed to send success mail: {mail_err}")
                 
-            break  # Generation succeeded, break the retry loop
+            # --- [15] Final Response ---
+            stage = "Final Response"
+            logger.info(f"Stage: {stage}")
+            break
 
         except Exception as e:
+            logger.exception(e)
             error_msg = str(e)
-            print(f"\n[PIPELINE FAILURE] Stage: {stage} | Reason: {error_msg}")
+            error_type = type(e).__name__
             
-            # Map stage to user-friendly names for step console logging
-            stage_to_step = {
-                "image_resize": "[3] Image Resize",
-                "article_processing": "[4] OCR/Article Processing",
-                "template_selection": "[5] Template Selection",
-                "html_generation": "[6] HTML Generation",
-                "font_loading": "[7] Font Loading",
-                "playwright_launch": "[8] Playwright Launch",
-                "screenshot_generation": "[9] Screenshot Creation",
-                "png_upload": "[10] PNG Upload",
-                "pdf_generation": "[11] PDF Creation",
-                "pdf_upload": "[12] PDF Upload",
-                "database_update": "[13] Database Update"
-            }
-            step_name = stage_to_step.get(stage, f"Stage: {stage}")
-            print(f"{step_name}: FAILED (Reason: {error_msg})")
-
+            # Detailed Exception Metadata Extraction
+            import sys
             import traceback
-            traceback.print_exc()
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            tb_info = traceback.extract_tb(exc_tb)
+            if tb_info:
+                filename, line, func, text = tb_info[-1]
+                filename = os.path.basename(filename)
+                details = f"Exception {error_type} in file {filename} at line {line} in function {func}: {error_msg}"
+            else:
+                details = error_msg
+                
+            traceback_str = traceback.format_exc()
+            print(f"\n[PIPELINE FAILURE] Stage: {stage} | Reason: {error_msg}")
 
             if attempt < max_retries:
                 print(f"[AUTO-RECOVERY] Retrying the entire pipeline in 3 seconds... (Attempt {attempt + 1}/{max_retries})")
-                # Clean up any temp files if they exist before retrying
                 for temp_file in [f"temp_{clipping_id}.png", f"temp_{clipping_id}.pdf"]:
                     if os.path.exists(temp_file):
                         try:
@@ -258,10 +227,14 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             # Final attempt failed, mark status as failed and store details
             try:
                 clipping.status = "failed"
-                temp_layout = clipping.custom_layout or {}
-                temp_layout["stage"] = stage
-                temp_layout["error"] = error_msg
-                clipping.custom_layout = temp_layout
+                clipping.custom_layout = {
+                    "stage": stage,
+                    "error_type": error_type,
+                    "message": error_msg,
+                    "error": error_msg,
+                    "details": details,
+                    "traceback": traceback_str
+                }
                 db.commit()
 
                 # Clean up any remaining temp files on final failure
@@ -282,9 +255,9 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                             status="failed"
                         )
                 except Exception as mail_err:
-                    print(f"Failed to send failure mail: {mail_err}")
+                    logger.warning(f"Failed to send failure mail: {mail_err}")
             except Exception as final_err:
-                print(f"Failed to write failure status to database: {final_err}")
+                logger.error(f"Failed to write failure status to database: {final_err}")
             
     if not is_external_db:
         db.close()
@@ -377,9 +350,12 @@ def get_all_clippings(
         resp_data = jsonable_encoder(clipping)
         if clipping.status == "failed":
             custom_layout = clipping.custom_layout or {}
-            resp_data["stage"] = custom_layout.get("stage", "unknown")
-            resp_data["message"] = custom_layout.get("error", "An unexpected error occurred during clipping generation.")
-            resp_data["error"] = custom_layout.get("error", "An unexpected error occurred during clipping generation.")
+            resp_data["stage"] = custom_layout.get("stage", "Unknown")
+            resp_data["error_type"] = custom_layout.get("error_type", "UnknownError")
+            resp_data["message"] = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
+            resp_data["error"] = custom_layout.get("error") or "An unexpected error occurred"
+            resp_data["details"] = custom_layout.get("details", "")
+            resp_data["traceback"] = custom_layout.get("traceback", "")
         serialized_items.append(resp_data)
 
     return jsonable_encoder({
@@ -408,14 +384,17 @@ def get_clipping(
     resp_data = jsonable_encoder(clipping)
     if clipping.status == "failed":
         custom_layout = clipping.custom_layout or {}
-        resp_data["stage"] = custom_layout.get("stage", "unknown")
-        resp_data["message"] = custom_layout.get("error", "An unexpected error occurred during clipping generation.")
-        resp_data["error"] = custom_layout.get("error", "An unexpected error occurred during clipping generation.")
+        resp_data["stage"] = custom_layout.get("stage", "Unknown")
+        resp_data["error_type"] = custom_layout.get("error_type", "UnknownError")
+        resp_data["message"] = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
+        resp_data["error"] = custom_layout.get("error") or "An unexpected error occurred"
+        resp_data["details"] = custom_layout.get("details", "")
+        resp_data["traceback"] = custom_layout.get("traceback", "")
 
     return jsonable_encoder({
         "success": True,
         "data": resp_data,
-        "message": "Clipping retrieved successfully"
+        "message": "Clippings retrieved successfully"
     })
 
 
@@ -428,10 +407,21 @@ def get_clipping_public(
     clipping = db.query(Clipping).filter(Clipping.id == id).first()
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
+        
+    resp_data = jsonable_encoder(clipping)
+    if clipping.status == "failed":
+        custom_layout = clipping.custom_layout or {}
+        resp_data["stage"] = custom_layout.get("stage", "Unknown")
+        resp_data["error_type"] = custom_layout.get("error_type", "UnknownError")
+        resp_data["message"] = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
+        resp_data["error"] = custom_layout.get("error") or "An unexpected error occurred"
+        resp_data["details"] = custom_layout.get("details", "")
+        resp_data["traceback"] = custom_layout.get("traceback", "")
+        
     return jsonable_encoder({
         "success": True,
-        "data": clipping,
-        "message": "Clipping retrieved successfully"
+        "data": resp_data,
+        "message": "Clippings retrieved successfully"
     })
 
 

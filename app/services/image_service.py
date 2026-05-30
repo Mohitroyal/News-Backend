@@ -97,8 +97,8 @@ class ImageService:
             return new_url
             
         except Exception as e:
-            print(f"[3] Image Resize: WARNING/FAILED ({e}). Falling back to original URL.")
-            return image_url
+            print(f"[3] Image Resize: FAILED ({e}).")
+            raise e
 
 image_service = ImageService()
 
