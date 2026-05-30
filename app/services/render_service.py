@@ -1,10 +1,13 @@
 import os
 import glob
+import logging
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
 from typing import Dict, Any
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _get_chromium_executable() -> str | None:
@@ -251,6 +254,7 @@ class RenderService:
 
     async def generate_pdf(self, html_content: str, output_path: str):
         """Uses Playwright to generate a PDF from the HTML content."""
+        logger.info("Starting PDF generation")
         chrome_path = _get_chromium_executable()
 
         launch_kwargs = {
@@ -271,6 +275,9 @@ class RenderService:
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
                     page = await browser.new_page()
+                    
+                    # Set default timeout for the page context
+                    page.set_default_timeout(120000)
                     
                     # Increased navigation timeout to 120 seconds
                     if html_content.startswith("http://") or html_content.startswith("https://"):
@@ -306,19 +313,20 @@ class RenderService:
                     await asyncio.sleep(0.5)
 
                     print(f"[11] PDF Creation: Started")
-                    # Increased PDF creation timeout to 120 seconds
+                    # Generate PDF (removed unsupported timeout keyword parameter)
                     await page.pdf(
                         path=output_path,
                         width="1120px",
                         height="1600px",
                         print_background=True,
-                        margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"},
-                        timeout=120000,
+                        margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"}
                     )
                     await browser.close()
                     print(f"[11] PDF Creation: SUCCESS")
+                    logger.info("PDF generated successfully")
                     return
             except Exception as e:
+                logger.exception("PDF generation failed")
                 print(f"[PLAYWRIGHT WARNING] generate_pdf attempt {attempt + 1} failed: {e}")
                 if attempt == max_attempts - 1:
                     print(f"[11] PDF Creation: FAILED (Reason: {e})")
