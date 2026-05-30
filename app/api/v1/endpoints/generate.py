@@ -422,6 +422,63 @@ async def create_clipping(
     })
 
 
+# ── Stage → progress mapping (matches frontend) ───────────────────────────────
+_STAGE_PROGRESS = {
+    "initialization":           5,
+    "Image Processing":         15,
+    "Content Generation":       30,
+    "Translation":              35,
+    "Database Save (rendering)": 40,
+    "Template Selection":       45,
+    "HTML Generation":          55,
+    "Screenshot Generation":    70,
+    "Font Loading":             72,
+    "Playwright Launch":        74,
+    "PNG Screenshot Creation":  80,
+    "Supabase Upload (PNG)":    85,
+    "PDF Generation":           88,
+    "PDF Creation":             90,
+    "Supabase Upload (PDF)":    93,
+    "Database Save (completed)": 97,
+    "Email Notification":       99,
+    "Final Response":           100,
+}
+
+
+def _enrich_clipping_response(clipping, resp_data: dict) -> dict:
+    """
+    Inject stage, progress, and (on failure) full error fields into
+    every API response so the frontend can drive its progress bar and
+    debug cards without re-fetching or guessing.
+    """
+    status = clipping.status or "processing"
+    custom_layout = clipping.custom_layout or {}
+
+    if status == "failed":
+        stage = custom_layout.get("stage", "Unknown")
+        resp_data["stage"]      = stage
+        resp_data["progress"]   = 0
+        resp_data["error_type"] = custom_layout.get("error_type", "UnknownError")
+        resp_data["message"]    = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
+        resp_data["error"]      = custom_layout.get("error") or "An unexpected error occurred"
+        resp_data["details"]    = custom_layout.get("details", "")
+        resp_data["traceback"]  = custom_layout.get("traceback", "")
+
+    elif status == "completed":
+        resp_data["stage"]    = "Final Response"
+        resp_data["progress"] = 100
+
+    else:
+        # processing / rendering — surface the last known stage from custom_layout
+        # (the pipeline writes a heartbeat there when it starts each stage)
+        stage = custom_layout.get("current_stage", "processing")
+        resp_data["stage"]    = stage
+        resp_data["progress"] = _STAGE_PROGRESS.get(stage, 10)
+        resp_data["current_stage"] = stage
+
+    return resp_data
+
+
 @router.get("/", response_model=dict)
 def get_all_clippings(
     page: int = 1,
@@ -436,14 +493,7 @@ def get_all_clippings(
     serialized_items = []
     for clipping in clippings:
         resp_data = jsonable_encoder(clipping)
-        if clipping.status == "failed":
-            custom_layout = clipping.custom_layout or {}
-            resp_data["stage"] = custom_layout.get("stage", "Unknown")
-            resp_data["error_type"] = custom_layout.get("error_type", "UnknownError")
-            resp_data["message"] = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
-            resp_data["error"] = custom_layout.get("error") or "An unexpected error occurred"
-            resp_data["details"] = custom_layout.get("details", "")
-            resp_data["traceback"] = custom_layout.get("traceback", "")
+        resp_data = _enrich_clipping_response(clipping, resp_data)
         serialized_items.append(resp_data)
 
     return jsonable_encoder({
@@ -470,14 +520,7 @@ def get_clipping(
         raise HTTPException(status_code=404, detail="Clipping not found")
 
     resp_data = jsonable_encoder(clipping)
-    if clipping.status == "failed":
-        custom_layout = clipping.custom_layout or {}
-        resp_data["stage"] = custom_layout.get("stage", "Unknown")
-        resp_data["error_type"] = custom_layout.get("error_type", "UnknownError")
-        resp_data["message"] = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
-        resp_data["error"] = custom_layout.get("error") or "An unexpected error occurred"
-        resp_data["details"] = custom_layout.get("details", "")
-        resp_data["traceback"] = custom_layout.get("traceback", "")
+    resp_data = _enrich_clipping_response(clipping, resp_data)
 
     return jsonable_encoder({
         "success": True,
@@ -497,15 +540,8 @@ def get_clipping_public(
         raise HTTPException(status_code=404, detail="Clipping not found")
         
     resp_data = jsonable_encoder(clipping)
-    if clipping.status == "failed":
-        custom_layout = clipping.custom_layout or {}
-        resp_data["stage"] = custom_layout.get("stage", "Unknown")
-        resp_data["error_type"] = custom_layout.get("error_type", "UnknownError")
-        resp_data["message"] = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
-        resp_data["error"] = custom_layout.get("error") or "An unexpected error occurred"
-        resp_data["details"] = custom_layout.get("details", "")
-        resp_data["traceback"] = custom_layout.get("traceback", "")
-        
+    resp_data = _enrich_clipping_response(clipping, resp_data)
+
     return jsonable_encoder({
         "success": True,
         "data": resp_data,
