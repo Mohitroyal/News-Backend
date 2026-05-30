@@ -6,7 +6,7 @@ from PIL import Image, ImageOps
 
 class ImageService:
     @staticmethod
-    def process_and_resize(image_url: str, max_width: int = 1000, max_height: int = 900) -> str:
+    def process_and_resize(image_url: str, max_width: int = 2400, max_height: int = 2000) -> str:
         """
         Downloads an image from a URL, validates format, applies EXIF auto-orientation,
         resizes it proportionally based on the requested scale algorithm to fit container,

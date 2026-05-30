@@ -41,14 +41,9 @@ class GrokService:
         DO NOT mix languages. DO NOT use English letters (transliteration) or Hindi if '{full_lang}' is requested.
         The headline, subheadline, sections, dateline, and byline MUST ALL be strictly in native {full_lang}.
         
-        CRITICAL REQUIREMENT 2: DO NOT SUMMARIZE OR SHORTEN. You MUST preserve 100% of the meaning, including ALL names, dates, places, organisations, designations, quotations, statistics, and context. Check that no information is omitted.
+        CRITICAL REQUIREMENT 2: DO NOT SUMMARIZE, SHORTEN, OR OMIT ANY TEXT. You MUST preserve 100% of the original content. Every single sentence and paragraph from the original article must be translated (if translating) and kept exactly in the "sections" array. Do not truncate, skip, or compress any portion of the source content.
         
-        CRITICAL REQUIREMENT 3: WRITE PROFESSIONAL JOURNALISTIC CONTENT. Expand dynamically depending on input size. Use professional writing style and avoid tiny paragraphs or empty areas.
-        Minimum Article Length logic based on input size:
-        - If input is SHORT NEWS: output 250–400 words.
-        - If input is MEDIUM NEWS: output 500–800 words.
-        - If input is FEATURE STORY: output 800–1500 words.
-        If the source article is already longer, preserve full meaning and expand naturally. Never summarize.
+        CRITICAL REQUIREMENT 3: KEEP ALL ORIGINAL SENTENCES INTACT. Do not try to fit the content into specific word limits or shorten it because of layout. The layout will adapt dynamically, so you must include all text without omitting any facts, sentences, or paragraphs.
         
         CRITICAL REQUIREMENT 4: Extract the reporter/author name from the content if provided. DO NOT INVENT AUTHORS. If no author is found, set "byline" to "" (empty string).
         
