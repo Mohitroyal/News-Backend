@@ -53,3 +53,4 @@ gunicorn>=22.0.0
 # pytest-asyncio                Dev only
 email-validator
 playwright
+psutil>=5.9.0
