@@ -250,6 +250,111 @@ class RenderService:
                 ));
             }
 
+            // Image layout rebuilding variables
+            const urls = data.image_urls || [];
+            const captions = data.image_captions || [];
+            const imgCount = urls.length;
+            
+            let imgContainer = container.querySelector('.image-grid, .featured-image-container, .extra-image-wrapper');
+            let borderStyle = '1px solid #ddd';
+            let paddingStyle = '4px';
+            
+            if (!imgContainer && imgCount > 0) {
+                // Find first non-logo image parent
+                const nonLogoImg = Array.from(container.querySelectorAll('img')).find(img => 
+                    !img.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+                );
+                if (nonLogoImg) {
+                    let parent = nonLogoImg.parentElement;
+                    if (parent && parent.parentElement && parent.parentElement !== container.querySelector('.col-2') && parent.parentElement !== container.querySelector('.newspaper-body') && parent.parentElement.tagName !== 'BODY') {
+                        imgContainer = parent.parentElement;
+                    } else if (parent) {
+                        imgContainer = parent;
+                    }
+                }
+            }
+
+            if (imgContainer && imgCount > 0) {
+                const firstWrapper = imgContainer.querySelector('div');
+                if (firstWrapper) {
+                    const comp = window.getComputedStyle(firstWrapper);
+                    const bWidth = comp.borderTopWidth || '1px';
+                    const bStyle = comp.borderTopStyle || 'solid';
+                    const bColor = comp.borderTopColor || '#ddd';
+                    borderStyle = `${bWidth} ${bStyle} ${bColor}`;
+                    paddingStyle = comp.padding || paddingStyle;
+                }
+            }
+
+            // Image layout generation helpers
+            function getLayout1(imgHeightPx) {
+                return `
+                  <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%;">
+                      <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                      ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                  </div>
+                `;
+            }
+
+            function getLayout2(imgHeightPx) {
+                return `
+                  <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                      </div>
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+                      </div>
+                  </div>
+                `;
+            }
+
+            function getLayoutA(imgHeightPx) {
+                return `
+                  <div class="nc-image-container-3-row" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                      </div>
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+                      </div>
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[2] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[2]}</div>` : ''}
+                      </div>
+                  </div>
+                `;
+            }
+
+            function getLayoutB(imgHeightPx) {
+                return `
+                  <div class="nc-image-container-3-stacked" style="display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box;">
+                      <div style="display: flex; gap: 10px; width: 100%;">
+                          <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                              <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                              ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                          </div>
+                          <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                              <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                              ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+                          </div>
+                      </div>
+                      <div style="display: flex; justify-content: center; width: 100%;">
+                          <div class="nc-image-wrapper" style="width: 100%; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                              <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                              ${captions[2] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[2]}</div>` : ''}
+                          </div>
+                      </div>
+                  </div>
+                `;
+            }
+
+            let layoutMode = 'stacked'; // default mode for 3 images, will switch to 'row' if needed
+
             function applyConfig(conf) {
                 const containerW = container.offsetWidth || 1060;
                 const imgHeightPx = Math.round(conf.imgMaxPct * containerW);
@@ -355,26 +460,20 @@ class RenderService:
                     subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
                 }
 
-                // Images: scale proportionally, never crop, maintain aspect ratio
-                container.querySelectorAll('img').forEach(img => {
-                    const isLogo = img.closest('.logo-container, .masthead, header');
-                    if (!isLogo) {
-                        img.style.maxHeight = imgHeightPx + 'px';
-                        img.style.width     = 'auto';
-                        img.style.maxWidth  = '100%';
-                        img.style.objectFit = 'contain';
-                        img.style.display   = 'block';
-                        img.style.margin    = '0 auto';
+                // Rebuild image container with layout mode and image height
+                if (imgContainer && imgCount > 0) {
+                    if (imgCount === 3) {
+                        if (layoutMode === 'stacked') {
+                            imgContainer.innerHTML = getLayoutB(imgHeightPx);
+                        } else {
+                            imgContainer.innerHTML = getLayoutA(imgHeightPx);
+                        }
+                    } else if (imgCount === 2) {
+                        imgContainer.innerHTML = getLayout2(imgHeightPx);
+                    } else if (imgCount === 1) {
+                        imgContainer.innerHTML = getLayout1(imgHeightPx);
                     }
-                });
-                
-                // For layout containers holding images
-                container.querySelectorAll('.image-grid > div, .featured-image-container > div, .extra-image-wrapper').forEach(div => {
-                    div.style.maxHeight = imgHeightPx + 'px';
-                    if (div.classList.contains('extra-image-wrapper') && !div.classList.contains('multi-img')) {
-                        div.style.maxWidth = '40%';
-                    }
-                });
+                }
 
                 console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' imgH=' + imgHeightPx + ' padding=' + conf.padding);
                 return imgHeightPx;
@@ -391,7 +490,10 @@ class RenderService:
                 let chosenConf = configs[0];
                 let chosenImgH = 0;
                 const TARGET_MAX_HEIGHT = 1500;
+                let fits = false;
 
+                // Step 1: Try stacked mode first (Layout B for 3 images)
+                layoutMode = 'stacked';
                 for (let i = 0; i < configs.length; i++) {
                     const imgH = applyConfig(configs[i]);
                     chosenConf = configs[i];
@@ -401,10 +503,32 @@ class RenderService:
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                     // Check if the container fits within target page height
-                    if (container.scrollHeight <= TARGET_MAX_HEIGHT || i === configs.length - 1) {
+                    if (container.scrollHeight <= TARGET_MAX_HEIGHT) {
+                        fits = true;
                         break;
                     }
                 }
+
+                // Step 2: If stacked didn't fit and we have 3 images, fallback to side-by-side mode (Layout A)
+                if (!fits && imgCount === 3) {
+                    layoutMode = 'row';
+                    for (let i = 0; i < configs.length; i++) {
+                        const imgH = applyConfig(configs[i]);
+                        chosenConf = configs[i];
+                        chosenImgH = imgH;
+
+                        // Wait two animation frames for layout to settle
+                        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                        // Check if the container fits within target page height
+                        if (container.scrollHeight <= TARGET_MAX_HEIGHT || i === configs.length - 1) {
+                            break;
+                        }
+                    }
+                }
+
+                // Wait final render cycle
+                await waitReady();
 
                 const finalW   = container.offsetWidth;
                 const finalH   = container.scrollHeight;
@@ -432,6 +556,33 @@ class RenderService:
                     }
                     .article-content p, .article-body p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }
                 `;
+
+                // Log image dimensions and layout selection
+                const dimsBefore = urls.map(url => {
+                    const img = Array.from(document.querySelectorAll('img')).find(i => i.src === url);
+                    return img ? `${img.naturalWidth}x${img.naturalHeight}` : 'unknown';
+                }).join(', ');
+
+                const dimsAfter = urls.map(url => {
+                    const img = Array.from(document.querySelectorAll('img')).find(i => 
+                        i.src === url && !i.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+                    );
+                    return img ? `${img.offsetWidth}x${img.offsetHeight}` : 'unknown';
+                }).join(', ');
+
+                let selectedLayoutName = 'Single Image Layout';
+                if (imgCount === 2) {
+                    selectedLayoutName = 'Side-by-Side Layout';
+                } else if (imgCount === 3) {
+                    selectedLayoutName = layoutMode === 'stacked' ? 'Stacked Layout' : 'Side-by-Side Layout';
+                }
+
+                window.__IMAGE_LAYOUT_LOGS__ = {
+                    images_uploaded: imgCount,
+                    layout_selected: selectedLayoutName,
+                    dims_before: dimsBefore,
+                    dims_after: dimsAfter
+                };
 
                 // Signal Playwright that layout is complete
                 window.__LAYOUT_DONE__ = true;
@@ -534,6 +685,15 @@ class RenderService:
                     print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
                     print(f"[PLAYWRIGHT] Container dimensions: {layout_info}")
                     sys.stdout.flush()
+
+                    # Image layout logging
+                    image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
+                    if image_logs:
+                        print(f"Images Uploaded: {image_logs.get('images_uploaded')}")
+                        print(f"Image Layout Selected: {image_logs.get('layout_selected')}")
+                        print(f"Image Dimensions Before: {image_logs.get('dims_before')}")
+                        print(f"Image Dimensions After: {image_logs.get('dims_after')}")
+                        sys.stdout.flush()
 
                     # Set viewport to exact layout dimensions (width 1200 is perfect for margins,
                     # height is container height + 60px for padding/margins)
@@ -661,6 +821,15 @@ class RenderService:
                     print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
                     print(f"[PLAYWRIGHT] Container dimensions for PDF: {layout_info}")
                     sys.stdout.flush()
+
+                    # Image layout logging
+                    image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
+                    if image_logs:
+                        print(f"Images Uploaded: {image_logs.get('images_uploaded')}")
+                        print(f"Image Layout Selected: {image_logs.get('layout_selected')}")
+                        print(f"Image Dimensions Before: {image_logs.get('dims_before')}")
+                        print(f"Image Dimensions After: {image_logs.get('dims_after')}")
+                        sys.stdout.flush()
 
                     # Convert px to inches (96 px = 1 inch) for standard PDF printing
                     width_in = layout_info.get("width", 1060) / 96.0
