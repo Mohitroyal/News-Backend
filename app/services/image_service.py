@@ -18,11 +18,11 @@ class ImageService:
         logger.info(f"[MEMORY] {stage}: {mem_mb:.2f} MB")
 
     @staticmethod
-    def process_and_resize(image_url: str, max_width: int = 800, max_height: int = 800) -> str:
+    def process_and_resize(image_url: str, max_width: int = 1200, max_height: int = 1200) -> str:
         """Download, resize, possibly convert, and upload an image.
 
-        - Max dimensions 800x800, preserving aspect ratio.
-        - JPEG quality 80.
+        - Max dimensions 1200x1200, preserving aspect ratio.
+        - JPEG quality 90.
         - Convert large PNGs to JPEG to save space.
         - Dispose image objects promptly and trigger GC.
         """
@@ -80,7 +80,7 @@ class ImageService:
             if ext == "jpeg":
                 ext = "jpg"
             temp_filename = f"temp_resized_{uuid.uuid4().hex}.{ext}"
-            img.save(temp_filename, format=final_format, quality=80)
+            img.save(temp_filename, format=final_format, quality=90)
             img.close()
             gc.collect()
             logger.info(f"[ImageService] Saved temporary file: {temp_filename}")

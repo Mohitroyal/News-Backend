@@ -186,8 +186,8 @@ class RenderService:
                 html = html.replace("</body>", f"{watermark_html}</body>")
             else:
                 html += watermark_html
-
-        # Smart Layout & Pagination Engine Injection
+        
+        # Single-Page Dynamic Compression Engine Injection
         import json
         serializable_data = {
             "headline": data.get("headline", ""),
@@ -212,372 +212,241 @@ class RenderService:
         }
         json_str = json.dumps(serializable_data)
 
+        # Log original article stats
+        sections = data.get("sections", [])
+        original_char_count = sum(len(s) for s in sections)
+        print(f"[LAYOUT] Original article length: {original_char_count} chars across {len(sections)} sections")
+        sys.stdout.flush()
+
         script_block = """
         <script>
         window.NEWSPAPER_DATA = {json_data};
         document.addEventListener("DOMContentLoaded", () => {
             const data = window.NEWSPAPER_DATA;
             if (!data) return;
-            
-            const firstPageContainer = document.querySelector('.newspaper-container');
-            if (!firstPageContainer) return;
-            
-            const getArticleBody = (container) => {
-                return container.querySelector('.article-content') || 
-                       container.querySelector('.article-body') || 
-                       container.querySelector('.extra-news-layout') ||
-                       container.querySelector('.columns .col-1') ||
-                       container.querySelector('.columns');
-            };
-            
-            const articleBody = getArticleBody(firstPageContainer);
-            if (!articleBody) return;
-            
-            let printWrapper = document.getElementById('print-wrapper');
-            if (!printWrapper) {
-                printWrapper = document.createElement('div');
-                printWrapper.id = 'print-wrapper';
-                document.body.appendChild(printWrapper);
-                printWrapper.appendChild(firstPageContainer);
-            }
-            
-            async function waitForImagesAndFonts() {
-                await document.fonts.ready;
-                const imgs = Array.from(document.images);
-                await Promise.all(imgs.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise(resolve => {
-                        img.onload = resolve;
-                        img.onerror = resolve;
-                    });
-                }));
-            }
-            
-            const pageTemplate = firstPageContainer.cloneNode(true);
-            const templateBody = getArticleBody(pageTemplate);
-            if (templateBody) {
-                templateBody.innerHTML = '';
-            }
-            
-            const originalParagraphs = data.sections || [];
-            const isMultiColumn = (data.template_id !== 'extra_news' && data.template_id !== 'custom');
-            const bodyBg = window.getComputedStyle(document.body).backgroundColor || '#fdfbf7';
-            
-            function applyStyles(page, fontSize, lineHeight, paraMargin, cols, imgHeight) {
-                const paragraphs = page.querySelectorAll('.paragraph, .extra-paragraph, .article-content p, .article-body p');
-                paragraphs.forEach(p => {
-                    p.style.fontSize = fontSize + 'pt';
-                    p.style.lineHeight = lineHeight;
-                    p.style.marginBottom = paraMargin + 'px';
-                });
-                
-                const textCol = page.querySelector('.article-content') || page.querySelector('.article-body');
-                if (textCol) {
-                    textCol.style.columnCount = cols;
-                    textCol.style.columns = cols;
-                }
-                
-                const images = page.querySelectorAll('.image-grid img, .featured-image-container img, .extra-image-wrapper img, .col-2 img');
-                images.forEach(img => {
-                    img.style.maxHeight = imgHeight + 'px';
-                });
-            }
-            
-            function runPagination(fontSize, cols, lineHeight, paraMargin, imgHeight) {
-                printWrapper.innerHTML = '';
-                
-                let pageNum = 1;
-                let currentPage = pageTemplate.cloneNode(true);
-                currentPage.className = `${firstPageContainer.className} page-${pageNum}`;
-                currentPage.style.pageBreakAfter = 'always';
-                currentPage.style.breakAfter = 'page';
-                currentPage.style.height = '1584px'; // Locked A4 landscape ratio equivalent (1120x1584)
-                currentPage.style.boxSizing = 'border-box';
-                currentPage.style.overflow = 'hidden';
-                
-                printWrapper.appendChild(currentPage);
-                
-                let currentBody = getArticleBody(currentPage);
-                if (currentBody) currentBody.innerHTML = '';
-                
-                applyStyles(currentPage, fontSize, lineHeight, paraMargin, cols, imgHeight);
-                
-                const headline = currentPage.querySelector('.headline');
-                if (headline) {
-                    let hlFontSize = 54;
-                    headline.style.fontSize = hlFontSize + 'px';
-                    headline.style.lineHeight = '1.1';
-                    while (headline.offsetHeight > 130 && hlFontSize > 24) {
-                        hlFontSize -= 2;
-                        headline.style.fontSize = hlFontSize + 'px';
-                    }
-                }
-                
-                for (let i = 0; i < originalParagraphs.length; i++) {
-                    const pNode = document.createElement('p');
-                    if (data.template_id === 'extra_news') {
-                        pNode.className = 'extra-paragraph';
-                    } else {
-                        pNode.className = 'paragraph';
-                    }
-                    
-                    if (i === 0) {
-                        pNode.className += ' has-dropcap';
-                        pNode.innerHTML = `<span class="dateline">${data.dateline ? data.dateline + ' — ' : ''}</span>${originalParagraphs[i]}`;
-                    } else {
-                        pNode.innerHTML = originalParagraphs[i];
-                    }
-                    
-                    pNode.style.fontSize = fontSize + 'pt';
-                    pNode.style.lineHeight = lineHeight;
-                    pNode.style.marginBottom = paraMargin + 'px';
-                    
-                    currentBody.appendChild(pNode);
-                    
-                    // Overflow threshold check at 1570px to preserve margins
-                    if (currentPage.scrollHeight > 1570) {
-                        currentBody.removeChild(pNode);
-                        
-                        pageNum++;
-                        if (pageNum > 3) {
-                            // Prevent oversized rendering jobs - limit to 3 pages
-                            const ellipsisNode = document.createElement('p');
-                            ellipsisNode.style.textAlign = 'center';
-                            ellipsisNode.style.fontWeight = 'bold';
-                            ellipsisNode.style.color = '#777';
-                            ellipsisNode.style.marginTop = '20px';
-                            ellipsisNode.innerHTML = '... [Content truncated due to length limits]';
-                            currentBody.appendChild(ellipsisNode);
-                            break;
-                        }
-                        currentPage = pageTemplate.cloneNode(true);
-                        currentPage.className = `${firstPageContainer.className} page-${pageNum}`;
-                        currentPage.style.pageBreakAfter = 'always';
-                        currentPage.style.breakAfter = 'page';
-                        currentPage.style.height = '1584px';
-                        currentPage.style.boxSizing = 'border-box';
-                        currentPage.style.overflow = 'hidden';
-                        
-                        const headlineSec = currentPage.querySelector('.headline-section') || currentPage.querySelector('.headline');
-                        if (headlineSec) headlineSec.remove();
-                        const subheadlineSec = currentPage.querySelector('.subheadline-section') || currentPage.querySelector('.subheadline') || currentPage.querySelector('.subtitle');
-                        if (subheadlineSec) subheadlineSec.remove();
-                        const bylineSec = currentPage.querySelector('.byline-section') || currentPage.querySelector('.byline') || currentPage.querySelector('.article-meta');
-                        if (bylineSec) bylineSec.remove();
-                        
-                        // Strip images and image containers on continuation pages
-                        const imgSec = currentPage.querySelector('.image-grid') || currentPage.querySelector('.featured-image-container') || currentPage.querySelector('.extra-image-wrapper') || currentPage.querySelector('.image-section');
-                        if (imgSec) imgSec.remove();
-                        
-                        // Strip any residual images using general fallback
-                        const continuationImgs = currentPage.querySelectorAll('img');
-                        continuationImgs.forEach(img => {
-                            const isLogo = img.closest('.logo-container') || img.closest('.masthead') || img.classList.contains('logo-img');
-                            if (!isLogo) {
-                                const wrapper = img.parentElement;
-                                if (wrapper && wrapper !== currentPage) {
-                                    wrapper.remove();
-                                } else {
-                                    img.remove();
-                                }
-                            }
-                        });
-                        
-                        const header = currentPage.querySelector('.header-section') || currentPage.querySelector('.masthead') || currentPage.querySelector('header');
-                        if (header) {
-                            header.innerHTML = `
-                                <div style="font-family: 'Playfair Display', serif; font-size: 20px; font-weight: bold; text-transform: uppercase; color: ${data.primary_color}; letter-spacing: 1px; padding: 10px 0; border-bottom: 2px solid ${data.border_color || '#000'}; text-align: center;">
-                                    ${data.publication_name} — CONTINUED ON PAGE ${pageNum}
-                                </div>
-                            `;
-                        }
-                        
-                        const metaBar = currentPage.querySelector('.meta-section') || currentPage.querySelector('.metadata-bar') || currentPage.querySelector('.meta-info');
-                        if (metaBar) {
-                            metaBar.style.marginBottom = "15px";
-                            metaBar.innerHTML = `
-                                <div style="display:flex; justify-content:space-between; width:100%; text-transform:uppercase; font-size:12px; font-weight:bold;">
-                                    <div>Page ${pageNum}</div>
-                                    <div>${data.publication_date}</div>
-                                    <div>Continued</div>
-                                </div>
-                            `;
-                        }
-                        
-                        const footer = currentPage.querySelector('.footer-section') || currentPage.querySelector('.footer');
-                        if (footer) {
-                            footer.innerHTML = `
-                                <div style="display:flex; justify-content:space-between; width:100%; font-size:11px; text-transform:uppercase; border-top: 1px solid ${data.border_color || '#000'}; padding-top: 10px;">
-                                    <div>PAGE ${pageNum}</div>
-                                    <div>${data.publication_name}</div>
-                                </div>
-                            `;
-                        }
-                        
-                        const columnsGrid = currentPage.querySelector('.columns');
-                        if (columnsGrid) {
-                            columnsGrid.style.gridTemplateColumns = "1fr";
-                            const col2 = columnsGrid.querySelector('.col-2');
-                            if (col2) { col2.remove(); }
-                        }
-                        
-                        currentBody = getArticleBody(currentPage);
-                        if (currentBody) currentBody.innerHTML = '';
-                        
-                        applyStyles(currentPage, fontSize, lineHeight, paraMargin, isMultiColumn ? 3 : 1, imgHeight);
-                        
-                        currentBody.appendChild(pNode);
-                        printWrapper.appendChild(currentPage);
-                    }
-                }
-                
-                return {
-                    pages: pageNum,
-                    lastPage: currentPage,
-                    lastPageBody: currentBody
-                };
-            }
-            
+
+            const container = document.querySelector('.newspaper-container');
+            if (!container) return;
+
+            // ── SINGLE-PAGE COMPRESSION ENGINE ──────────────────────────────
+            // NEVER creates Page 2 or Page 3.
+            // Compresses font, image height, and spacing until everything fits.
+            // ALL article content is always preserved.
+
+            const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
+            console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
+
+            // Compression ladder: spacious -> compact. Content NEVER removed.
             const configs = [
-                // Spacious configurations for short content
-                { fontSize: 14.0, cols: 2, lineHeight: 1.7, paraMargin: 20, imgHeight: 520 },
-                { fontSize: 13.5, cols: 2, lineHeight: 1.65, paraMargin: 18, imgHeight: 500 },
-                { fontSize: 13.0, cols: 2, lineHeight: 1.65, paraMargin: 16, imgHeight: 480 },
-                { fontSize: 12.5, cols: 2, lineHeight: 1.6, paraMargin: 15, imgHeight: 460 },
-                
-                // Medium configurations
-                { fontSize: 12.0, cols: 3, lineHeight: 1.6, paraMargin: 15, imgHeight: 440 },
-                { fontSize: 11.5, cols: 3, lineHeight: 1.6, paraMargin: 14, imgHeight: 420 },
-                { fontSize: 11.0, cols: 3, lineHeight: 1.55, paraMargin: 12, imgHeight: 400 },
-                { fontSize: 10.5, cols: 3, lineHeight: 1.5, paraMargin: 10, imgHeight: 360 },
-                { fontSize: 10.0, cols: 3, lineHeight: 1.5, paraMargin: 10, imgHeight: 320 }
+                // fontSize, cols, lineHeight, paraMargin, imgMaxPct, containerPadding
+                { fontSize: 17.0, cols: 2, lineHeight: 1.65, paraMargin: 18, imgMaxPct: 0.40, padding: 35 },
+                { fontSize: 16.0, cols: 2, lineHeight: 1.62, paraMargin: 16, imgMaxPct: 0.38, padding: 32 },
+                { fontSize: 15.0, cols: 2, lineHeight: 1.58, paraMargin: 14, imgMaxPct: 0.36, padding: 30 },
+                { fontSize: 14.0, cols: 2, lineHeight: 1.54, paraMargin: 12, imgMaxPct: 0.34, padding: 28 },
+                { fontSize: 13.5, cols: 3, lineHeight: 1.50, paraMargin: 10, imgMaxPct: 0.32, padding: 25 },
+                { fontSize: 13.0, cols: 3, lineHeight: 1.46, paraMargin:  9, imgMaxPct: 0.30, padding: 22 },
+                { fontSize: 12.5, cols: 3, lineHeight: 1.42, paraMargin:  8, imgMaxPct: 0.28, padding: 20 },
+                { fontSize: 12.0, cols: 3, lineHeight: 1.38, paraMargin:  7, imgMaxPct: 0.26, padding: 18 },
+                { fontSize: 11.5, cols: 3, lineHeight: 1.35, paraMargin:  6, imgMaxPct: 0.24, padding: 16 },
+                { fontSize: 11.0, cols: 4, lineHeight: 1.32, paraMargin:  5, imgMaxPct: 0.22, padding: 15 },
+                { fontSize: 10.0, cols: 4, lineHeight: 1.28, paraMargin:  4, imgMaxPct: 0.20, padding: 12 },
+                { fontSize:  9.0, cols: 4, lineHeight: 1.25, paraMargin:  3, imgMaxPct: 0.16, padding: 10 }
             ];
-            
-            async function executeLayout() {
-                await waitForImagesAndFonts();
+
+            async function waitReady() {
+                await document.fonts.ready;
+                await Promise.all(Array.from(document.images).map(img =>
+                    img.complete ? Promise.resolve() :
+                    new Promise(r => { img.onload = r; img.onerror = r; })
+                ));
+            }
+
+            function applyConfig(conf) {
+                const containerW = container.offsetWidth || 1060;
+                const imgHeightPx = Math.round(conf.imgMaxPct * containerW);
+
+                // Container padding
+                container.style.padding = conf.padding + 'px';
                 
-                let bestConfig = configs[configs.length - 1];
-                let bestPages = 999;
-                
-                for (let i = 0; i < configs.length; i++) {
-                    const conf = configs[i];
-                    const cols = isMultiColumn ? conf.cols : 1;
-                    
-                    const res = runPagination(conf.fontSize, cols, conf.lineHeight, conf.paraMargin, conf.imgHeight);
-                    const pageNode = printWrapper.querySelector('.newspaper-container');
-                    const inner = pageNode.querySelector('.inner-border') || pageNode;
-                    const contentHeight = inner.scrollHeight;
-                    
-                    if (res.pages === 1) {
-                        bestConfig = conf;
-                        bestPages = 1;
-                        // Utilization threshold: 85% of 1584px is 1346px
-                        if (contentHeight >= 1346) {
-                            break;
-                        }
-                    } else {
-                        if (bestPages > res.pages) {
-                            bestPages = res.pages;
-                            bestConfig = conf;
-                        }
-                    }
+                // Adjust inner-border padding if it exists
+                const innerBorder = container.querySelector('.inner-border');
+                if (innerBorder) {
+                    innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
+                }
+
+                // Article text
+                const articleEl = container.querySelector('.article-content, .article-body');
+                if (articleEl) {
+                    articleEl.style.fontSize      = conf.fontSize + 'px';
+                    articleEl.style.lineHeight    = conf.lineHeight;
+                    articleEl.style.columnCount   = conf.cols;
+                    articleEl.style.columns       = conf.cols;
+                    articleEl.style.webkitColumns = conf.cols;
                 }
                 
-                if (bestPages > 1) {
-                    const cols = isMultiColumn ? 3 : 1;
-                    let finalRes = runPagination(11.5, cols, 1.6, 14, 420);
-                    if (finalRes.pages > bestPages) {
-                        finalRes = runPagination(11.0, cols, 1.55, 12, 380);
-                    }
-                } else {
-                    const cols = isMultiColumn ? bestConfig.cols : 1;
-                    runPagination(bestConfig.fontSize, cols, bestConfig.lineHeight, bestConfig.paraMargin, bestConfig.imgHeight);
+                container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph').forEach(p => {
+                    p.style.fontSize     = conf.fontSize + 'px';
+                    p.style.lineHeight   = conf.lineHeight;
+                    p.style.marginBottom = conf.paraMargin + 'px';
+                    p.style.marginTop    = '0';
+                });
+
+                // Dropcap scaling: should scale proportionally with font size
+                let dcStyle = document.getElementById('nc-dropcap-style');
+                if (!dcStyle) {
+                    dcStyle = document.createElement('style');
+                    dcStyle.id = 'nc-dropcap-style';
+                    document.head.appendChild(dcStyle);
                 }
-                
-                // Inject final global styles to ensure print layout stability and sharp typography
-                let styleTag = document.getElementById('dynamic-font-style');
-                if (!styleTag) {
-                    styleTag = document.createElement('style');
-                    styleTag.id = 'dynamic-font-style';
-                    document.head.appendChild(styleTag);
-                }
-                
-                const finalFontSize = printWrapper.querySelector('.paragraph, .extra-paragraph, .article-content p, .article-body p')?.style.fontSize || '12pt';
-                const finalParaMargin = printWrapper.querySelector('.paragraph, .extra-paragraph, .article-content p, .article-body p')?.style.marginBottom || '15px';
-                
-                styleTag.innerHTML = `
-                    * {
-                        -webkit-font-smoothing: antialiased !important;
-                        -moz-osx-font-smoothing: grayscale !important;
-                        text-rendering: optimizeLegibility !important;
-                    }
-                    body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: ${bodyBg} !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        align-items: center !important;
-                    }
-                    #print-wrapper {
-                        display: flex !important;
-                        flex-direction: column !important;
-                        align-items: center !important;
-                        width: 100% !important;
-                        background: ${bodyBg} !important;
-                        gap: 20px !important;
-                        padding: 20px 0 !important;
-                    }
-                    .newspaper-container {
-                        width: 1120px !important;
-                        height: 1584px !important;
-                        box-sizing: border-box !important;
-                        background: #ffffff !important;
-                        border: 2px solid ${data.border_color || '#000'} !important;
-                        box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
-                        overflow: hidden !important;
-                        page-break-after: always !important;
-                        break-after: page !important;
-                        position: relative !important;
-                        margin: 0 auto !important;
-                    }
-                    
-                    /* Custom print styles to remove gaps, borders, and shadows in A4 PDF */
-                    @media print {
-                        @page {
-                            size: A4 portrait !important;
-                            margin: 0 !important;
-                        }
-                        body {
-                            background: #ffffff !important;
-                        }
-                        #print-wrapper {
-                            gap: 0 !important;
-                            padding: 0 !important;
-                            background: #ffffff !important;
-                        }
-                        .newspaper-container {
-                            border: none !important;
-                            box-shadow: none !important;
-                            page-break-after: always !important;
-                            break-after: page !important;
-                            margin: 0 !important;
-                            width: 100% !important;
-                            height: 100% !important;
-                        }
-                    }
-                    
-                    .article-content p, .article-body p, .paragraph, .extra-paragraph {
-                        font-size: ${finalFontSize} !important;
-                        margin-top: 0 !important;
-                        margin-bottom: ${finalParaMargin} !important;
-                        text-align: justify !important;
-                        text-rendering: optimizeLegibility !important;
-                        -webkit-font-smoothing: antialiased !important;
+                const dropcapFS = Math.round(conf.fontSize * 3.6);
+                const dropcapLH = Math.round(conf.fontSize * 2.8);
+                dcStyle.innerHTML = `
+                    .paragraph.has-dropcap::first-letter,
+                    .article-body p:first-of-type::first-letter {
+                        font-size: ${dropcapFS}px !important;
+                        line-height: ${dropcapLH}px !important;
                     }
                 `;
+
+                // Headline auto-shrink
+                const headline = container.querySelector('.headline');
+                if (headline) {
+                    let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
+                    headline.style.fontSize = hlSize + 'px';
+                    headline.style.lineHeight = '1.1';
+                    let count = 0;
+                    while (hlSize > 20 && count < 20) {
+                        const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
+                        const lines = Math.round(headline.offsetHeight / lh);
+                        if (lines <= 2) {
+                            break;
+                        }
+                        hlSize -= 2;
+                        headline.style.fontSize = hlSize + 'px';
+                        count++;
+                    }
+                }
+
+                // Subheadline auto-shrink
+                const subheadline = container.querySelector('.subheadline, .subtitle');
+                if (subheadline) {
+                    let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
+                    subheadline.style.fontSize = subSize + 'px';
+                    subheadline.style.lineHeight = '1.3';
+                    let count = 0;
+                    while (subSize > 12 && count < 10) {
+                        const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
+                        const lines = Math.round(subheadline.offsetHeight / lh);
+                        if (lines <= 2) {
+                            break;
+                        }
+                        subSize -= 1.5;
+                        subheadline.style.fontSize = subSize + 'px';
+                        count++;
+                    }
+                }
+
+                // Spacing adjustments
+                const header = container.querySelector('header, .header-section');
+                if (header) {
+                    header.style.marginBottom = Math.round(conf.paraMargin * 1.2) + 'px';
+                }
+                const meta = container.querySelector('.metadata-bar, .meta-section');
+                if (meta) {
+                    meta.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+                    meta.style.marginTop = Math.round(conf.paraMargin * 0.8) + 'px';
+                }
+                const headlineSec = container.querySelector('.headline-section');
+                if (headlineSec) {
+                    headlineSec.style.margin = Math.round(conf.paraMargin * 1.2) + 'px 0 ' + Math.round(conf.paraMargin * 0.8) + 'px 0';
+                }
+                const subheadlineSec = container.querySelector('.subheadline-section');
+                if (subheadlineSec) {
+                    subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+                }
+
+                // Images: scale proportionally, never crop, maintain aspect ratio
+                container.querySelectorAll('img').forEach(img => {
+                    const isLogo = img.closest('.logo-container, .masthead, header');
+                    if (!isLogo) {
+                        img.style.maxHeight = imgHeightPx + 'px';
+                        img.style.width     = 'auto';
+                        img.style.maxWidth  = '100%';
+                        img.style.objectFit = 'contain';
+                        img.style.display   = 'block';
+                        img.style.margin    = '0 auto';
+                    }
+                });
+                
+                // For layout containers holding images
+                container.querySelectorAll('.image-grid > div, .featured-image-container > div, .extra-image-wrapper').forEach(div => {
+                    div.style.maxHeight = imgHeightPx + 'px';
+                    if (div.classList.contains('extra-image-wrapper') && !div.classList.contains('multi-img')) {
+                        div.style.maxWidth = '40%';
+                    }
+                });
+
+                console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + conf.cols + ' imgH=' + imgHeightPx + ' padding=' + conf.padding);
+                return imgHeightPx;
             }
-            
+
+            async function executeLayout() {
+                await waitReady();
+
+                // Unlock container — must be auto-height (single page = natural height)
+                container.style.height    = 'auto';
+                container.style.minHeight = 'unset';
+                container.style.overflow  = 'visible';
+
+                let chosenConf = configs[0];
+                let chosenImgH = 0;
+                const TARGET_MAX_HEIGHT = 1500;
+
+                for (let i = 0; i < configs.length; i++) {
+                    const imgH = applyConfig(configs[i]);
+                    chosenConf = configs[i];
+                    chosenImgH = imgH;
+
+                    // Wait two animation frames for layout to settle
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                    // Check if the container fits within target page height
+                    if (container.scrollHeight <= TARGET_MAX_HEIGHT || i === configs.length - 1) {
+                        break;
+                    }
+                }
+
+                const finalW   = container.offsetWidth;
+                const finalH   = container.scrollHeight;
+                const finalFS  = chosenConf.fontSize;
+                const finalSec = (data.sections || []).length;
+                const finalCh  = (data.sections || []).reduce((s,p) => s + p.length, 0);
+
+                console.log('[LAYOUT] DONE — chars:', finalCh, 'sections:', finalSec, '(ALL PRESERVED)');
+                console.log('[LAYOUT] Font size used:', finalFS + 'px');
+                console.log('[LAYOUT] Image height used:', chosenImgH + 'px');
+                console.log('[LAYOUT] Final clipping dimensions:', finalW + 'x' + finalH + 'px');
+
+                // Print-ready global styles
+                let st = document.getElementById('nc-layout-style');
+                if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
+                st.innerHTML = `
+                    * { -webkit-font-smoothing: antialiased !important; text-rendering: optimizeLegibility !important; }
+                    body { margin: 0 !important; padding: 20px !important; display: flex !important; justify-content: center !important; align-items: flex-start !important; }
+                    .newspaper-container { height: auto !important; min-height: unset !important; overflow: visible !important; }
+                    @media print {
+                        @page { size: auto; margin: 0; }
+                        body { padding: 0 !important; background: #fff !important; }
+                        .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
+                        * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
+                    }
+                    .article-content p, .article-body p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }
+                `;
+
+                // Signal Playwright that layout is complete
+                window.__LAYOUT_DONE__ = true;
+            }
+
             executeLayout();
         });
         </script>
@@ -626,7 +495,7 @@ class RenderService:
                     sys.stdout.flush()
                     page = await browser.new_page(
                         viewport={"width": 1200, "height": 1600},
-                        device_scale_factor=1,
+                        device_scale_factor=3,
                     )
                     print(f"PAGE CREATED (PNG)"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] New Page Success")
@@ -642,35 +511,38 @@ class RenderService:
                     print(f"[PLAYWRIGHT] HTML Loaded")
                     sys.stdout.flush()
 
-                    print(f"[PLAYWRIGHT] Font Loading: Started")
+                    print("[PLAYWRIGHT] Waiting for layout to complete...")
                     sys.stdout.flush()
-                    # Wait for all fonts and images to load completely (110s timeout internally)
-                    await page.evaluate("""
-                        async () => {
-                            const timeout = new Promise(resolve => setTimeout(resolve, 110000));
-                            const loadPromise = (async () => {
-                                await document.fonts.ready;
-                                await Promise.all(
-                                    Array.from(document.images)
-                                    .filter(img => !img.complete)
-                                    .map(img => new Promise(resolve => {
-                                        img.onload = resolve;
-                                        img.onerror = resolve;
-                                    }))
-                                );
-                            })();
-                            await Promise.race([loadPromise, timeout]);
-                        }
-                    """)
-                    print(f"[PLAYWRIGHT] Font Loading: SUCCESS")
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=120000)
+                    print("[PLAYWRIGHT] Layout complete!")
                     sys.stdout.flush()
 
-                    await asyncio.sleep(0.5)
+                    # Get container dimensions
+                    dimensions = await page.evaluate("""
+                        () => {
+                            const container = document.querySelector('.newspaper-container');
+                            if (container) {
+                                return {
+                                    width: container.offsetWidth,
+                                    height: container.scrollHeight
+                                };
+                            }
+                            return { width: 1200, height: 1600 };
+                        }
+                    """)
+                    print(f"[PLAYWRIGHT] Container dimensions: {dimensions}")
+                    sys.stdout.flush()
+
+                    # Set viewport to exact layout dimensions (width 1200 is perfect for margins,
+                    # height is container height + 60px for padding/margins)
+                    viewport_width = 1200
+                    viewport_height = dimensions.get("height", 1600) + 60
+                    await page.set_viewport_size({"width": viewport_width, "height": viewport_height})
 
                     _log_memory("generate_png: Before Screenshot")
                     print(f"[PLAYWRIGHT] Screenshot Started")
                     sys.stdout.flush()
-                    await page.screenshot(path=output_path, full_page=True, type="png", timeout=300000)
+                    await page.screenshot(path=output_path, full_page=False, type="png", timeout=300000)
                     print(f"[PLAYWRIGHT] Screenshot Completed")
                     sys.stdout.flush()
                     print(f"[PLAYWRIGHT] PNG Saved")
@@ -736,7 +608,10 @@ class RenderService:
 
                     print(f"[PLAYWRIGHT] New Page Started (PDF)")
                     sys.stdout.flush()
-                    page = await browser.new_page()
+                    page = await browser.new_page(
+                        viewport={"width": 1200, "height": 1600},
+                        device_scale_factor=3,
+                    )
                     print(f"PAGE CREATED (PDF)"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] New Page Success (PDF)")
                     sys.stdout.flush()
@@ -751,39 +626,40 @@ class RenderService:
                     print(f"[PLAYWRIGHT] HTML Loaded (PDF)")
                     sys.stdout.flush()
 
-                    print(f"[PLAYWRIGHT] Font Loading (PDF): Started")
+                    print("[PLAYWRIGHT] Waiting for layout to complete (PDF)...")
                     sys.stdout.flush()
-                    # Wait for all fonts and images to load completely (110s timeout internally)
-                    await page.evaluate("""
-                        async () => {
-                            const timeout = new Promise(resolve => setTimeout(resolve, 110000));
-                            const loadPromise = (async () => {
-                                await document.fonts.ready;
-                                await Promise.all(
-                                    Array.from(document.images)
-                                    .filter(img => !img.complete)
-                                    .map(img => new Promise(resolve => {
-                                        img.onload = resolve;
-                                        img.onerror = resolve;
-                                    }))
-                                );
-                            })();
-                            await Promise.race([loadPromise, timeout]);
-                        }
-                    """)
-                    print(f"[PLAYWRIGHT] Font Loading (PDF): SUCCESS")
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=120000)
+                    print("[PLAYWRIGHT] Layout complete (PDF)!")
                     sys.stdout.flush()
 
-                    await asyncio.sleep(0.5)
+                    # Get container dimensions
+                    dimensions = await page.evaluate("""
+                        () => {
+                            const container = document.querySelector('.newspaper-container');
+                            if (container) {
+                                return {
+                                    width: container.offsetWidth,
+                                    height: container.scrollHeight
+                                };
+                            }
+                            return { width: 1060, height: 1600 };
+                        }
+                    """)
+                    print(f"[PLAYWRIGHT] Container dimensions for PDF: {dimensions}")
+                    sys.stdout.flush()
+
+                    # Convert px to inches (96 px = 1 inch) for standard PDF printing
+                    width_in = dimensions.get("width", 1060) / 96.0
+                    height_in = (dimensions.get("height", 1600) + 15) / 96.0
 
                     _log_memory("generate_pdf: Before PDF Creation")
                     print(f"[PLAYWRIGHT] PDF Creation Started")
                     sys.stdout.flush()
                     await page.pdf(
                         path=output_path,
-                        format="A4",
+                        width=f"{width_in}in",
+                        height=f"{height_in}in",
                         print_background=True,
-                        prefer_css_page_size=True,
                         margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"}
                     )
                     print(f"[PLAYWRIGHT] PDF Creation Completed")
@@ -819,3 +695,4 @@ class RenderService:
 
 
 render_service = RenderService()
+
