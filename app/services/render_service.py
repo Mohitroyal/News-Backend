@@ -1,6 +1,9 @@
 import os
 import glob
 import logging
+import sys
+import gc
+import psutil
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
@@ -8,6 +11,36 @@ from typing import Dict, Any
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _get_peak_memory() -> float:
+    """Return peak memory usage (max RSS) in MB."""
+    if sys.platform != 'win32':
+        import resource
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    else:
+        try:
+            process = psutil.Process(os.getpid())
+            return getattr(process.memory_info(), 'peak_wset', 0) / (1024 * 1024)
+        except Exception:
+            return 0.0
+
+
+def _log_memory(stage: str):
+    """Log current and peak memory usage in MB."""
+    try:
+        process = psutil.Process(os.getpid())
+        current_mem = process.memory_info().rss / (1024 * 1024)
+        peak_mem = _get_peak_memory()
+        print(f"[MEMORY] {stage} - Current RSS: {current_mem:.2f} MB | Peak RSS: {peak_mem:.2f} MB")
+        sys.stdout.flush()
+        if current_mem > 450:
+            print("[MEMORY WARNING] Memory usage is critically high! Approaching Render Free limit.")
+            sys.stdout.flush()
+            gc.collect()
+    except Exception as e:
+        print(f"[MEMORY LOG ERROR] Failed to log memory: {e}")
+        sys.stdout.flush()
 
 
 def _get_chromium_executable() -> str | None:
@@ -306,6 +339,17 @@ class RenderService:
                         currentBody.removeChild(pNode);
                         
                         pageNum++;
+                        if (pageNum > 3) {
+                            // Prevent oversized rendering jobs - limit to 3 pages
+                            const ellipsisNode = document.createElement('p');
+                            ellipsisNode.style.textAlign = 'center';
+                            ellipsisNode.style.fontWeight = 'bold';
+                            ellipsisNode.style.color = '#777';
+                            ellipsisNode.style.marginTop = '20px';
+                            ellipsisNode.innerHTML = '... [Content truncated due to length limits]';
+                            currentBody.appendChild(ellipsisNode);
+                            break;
+                        }
                         currentPage = pageTemplate.cloneNode(true);
                         currentPage.className = `${firstPageContainer.className} page-${pageNum}`;
                         currentPage.style.pageBreakAfter = 'always';
@@ -548,6 +592,7 @@ class RenderService:
 
     async def generate_png(self, html_content: str, output_path: str):
         """Uses Playwright to take a high-quality screenshot of the rendered HTML."""
+        _log_memory("generate_png: Enter")
         chrome_path = _get_chromium_executable()
 
         launch_kwargs = {
@@ -556,6 +601,8 @@ class RenderService:
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--js-flags=--max-old-space-size=256",
             ],
         }
         if chrome_path:
@@ -563,26 +610,38 @@ class RenderService:
 
         max_attempts = 2
         for attempt in range(max_attempts):
+            browser = None
             try:
-                print(f"[8] Playwright Launch: Started (Attempt {attempt + 1})")
+                _log_memory(f"generate_png: Attempt {attempt + 1} - Before Launch")
+                print(f"[PLAYWRIGHT] Browser Launch Started (Attempt {attempt + 1})")
+                sys.stdout.flush()
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
+                    print(f"[PLAYWRIGHT] Browser Launch Success")
+                    sys.stdout.flush()
+                    _log_memory("generate_png: After Launch")
+
+                    print(f"[PLAYWRIGHT] New Page Started")
+                    sys.stdout.flush()
                     page = await browser.new_page(
                         viewport={"width": 1200, "height": 1600},
-                        device_scale_factor=3,
+                        device_scale_factor=1,
                     )
+                    print(f"[PLAYWRIGHT] New Page Success")
+                    sys.stdout.flush()
                     
-                    # Increased navigation timeout to 120 seconds
+                    page.set_default_timeout(300000)
+
                     if html_content.startswith("http://") or html_content.startswith("https://"):
-                        await page.goto(html_content, wait_until="networkidle", timeout=120000)
+                        await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
                     else:
-                        await page.set_content(html_content, timeout=120000)
+                        await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
 
-                    # Explicit wait for networkidle increased to 120 seconds
-                    await page.wait_for_load_state("networkidle", timeout=120000)
-                    print(f"[8] Playwright Launch: SUCCESS")
+                    print(f"[PLAYWRIGHT] HTML Loaded")
+                    sys.stdout.flush()
 
-                    print(f"[7] Font Loading: Started")
+                    print(f"[PLAYWRIGHT] Font Loading: Started")
+                    sys.stdout.flush()
                     # Wait for all fonts and images to load completely (110s timeout internally)
                     await page.evaluate("""
                         async () => {
@@ -601,24 +660,44 @@ class RenderService:
                             await Promise.race([loadPromise, timeout]);
                         }
                     """)
-                    print(f"[7] Font Loading: SUCCESS")
+                    print(f"[PLAYWRIGHT] Font Loading: SUCCESS")
+                    sys.stdout.flush()
 
                     await asyncio.sleep(0.5)
 
-                    print(f"[9] Screenshot Creation: Started")
-                    # Increased screenshot timeout to 120 seconds
-                    await page.screenshot(path=output_path, full_page=True, type="png", timeout=120000)
+                    _log_memory("generate_png: Before Screenshot")
+                    print(f"[PLAYWRIGHT] Screenshot Started")
+                    sys.stdout.flush()
+                    await page.screenshot(path=output_path, full_page=True, type="png", timeout=300000)
+                    print(f"[PLAYWRIGHT] Screenshot Completed")
+                    sys.stdout.flush()
+                    print(f"[PLAYWRIGHT] PNG Saved")
+                    sys.stdout.flush()
+                    
                     await browser.close()
-                    print(f"[9] Screenshot Creation: SUCCESS")
+                    browser = None
+                    _log_memory("generate_png: After Browser Close (Success)")
                     return
             except Exception as e:
                 print(f"[PLAYWRIGHT WARNING] generate_png attempt {attempt + 1} failed: {e}")
+                sys.stdout.flush()
                 if attempt == max_attempts - 1:
-                    print(f"[9] Screenshot Creation: FAILED (Reason: {e})")
+                    print(f"[PLAYWRIGHT] Screenshot Creation: FAILED (Reason: {e})")
+                    sys.stdout.flush()
                     raise
+            finally:
+                if browser:
+                    try:
+                        await browser.close()
+                    except Exception as close_err:
+                        print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
+                        sys.stdout.flush()
+                _log_memory("generate_png: Finally clean up")
+                gc.collect()
 
     async def generate_pdf(self, html_content: str, output_path: str):
         """Uses Playwright to generate a PDF from the HTML content."""
+        _log_memory("generate_pdf: Enter")
         logger.info("Starting PDF generation")
         chrome_path = _get_chromium_executable()
 
@@ -628,6 +707,8 @@ class RenderService:
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--js-flags=--max-old-space-size=256",
             ],
         }
         if chrome_path:
@@ -635,26 +716,35 @@ class RenderService:
 
         max_attempts = 2
         for attempt in range(max_attempts):
+            browser = None
             try:
-                print(f"[8] Playwright Launch (PDF): Started (Attempt {attempt + 1})")
+                _log_memory(f"generate_pdf: Attempt {attempt + 1} - Before Launch")
+                print(f"[PLAYWRIGHT] Browser Launch Started (PDF) (Attempt {attempt + 1})")
+                sys.stdout.flush()
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
+                    print(f"[PLAYWRIGHT] Browser Launch Success (PDF)")
+                    sys.stdout.flush()
+                    _log_memory("generate_pdf: After Launch")
+
+                    print(f"[PLAYWRIGHT] New Page Started (PDF)")
+                    sys.stdout.flush()
                     page = await browser.new_page()
+                    print(f"[PLAYWRIGHT] New Page Success (PDF)")
+                    sys.stdout.flush()
                     
-                    # Set default timeout for the page context
-                    page.set_default_timeout(120000)
+                    page.set_default_timeout(300000)
                     
-                    # Increased navigation timeout to 120 seconds
                     if html_content.startswith("http://") or html_content.startswith("https://"):
-                        await page.goto(html_content, wait_until="networkidle", timeout=120000)
+                        await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
                     else:
-                        await page.set_content(html_content, timeout=120000)
+                        await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
 
-                    # Explicit wait for networkidle increased to 120 seconds
-                    await page.wait_for_load_state("networkidle", timeout=120000)
-                    print(f"[8] Playwright Launch (PDF): SUCCESS")
+                    print(f"[PLAYWRIGHT] HTML Loaded (PDF)")
+                    sys.stdout.flush()
 
-                    print(f"[7] Font Loading (PDF): Started")
+                    print(f"[PLAYWRIGHT] Font Loading (PDF): Started")
+                    sys.stdout.flush()
                     # Wait for all fonts and images to load completely (110s timeout internally)
                     await page.evaluate("""
                         async () => {
@@ -673,12 +763,14 @@ class RenderService:
                             await Promise.race([loadPromise, timeout]);
                         }
                     """)
-                    print(f"[7] Font Loading (PDF): SUCCESS")
+                    print(f"[PLAYWRIGHT] Font Loading (PDF): SUCCESS")
+                    sys.stdout.flush()
 
                     await asyncio.sleep(0.5)
 
-                    print(f"[11] PDF Creation: Started")
-                    # Generate PDF (removed unsupported timeout keyword parameter)
+                    _log_memory("generate_pdf: Before PDF Creation")
+                    print(f"[PLAYWRIGHT] PDF Creation Started")
+                    sys.stdout.flush()
                     await page.pdf(
                         path=output_path,
                         format="A4",
@@ -686,16 +778,33 @@ class RenderService:
                         prefer_css_page_size=True,
                         margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"}
                     )
+                    print(f"[PLAYWRIGHT] PDF Creation Completed")
+                    sys.stdout.flush()
+                    print(f"[PLAYWRIGHT] PDF Saved")
+                    sys.stdout.flush()
+
                     await browser.close()
-                    print(f"[11] PDF Creation: SUCCESS")
+                    browser = None
+                    _log_memory("generate_pdf: After Browser Close (Success)")
                     logger.info("PDF generated successfully")
                     return
             except Exception as e:
                 logger.exception("PDF generation failed")
                 print(f"[PLAYWRIGHT WARNING] generate_pdf attempt {attempt + 1} failed: {e}")
+                sys.stdout.flush()
                 if attempt == max_attempts - 1:
-                    print(f"[11] PDF Creation: FAILED (Reason: {e})")
+                    print(f"[PLAYWRIGHT] PDF Creation: FAILED (Reason: {e})")
+                    sys.stdout.flush()
                     raise
+            finally:
+                if browser:
+                    try:
+                        await browser.close()
+                    except Exception as close_err:
+                        print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
+                        sys.stdout.flush()
+                _log_memory("generate_pdf: Finally clean up")
+                gc.collect()
 
 
 render_service = RenderService()

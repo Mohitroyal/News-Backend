@@ -18,7 +18,44 @@ import logging
 import traceback as _traceback
 import sys
 import asyncio
+import gc
+import psutil
 from datetime import datetime, timedelta
+
+# Concurrency control – Render free tier supports only one generation at a time
+MAX_CONCURRENT_GENERATIONS = 1
+_semaphore = asyncio.Semaphore(MAX_CONCURRENT_GENERATIONS)
+
+
+def _get_peak_memory() -> float:
+    """Return peak memory usage (max RSS) in MB."""
+    if sys.platform != 'win32':
+        import resource
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    else:
+        try:
+            process = psutil.Process(os.getpid())
+            return getattr(process.memory_info(), 'peak_wset', 0) / (1024 * 1024)
+        except Exception:
+            return 0.0
+
+
+def _log_memory(stage: str):
+    """Log current and peak memory usage in MB."""
+    try:
+        process = psutil.Process(os.getpid())
+        current_mem = process.memory_info().rss / (1024 * 1024)
+        peak_mem = _get_peak_memory()
+        msg = f"[MEMORY] {stage} - Current RSS: {current_mem:.2f} MB | Peak RSS: {peak_mem:.2f} MB"
+        logger.info(msg)
+        print(msg)
+        sys.stdout.flush()
+        if current_mem > 450:
+            print("[MEMORY WARNING] Memory usage is critically high! Approaching Render Free limit.")
+            sys.stdout.flush()
+            gc.collect()
+    except Exception as e:
+        logger.error(f"[MEMORY LOG ERROR] Failed to log memory: {e}")
 
 router = APIRouter()
 
@@ -70,6 +107,7 @@ def _flush_error(stage: str, e: Exception) -> dict:
 
 async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
     """Core asynchronous logic - full debug mode with raw exception exposure."""
+    await _semaphore.acquire()
     if isinstance(clipping_id, str):
         try:
             clipping_id = uuid.UUID(clipping_id)
@@ -120,8 +158,10 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             stage = "Database Save (rendering)"
             last_failed_stage = stage
             print(f"[STARTED] {stage}"); sys.stdout.flush()
+            print("START status update"); sys.stdout.flush()
             clipping.status = "rendering"
             db.commit()
+            print("END status update"); sys.stdout.flush()
             print(f"[COMPLETED] {stage}"); sys.stdout.flush()
 
             # --- [5] Template Selection ---
@@ -173,18 +213,22 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             print(f"[STARTED] {stage}"); sys.stdout.flush()
             temp_png = f"temp_{clipping_id}.png"
             try:
-                await render_service.generate_png(html, temp_png)
+                print("START screenshot"); sys.stdout.flush()
+                print("START png save"); sys.stdout.flush()
+                await asyncio.wait_for(render_service.generate_png(html, temp_png), timeout=60.0)
+                print("END png save"); sys.stdout.flush()
+                print("END screenshot"); sys.stdout.flush()
                 print(f"[COMPLETED] {stage}"); sys.stdout.flush()
             except Exception as png_err:
-                err_str = str(png_err)
-                if "[7] Font Loading" in err_str:
-                    stage = "Font Loading"
-                elif "[8] Playwright Launch" in err_str:
-                    stage = "Playwright Launch"
-                elif "[9] Screenshot Creation" in err_str:
-                    stage = "PNG Screenshot Creation"
+                err_str = f"{type(png_err).__name__} {str(png_err)}".lower()
+                if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
+                    stage = "Chromium Launch Failed"
+                elif "timeout" in err_str:
+                    stage = "Screenshot Timeout"
+                elif "memory" in err_str:
+                    stage = "Memory Limit Exceeded"
                 else:
-                    stage = "Screenshot Generation"
+                    stage = "Page Rendering Failed"
                 last_failed_stage = stage
                 print(f"[FAILED] {stage} | {type(png_err).__name__}: {png_err}"); sys.stdout.flush()
                 raise png_err
@@ -193,10 +237,16 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             stage = "Supabase Upload (PNG)"
             last_failed_stage = stage
             print(f"[STARTED] {stage}"); sys.stdout.flush()
-            png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
-            if os.path.exists(temp_png):
-                os.remove(temp_png)
-            print(f"[COMPLETED] {stage} -> {png_url}"); sys.stdout.flush()
+            try:
+                png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
+                if os.path.exists(temp_png):
+                    os.remove(temp_png)
+                print(f"[COMPLETED] {stage} -> {png_url}"); sys.stdout.flush()
+            except Exception as png_up_err:
+                stage = "Supabase Upload Failed"
+                last_failed_stage = stage
+                print(f"[FAILED] {stage} | {type(png_up_err).__name__}: {png_up_err}"); sys.stdout.flush()
+                raise png_up_err
 
             # --- [11] PDF Generation ---
             stage = "PDF Generation"
@@ -204,18 +254,20 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             print(f"[STARTED] {stage}"); sys.stdout.flush()
             temp_pdf = f"temp_{clipping_id}.pdf"
             try:
-                await render_service.generate_pdf(html, temp_pdf)
+                print("START pdf generation"); sys.stdout.flush()
+                await asyncio.wait_for(render_service.generate_pdf(html, temp_pdf), timeout=60.0)
+                print("END pdf generation"); sys.stdout.flush()
                 print(f"[COMPLETED] {stage}"); sys.stdout.flush()
             except Exception as pdf_err:
-                err_str = str(pdf_err)
-                if "[7] Font Loading" in err_str:
-                    stage = "Font Loading (PDF)"
-                elif "[8] Playwright Launch" in err_str:
-                    stage = "Playwright Launch (PDF)"
-                elif "[11] PDF Creation" in err_str:
-                    stage = "PDF Creation"
+                err_str = f"{type(pdf_err).__name__} {str(pdf_err)}".lower()
+                if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
+                    stage = "Chromium Launch Failed"
+                elif "timeout" in err_str:
+                    stage = "Screenshot Timeout"
+                elif "memory" in err_str:
+                    stage = "Memory Limit Exceeded"
                 else:
-                    stage = "PDF Generation"
+                    stage = "Page Rendering Failed"
                 last_failed_stage = stage
                 print(f"[FAILED] {stage} | {type(pdf_err).__name__}: {pdf_err}"); sys.stdout.flush()
                 raise pdf_err
@@ -224,15 +276,22 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             stage = "Supabase Upload (PDF)"
             last_failed_stage = stage
             print(f"[STARTED] {stage}"); sys.stdout.flush()
-            pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
-            if os.path.exists(temp_pdf):
-                os.remove(temp_pdf)
-            print(f"[COMPLETED] {stage} -> {pdf_url}"); sys.stdout.flush()
+            try:
+                pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
+                if os.path.exists(temp_pdf):
+                    os.remove(temp_pdf)
+                print(f"[COMPLETED] {stage} -> {pdf_url}"); sys.stdout.flush()
+            except Exception as pdf_up_err:
+                stage = "Supabase Upload Failed"
+                last_failed_stage = stage
+                print(f"[FAILED] {stage} | {type(pdf_up_err).__name__}: {pdf_up_err}"); sys.stdout.flush()
+                raise pdf_up_err
 
             # --- [13] Database Save (completed) ---
             stage = "Database Save (completed)"
             last_failed_stage = stage
             print(f"[STARTED] {stage}"); sys.stdout.flush()
+            print("START status update"); sys.stdout.flush()
             clipping.png_url = png_url
             clipping.pdf_url = pdf_url
             clipping.status = "completed"
@@ -245,6 +304,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 clipping.custom_layout = temp_layout
 
             db.commit()
+            print("END status update"); sys.stdout.flush()
 
             # --- [14] Email Notification ---
             stage = "Email Notification"
@@ -301,11 +361,13 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
             from app.db.session import SessionLocal
             fresh_db = SessionLocal()
             try:
+                print("START status update"); sys.stdout.flush()
                 fresh_clipping = fresh_db.query(Clipping).filter(Clipping.id == clipping_id).first()
                 if fresh_clipping:
                     fresh_clipping.status = "failed"
                     fresh_clipping.custom_layout = error_payload
                     fresh_db.commit()
+                    print("END status update"); sys.stdout.flush()
                     print(f"[DB SAVED] Failure status written to database for clipping {clipping_id}")
                     sys.stdout.flush()
                 else:
