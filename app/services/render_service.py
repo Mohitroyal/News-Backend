@@ -617,6 +617,7 @@ class RenderService:
                 sys.stdout.flush()
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
+                    print(f"BROWSER CREATED (PNG attempt {attempt + 1})"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] Browser Launch Success")
                     sys.stdout.flush()
                     _log_memory("generate_png: After Launch")
@@ -627,6 +628,7 @@ class RenderService:
                         viewport={"width": 1200, "height": 1600},
                         device_scale_factor=1,
                     )
+                    print(f"PAGE CREATED (PNG)"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] New Page Success")
                     sys.stdout.flush()
                     
@@ -675,6 +677,8 @@ class RenderService:
                     sys.stdout.flush()
                     
                     await browser.close()
+                    print(f"PAGE CLOSED (PNG)"); sys.stdout.flush()
+                    print(f"BROWSER CLOSED (PNG attempt {attempt + 1})"); sys.stdout.flush()
                     browser = None
                     _log_memory("generate_png: After Browser Close (Success)")
                     return
@@ -689,6 +693,8 @@ class RenderService:
                 if browser:
                     try:
                         await browser.close()
+                        print(f"PAGE CLOSED (PNG)"); sys.stdout.flush()
+                        print(f"BROWSER CLOSED (PNG attempt {attempt + 1})"); sys.stdout.flush()
                     except Exception as close_err:
                         print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
                         sys.stdout.flush()
@@ -723,6 +729,7 @@ class RenderService:
                 sys.stdout.flush()
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
+                    print(f"BROWSER CREATED (PDF attempt {attempt + 1})"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] Browser Launch Success (PDF)")
                     sys.stdout.flush()
                     _log_memory("generate_pdf: After Launch")
@@ -730,6 +737,7 @@ class RenderService:
                     print(f"[PLAYWRIGHT] New Page Started (PDF)")
                     sys.stdout.flush()
                     page = await browser.new_page()
+                    print(f"PAGE CREATED (PDF)"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] New Page Success (PDF)")
                     sys.stdout.flush()
                     
@@ -784,6 +792,8 @@ class RenderService:
                     sys.stdout.flush()
 
                     await browser.close()
+                    print(f"PAGE CLOSED (PDF)"); sys.stdout.flush()
+                    print(f"BROWSER CLOSED (PDF attempt {attempt + 1})"); sys.stdout.flush()
                     browser = None
                     _log_memory("generate_pdf: After Browser Close (Success)")
                     logger.info("PDF generated successfully")
@@ -800,6 +810,7 @@ class RenderService:
                 if browser:
                     try:
                         await browser.close()
+                        print("BROWSER CLOSED"); sys.stdout.flush()
                     except Exception as close_err:
                         print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
                         sys.stdout.flush()

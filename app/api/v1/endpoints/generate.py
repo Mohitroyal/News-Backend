@@ -107,317 +107,336 @@ def _flush_error(stage: str, e: Exception) -> dict:
 
 async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
     """Core asynchronous logic - full debug mode with raw exception exposure."""
+    print("GENERATION STARTED"); sys.stdout.flush()
     await _semaphore.acquire()
-    if isinstance(clipping_id, str):
-        try:
-            clipping_id = uuid.UUID(clipping_id)
-        except Exception:
-            pass
+    print("LOCK ACQUIRED"); sys.stdout.flush()
+    try:
+        if isinstance(clipping_id, str):
+            try:
+                clipping_id = uuid.UUID(clipping_id)
+            except Exception:
+                pass
 
-    is_external_db = db is not None
-    if not is_external_db:
-        from app.db.session import SessionLocal
-        db = SessionLocal()
+        is_external_db = db is not None
+        if not is_external_db:
+            from app.db.session import SessionLocal
+            db = SessionLocal()
 
-    # ── Permanent stage tracker: NEVER resets on retry ──────────────────────
-    # This ensures we always know where the pipeline last failed.
-    last_failed_stage = "initialization"
+        # ── Permanent stage tracker: NEVER resets on retry ──────────────────────
+        # This ensures we always know where the pipeline last failed.
+        last_failed_stage = "initialization"
 
-    max_retries = 2  # Allows up to 3 total attempts
-    for attempt in range(max_retries + 1):
-        stage = "initialization"
-        try:
-            clipping = db.query(Clipping).filter(Clipping.id == clipping_id).first()
-            if not clipping:
-                logger.error("Database Update: FAILED (Clipping record not found)")
-                return
-
-            print(f"\n{'='*70}")
-            print(f"[PIPELINE START] Attempt {attempt + 1}/{max_retries + 1} | Clipping: {clipping_id}")
-            print(f"{'='*70}")
-            sys.stdout.flush()
-
-            # --- [2] Image Processing ---
-            stage = "Image Processing"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            from app.services.image_service import image_service
-            safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
-            safe_image_urls = [image_service.process_and_resize(u) for u in (clipping.image_urls or [])]
-            print(f"[COMPLETED] {stage}"); sys.stdout.flush()
-
-            # --- [4] Content Generation & Translation ---
-            stage = "Translation" if clipping.language and clipping.language.lower() != "en" else "Content Generation"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            formatted = await grok_service.format_article(clipping.article_content, clipping.language)
-            clipping.content_formatted = formatted
-            print(f"[COMPLETED] {stage}"); sys.stdout.flush()
-
-            # --- Save to rendering ---
-            stage = "Database Save (rendering)"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            print("START status update"); sys.stdout.flush()
-            clipping.status = "rendering"
-            db.commit()
-            print("END status update"); sys.stdout.flush()
-            print(f"[COMPLETED] {stage}"); sys.stdout.flush()
-
-            # --- [5] Template Selection ---
-            stage = "Template Selection"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            template_id = clipping.template_id or "classic"
-            print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
-
-            # --- [7] HTML Generation & [6] Layout Rendering ---
-            stage = "HTML Generation"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            owner = db.query(User).filter(User.id == clipping.user_id).first()
-            is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
-            
-            safe_image_url = _rewrite_to_absolute(safe_image_url)
-            safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
-
-            render_data = {
-                **formatted,
-                "id": str(clipping_id),
-                "publication_name": clipping.publication_name,
-                "publication_date": clipping.publication_date,
-                "image_url": safe_image_url,
-                "image_urls": safe_image_urls,
-                "language": clipping.language,
-                "layout_columns": clipping.layout_columns,
-                "font_family": clipping.font_family or "playfair",
-                "logo_id": clipping.logo_id or clipping.template_id,
-                "is_premium": is_premium,
-            }
-
-            if clipping.template_id == "custom":
-                if not clipping.custom_layout:
-                    clipping.status = "completed"
-                    db.commit()
+        max_retries = 2  # Allows up to 3 total attempts
+        for attempt in range(max_retries + 1):
+            stage = "initialization"
+            try:
+                clipping = db.query(Clipping).filter(Clipping.id == clipping_id).first()
+                if not clipping:
+                    logger.error("Database Update: FAILED (Clipping record not found)")
                     return
-                import os as _os
-                _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
-                html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
-            else:
-                html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
-            print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
 
-            # --- [9] Screenshot / PNG Generation ---
-            stage = "Screenshot Generation"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            temp_png = f"temp_{clipping_id}.png"
-            try:
-                print("START screenshot"); sys.stdout.flush()
-                print("START png save"); sys.stdout.flush()
-                await asyncio.wait_for(render_service.generate_png(html, temp_png), timeout=60.0)
-                print("END png save"); sys.stdout.flush()
-                print("END screenshot"); sys.stdout.flush()
-                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
-            except Exception as png_err:
-                err_str = f"{type(png_err).__name__} {str(png_err)}".lower()
-                if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
-                    stage = "Chromium Launch Failed"
-                elif "timeout" in err_str:
-                    stage = "Screenshot Timeout"
-                elif "memory" in err_str:
-                    stage = "Memory Limit Exceeded"
-                else:
-                    stage = "Page Rendering Failed"
-                last_failed_stage = stage
-                print(f"[FAILED] {stage} | {type(png_err).__name__}: {png_err}"); sys.stdout.flush()
-                raise png_err
-
-            # --- [10] Supabase Upload PNG ---
-            stage = "Supabase Upload (PNG)"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            try:
-                png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
-                if os.path.exists(temp_png):
-                    os.remove(temp_png)
-                print(f"[COMPLETED] {stage} -> {png_url}"); sys.stdout.flush()
-            except Exception as png_up_err:
-                stage = "Supabase Upload Failed"
-                last_failed_stage = stage
-                print(f"[FAILED] {stage} | {type(png_up_err).__name__}: {png_up_err}"); sys.stdout.flush()
-                raise png_up_err
-
-            # --- [11] PDF Generation ---
-            stage = "PDF Generation"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            temp_pdf = f"temp_{clipping_id}.pdf"
-            try:
-                print("START pdf generation"); sys.stdout.flush()
-                await asyncio.wait_for(render_service.generate_pdf(html, temp_pdf), timeout=60.0)
-                print("END pdf generation"); sys.stdout.flush()
-                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
-            except Exception as pdf_err:
-                err_str = f"{type(pdf_err).__name__} {str(pdf_err)}".lower()
-                if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
-                    stage = "Chromium Launch Failed"
-                elif "timeout" in err_str:
-                    stage = "Screenshot Timeout"
-                elif "memory" in err_str:
-                    stage = "Memory Limit Exceeded"
-                else:
-                    stage = "Page Rendering Failed"
-                last_failed_stage = stage
-                print(f"[FAILED] {stage} | {type(pdf_err).__name__}: {pdf_err}"); sys.stdout.flush()
-                raise pdf_err
-
-            # --- [12] Supabase Upload PDF ---
-            stage = "Supabase Upload (PDF)"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            try:
-                pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
-                if os.path.exists(temp_pdf):
-                    os.remove(temp_pdf)
-                print(f"[COMPLETED] {stage} -> {pdf_url}"); sys.stdout.flush()
-            except Exception as pdf_up_err:
-                stage = "Supabase Upload Failed"
-                last_failed_stage = stage
-                print(f"[FAILED] {stage} | {type(pdf_up_err).__name__}: {pdf_up_err}"); sys.stdout.flush()
-                raise pdf_up_err
-
-            # --- [13] Database Save (completed) ---
-            stage = "Database Save (completed)"
-            last_failed_stage = stage
-            print(f"[STARTED] {stage}"); sys.stdout.flush()
-            print("START status update"); sys.stdout.flush()
-            clipping.png_url = png_url
-            clipping.pdf_url = pdf_url
-            clipping.status = "completed"
-            
-            if clipping.custom_layout and "error" in clipping.custom_layout:
-                del clipping.custom_layout["error"]
-                if "stage" in clipping.custom_layout:
-                    del clipping.custom_layout["stage"]
-                temp_layout = dict(clipping.custom_layout)
-                clipping.custom_layout = temp_layout
-
-            db.commit()
-            print("END status update"); sys.stdout.flush()
-
-            # --- [14] Email Notification ---
-            stage = "Email Notification"
-            logger.info(f"Stage: {stage}")
-            try:
-                from app.services.email_service import email_service
-                if owner and owner.email:
-                    email_service.send_clipping_status_email(
-                        user_email=owner.email,
-                        headline=clipping.headline,
-                        status="completed",
-                        png_url=png_url,
-                        pdf_url=pdf_url
-                    )
-            except Exception as mail_err:
-                logger.warning(f"Failed to send success mail: {mail_err}")
-                
-            # --- [15] Final Response ---
-            stage = "Final Response"
-            logger.info(f"Stage: {stage}")
-            break
-
-        except Exception as e:
-            # ── Immediately flush the raw exception to logs ──────────────────
-            error_payload = _flush_error(stage, e)
-            last_failed_stage = stage  # ensure it's captured
-
-            if attempt < max_retries:
-                print(f"[AUTO-RECOVERY] Retrying pipeline in 3s (attempt {attempt + 1}/{max_retries})...")
+                print(f"\n{'='*70}")
+                print(f"[PIPELINE START] Attempt {attempt + 1}/{max_retries + 1} | Clipping: {clipping_id}")
+                print(f"{'='*70}")
                 sys.stdout.flush()
+
+                # --- [2] Image Processing ---
+                stage = "Image Processing"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                from app.services.image_service import image_service
+                safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
+                safe_image_urls = [image_service.process_and_resize(u) for u in (clipping.image_urls or [])]
+                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
+
+                # --- [4] Content Generation & Translation ---
+                stage = "Translation" if clipping.language and clipping.language.lower() != "en" else "Content Generation"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                formatted = await grok_service.format_article(clipping.article_content, clipping.language)
+                clipping.content_formatted = formatted
+                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
+
+                # --- Save to rendering ---
+                stage = "Database Save (rendering)"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                print("START status update"); sys.stdout.flush()
+                clipping.status = "rendering"
+                db.commit()
+                print("END status update"); sys.stdout.flush()
+                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
+
+                # --- [5] Template Selection ---
+                stage = "Template Selection"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                template_id = clipping.template_id or "classic"
+                print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
+
+                # --- [7] HTML Generation & [6] Layout Rendering ---
+                stage = "HTML Generation"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                owner = db.query(User).filter(User.id == clipping.user_id).first()
+                is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
+
+                safe_image_url = _rewrite_to_absolute(safe_image_url)
+                safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
+
+                render_data = {
+                    **formatted,
+                    "id": str(clipping_id),
+                    "publication_name": clipping.publication_name,
+                    "publication_date": clipping.publication_date,
+                    "image_url": safe_image_url,
+                    "image_urls": safe_image_urls,
+                    "language": clipping.language,
+                    "layout_columns": clipping.layout_columns,
+                    "font_family": clipping.font_family or "playfair",
+                    "logo_id": clipping.logo_id or clipping.template_id,
+                    "is_premium": is_premium,
+                }
+
+                if clipping.template_id == "custom":
+                    if not clipping.custom_layout:
+                        clipping.status = "completed"
+                        db.commit()
+                        return
+                    import os as _os
+                    _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
+                    html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
+                else:
+                    html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
+                print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
+
+                # --- [9] Screenshot / PNG Generation ---
+                stage = "Screenshot Generation"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                temp_png = f"temp_{clipping_id}.png"
+                print(f"TEMP FILE CREATED: {temp_png}"); sys.stdout.flush()
+                try:
+                    print("START screenshot"); sys.stdout.flush()
+                    print("START png save"); sys.stdout.flush()
+                    await asyncio.wait_for(render_service.generate_png(html, temp_png), timeout=60.0)
+                    print("END png save"); sys.stdout.flush()
+                    print("END screenshot"); sys.stdout.flush()
+                    print(f"[COMPLETED] {stage}"); sys.stdout.flush()
+                except Exception as png_err:
+                    err_str = f"{type(png_err).__name__} {str(png_err)}".lower()
+                    if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
+                        stage = "Chromium Launch Failed"
+                    elif "timeout" in err_str:
+                        stage = "Screenshot Timeout"
+                    elif "memory" in err_str:
+                        stage = "Memory Limit Exceeded"
+                    else:
+                        stage = "Page Rendering Failed"
+                    last_failed_stage = stage
+                    print(f"[FAILED] {stage} | {type(png_err).__name__}: {png_err}"); sys.stdout.flush()
+                    raise png_err
+
+                # --- [10] Supabase Upload PNG ---
+                stage = "Supabase Upload (PNG)"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                try:
+                    png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
+                    if os.path.exists(temp_png):
+                        os.remove(temp_png)
+                        print(f"TEMP FILE DELETED: {temp_png}"); sys.stdout.flush()
+                    print(f"[COMPLETED] {stage} -> {png_url}"); sys.stdout.flush()
+                except Exception as png_up_err:
+                    stage = "Supabase Upload Failed"
+                    last_failed_stage = stage
+                    print(f"[FAILED] {stage} | {type(png_up_err).__name__}: {png_up_err}"); sys.stdout.flush()
+                    raise png_up_err
+
+                # --- [11] PDF Generation ---
+                stage = "PDF Generation"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                temp_pdf = f"temp_{clipping_id}.pdf"
+                print(f"TEMP FILE CREATED: {temp_pdf}"); sys.stdout.flush()
+                try:
+                    print("START pdf generation"); sys.stdout.flush()
+                    await asyncio.wait_for(render_service.generate_pdf(html, temp_pdf), timeout=60.0)
+                    print("END pdf generation"); sys.stdout.flush()
+                    print(f"[COMPLETED] {stage}"); sys.stdout.flush()
+                except Exception as pdf_err:
+                    err_str = f"{type(pdf_err).__name__} {str(pdf_err)}".lower()
+                    if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
+                        stage = "Chromium Launch Failed"
+                    elif "timeout" in err_str:
+                        stage = "Screenshot Timeout"
+                    elif "memory" in err_str:
+                        stage = "Memory Limit Exceeded"
+                    else:
+                        stage = "Page Rendering Failed"
+                    last_failed_stage = stage
+                    print(f"[FAILED] {stage} | {type(pdf_err).__name__}: {pdf_err}"); sys.stdout.flush()
+                    raise pdf_err
+
+                # --- [12] Supabase Upload PDF ---
+                stage = "Supabase Upload (PDF)"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                try:
+                    pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
+                    if os.path.exists(temp_pdf):
+                        os.remove(temp_pdf)
+                        print(f"TEMP FILE DELETED: {temp_pdf}"); sys.stdout.flush()
+                    print(f"[COMPLETED] {stage} -> {pdf_url}"); sys.stdout.flush()
+                except Exception as pdf_up_err:
+                    stage = "Supabase Upload Failed"
+                    last_failed_stage = stage
+                    print(f"[FAILED] {stage} | {type(pdf_up_err).__name__}: {pdf_up_err}"); sys.stdout.flush()
+                    raise pdf_up_err
+
+                # --- [13] Database Save (completed) ---
+                stage = "Database Save (completed)"
+                last_failed_stage = stage
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
+                print("START status update"); sys.stdout.flush()
+                clipping.png_url = png_url
+                clipping.pdf_url = pdf_url
+                clipping.status = "completed"
+
+                if clipping.custom_layout and "error" in clipping.custom_layout:
+                    del clipping.custom_layout["error"]
+                    if "stage" in clipping.custom_layout:
+                        del clipping.custom_layout["stage"]
+                    temp_layout = dict(clipping.custom_layout)
+                    clipping.custom_layout = temp_layout
+
+                db.commit()
+                print("END status update"); sys.stdout.flush()
+
+                # --- [14] Email Notification ---
+                stage = "Email Notification"
+                logger.info(f"Stage: {stage}")
+                try:
+                    from app.services.email_service import email_service
+                    if owner and owner.email:
+                        email_service.send_clipping_status_email(
+                            user_email=owner.email,
+                            headline=clipping.headline,
+                            status="completed",
+                            png_url=png_url,
+                            pdf_url=pdf_url
+                        )
+                except Exception as mail_err:
+                    logger.warning(f"Failed to send success mail: {mail_err}")
+
+                # --- [15] Final Response ---
+                stage = "Final Response"
+                logger.info(f"Stage: {stage}")
+                break
+
+            except Exception as e:
+                # ── Immediately flush the raw exception to logs ──────────────────
+                error_payload = _flush_error(stage, e)
+                last_failed_stage = stage  # ensure it's captured
+
+                if attempt < max_retries:
+                    print(f"[AUTO-RECOVERY] Retrying pipeline in 3s (attempt {attempt + 1}/{max_retries})...")
+                    sys.stdout.flush()
+                    for temp_file in [f"temp_{clipping_id}.png", f"temp_{clipping_id}.pdf"]:
+                        if os.path.exists(temp_file):
+                            try:
+                                os.remove(temp_file)
+                                print(f"TEMP FILE DELETED: {temp_file}"); sys.stdout.flush()
+                            except Exception:
+                                pass
+                    await asyncio.sleep(3)
+                    continue
+
+                # ── All retries exhausted — write failure to DB ──────────────────
+                # Use a FRESH session to avoid stale transaction state
+                print(f"[FINAL FAILURE] All {max_retries + 1} attempts failed at stage: {last_failed_stage}")
+                sys.stdout.flush()
+
+                # Clean up temp files
                 for temp_file in [f"temp_{clipping_id}.png", f"temp_{clipping_id}.pdf"]:
                     if os.path.exists(temp_file):
                         try:
                             os.remove(temp_file)
+                            print(f"TEMP FILE DELETED: {temp_file}"); sys.stdout.flush()
                         except Exception:
                             pass
-                await asyncio.sleep(3)
-                continue
 
-            # ── All retries exhausted — write failure to DB ──────────────────
-            # Use a FRESH session to avoid stale transaction state
-            print(f"[FINAL FAILURE] All {max_retries + 1} attempts failed at stage: {last_failed_stage}")
-            sys.stdout.flush()
-
-            # Clean up temp files
-            for temp_file in [f"temp_{clipping_id}.png", f"temp_{clipping_id}.pdf"]:
-                if os.path.exists(temp_file):
+                # Write failure using fresh DB session to avoid stale connection
+                from app.db.session import SessionLocal
+                fresh_db = SessionLocal()
+                try:
+                    print("START status update"); sys.stdout.flush()
+                    fresh_clipping = fresh_db.query(Clipping).filter(Clipping.id == clipping_id).first()
+                    if fresh_clipping:
+                        fresh_clipping.status = "failed"
+                        fresh_clipping.custom_layout = error_payload
+                        fresh_db.commit()
+                        print("END status update"); sys.stdout.flush()
+                        print(f"[DB SAVED] Failure status written to database for clipping {clipping_id}")
+                        sys.stdout.flush()
+                    else:
+                        print(f"[DB ERROR] Could not find clipping {clipping_id} to write failure status")
+                        sys.stdout.flush()
+                except Exception as db_write_err:
+                    print(f"[DB WRITE FAILURE] Failed to persist error to DB: {type(db_write_err).__name__}: {db_write_err}")
+                    print(_traceback.format_exc())
+                    sys.stdout.flush()
                     try:
-                        os.remove(temp_file)
+                        fresh_db.rollback()
+                    except Exception:
+                        pass
+                finally:
+                    try:
+                        fresh_db.close()
                     except Exception:
                         pass
 
-            # Write failure using fresh DB session to avoid stale connection
-            from app.db.session import SessionLocal
-            fresh_db = SessionLocal()
+                # Attempt failure email (best-effort)
+                try:
+                    from app.services.email_service import email_service
+                    fresh_db2 = SessionLocal()
+                    try:
+                        owner = fresh_db2.query(User).filter(
+                            User.id == (fresh_clipping.user_id if fresh_clipping else None)
+                        ).first()
+                        if owner and owner.email:
+                            email_service.send_clipping_status_email(
+                                user_email=owner.email,
+                                headline=getattr(fresh_clipping, 'headline', 'Unknown'),
+                                status="failed"
+                            )
+                    finally:
+                        fresh_db2.close()
+                except Exception as mail_err:
+                    print(f"[MAIL WARNING] Failure email not sent: {mail_err}")
+
+        if not is_external_db:
             try:
-                print("START status update"); sys.stdout.flush()
-                fresh_clipping = fresh_db.query(Clipping).filter(Clipping.id == clipping_id).first()
-                if fresh_clipping:
-                    fresh_clipping.status = "failed"
-                    fresh_clipping.custom_layout = error_payload
-                    fresh_db.commit()
-                    print("END status update"); sys.stdout.flush()
-                    print(f"[DB SAVED] Failure status written to database for clipping {clipping_id}")
-                    sys.stdout.flush()
-                else:
-                    print(f"[DB ERROR] Could not find clipping {clipping_id} to write failure status")
-                    sys.stdout.flush()
-            except Exception as db_write_err:
-                print(f"[DB WRITE FAILURE] Failed to persist error to DB: {type(db_write_err).__name__}: {db_write_err}")
-                print(_traceback.format_exc())
-                sys.stdout.flush()
-                try:
-                    fresh_db.rollback()
-                except Exception:
-                    pass
-            finally:
-                try:
-                    fresh_db.close()
-                except Exception:
-                    pass
-
-            # Attempt failure email (best-effort)
-            try:
-                from app.services.email_service import email_service
-                fresh_db2 = SessionLocal()
-                try:
-                    owner = fresh_db2.query(User).filter(
-                        User.id == (fresh_clipping.user_id if fresh_clipping else None)
-                    ).first()
-                    if owner and owner.email:
-                        email_service.send_clipping_status_email(
-                            user_email=owner.email,
-                            headline=getattr(fresh_clipping, 'headline', 'Unknown'),
-                            status="failed"
-                        )
-                finally:
-                    fresh_db2.close()
-            except Exception as mail_err:
-                print(f"[MAIL WARNING] Failure email not sent: {mail_err}")
-
-    if not is_external_db:
-        try:
-            db.close()
-        except Exception:
-            pass
+                db.close()
+            except Exception:
+                pass
 
 
-def process_clipping_task(clipping_id: Any, db: Session = None):
-    """Background task wrapper to handle asyncio event loop policy on Windows."""
-    if sys.platform == 'win32':
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    asyncio.run(_async_process_clipping_task(clipping_id, db))
+    finally:
+        _semaphore.release()
+        print("LOCK RELEASED"); sys.stdout.flush()
+        print("GENERATION COMPLETED"); sys.stdout.flush()
+        gc.collect()
+
+
+async def _background_process_clipping(clipping_id: Any):
+    """Thin async wrapper registered directly with FastAPI BackgroundTasks.
+    
+    CRITICAL: Must be async so FastAPI runs it in the SAME uvicorn event loop.
+    Using a sync wrapper (asyncio.run()) creates a new event loop per task,
+    which corrupts the module-level asyncio.Semaphore across generations.
+    """
+    await _async_process_clipping_task(clipping_id)
 
 
 @router.post("/", response_model=dict)
@@ -475,7 +494,7 @@ async def create_clipping(
     db.commit()
     db.refresh(clipping)
 
-    background_tasks.add_task(process_clipping_task, clipping.id)
+    background_tasks.add_task(_background_process_clipping, clipping.id)
 
     return jsonable_encoder({
         "success": True,
