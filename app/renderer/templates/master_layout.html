@@ -8,29 +8,194 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Inter:wght@300;400;700;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Telugu:wght@400;700&family=Noto+Serif+Telugu:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* ── Telugu ────────────────────────────────────────────────────── */
         @font-face {
             font-family: 'Noto Sans Telugu';
-            font-style: normal;
-            font-weight: 400;
+            font-style: normal; font-weight: 400;
             src: url('{{ service_url }}/static/fonts/NotoSansTelugu-Regular.ttf') format('truetype');
         }
         @font-face {
             font-family: 'Noto Sans Telugu';
-            font-style: normal;
-            font-weight: 700;
+            font-style: normal; font-weight: 700;
             src: url('{{ service_url }}/static/fonts/NotoSansTelugu-Bold.ttf') format('truetype');
         }
         @font-face {
             font-family: 'Noto Serif Telugu';
-            font-style: normal;
-            font-weight: 400;
+            font-style: normal; font-weight: 400;
             src: url('{{ service_url }}/static/fonts/NotoSerifTelugu-Regular.ttf') format('truetype');
         }
         @font-face {
             font-family: 'Noto Serif Telugu';
-            font-style: normal;
-            font-weight: 700;
+            font-style: normal; font-weight: 700;
             src: url('{{ service_url }}/static/fonts/NotoSerifTelugu-Bold.ttf') format('truetype');
+        }
+        /* ── Hindi / Devanagari (covers Marathi too) ───────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansDevanagari-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansDevanagari-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Devanagari';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifDevanagari-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Devanagari';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifDevanagari-Bold.ttf') format('truetype');
+        }
+        /* ── Kannada ───────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Kannada';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansKannada-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Kannada';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansKannada-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Kannada';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifKannada-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Kannada';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifKannada-Bold.ttf') format('truetype');
+        }
+        /* ── Malayalam ─────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Malayalam';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansMalayalam-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Malayalam';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansMalayalam-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Malayalam';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifMalayalam-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Malayalam';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifMalayalam-Bold.ttf') format('truetype');
+        }
+        /* ── Tamil ─────────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Tamil';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansTamil-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Tamil';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansTamil-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Tamil';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifTamil-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Tamil';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifTamil-Bold.ttf') format('truetype');
+        }
+        /* ── Bengali ───────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Bengali';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansBengali-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Bengali';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansBengali-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Bengali';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifBengali-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Bengali';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifBengali-Bold.ttf') format('truetype');
+        }
+        /* ── Gujarati ──────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Gujarati';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansGujarati-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Gujarati';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansGujarati-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gujarati';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGujarati-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gujarati';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGujarati-Bold.ttf') format('truetype');
+        }
+        /* ── Punjabi / Gurmukhi ────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Gurmukhi';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansGurmukhi-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Gurmukhi';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansGurmukhi-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gurmukhi';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGurmukhi-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gurmukhi';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGurmukhi-Bold.ttf') format('truetype');
+        }
+        /* ── Odia ──────────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Oriya';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansOriya-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Oriya';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansOriya-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Oriya';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifOriya-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Oriya';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifOriya-Bold.ttf') format('truetype');
         }
 
         :root {
@@ -53,15 +218,57 @@
             {% endif %}
         }
 
+        /* ── Complete Unicode Indic script fallback stack ─────────────────
+           The font-family chosen by the user (Playfair, Merriweather, etc.)
+           is used for Latin characters. For each Indic script the matching
+           Noto font is prepended via a per-language body class below so that
+           Chromium always has the correct glyph table and never shows bars. */
+        --noto-indic-fallbacks:
+            'Noto Serif Telugu',  'Noto Sans Telugu',
+            'Noto Serif Devanagari', 'Noto Sans Devanagari',
+            'Noto Serif Kannada',  'Noto Sans Kannada',
+            'Noto Serif Malayalam','Noto Sans Malayalam',
+            'Noto Serif Tamil',   'Noto Sans Tamil',
+            'Noto Serif Bengali', 'Noto Sans Bengali',
+            'Noto Serif Gujarati','Noto Sans Gujarati',
+            'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+            'Noto Serif Oriya',   'Noto Sans Oriya';
+
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: var(--font-family-chosen), 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+            /* Latin chosen font + ALL Indic Noto fallbacks so every script renders */
+            font-family: var(--font-family-chosen),
+                         'Noto Serif Telugu',  'Noto Sans Telugu',
+                         'Noto Serif Devanagari', 'Noto Sans Devanagari',
+                         'Noto Serif Kannada',  'Noto Sans Kannada',
+                         'Noto Serif Malayalam','Noto Sans Malayalam',
+                         'Noto Serif Tamil',   'Noto Sans Tamil',
+                         'Noto Serif Bengali', 'Noto Sans Bengali',
+                         'Noto Serif Gujarati','Noto Sans Gujarati',
+                         'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+                         'Noto Serif Oriya',   'Noto Sans Oriya',
+                         serif;
             margin: 0;
             padding: 40px;
             width: 1120px; /* Broadsheet width */
             box-sizing: border-box;
         }
+
+        /* ── Per-language body font injection ────────────────────────────
+           Each language class puts the primary script font FIRST in the
+           family list so Chromium uses it for all glyphs in that script
+           instead of falling back to a tofu/bar glyph. */
+        body[lang="te"] { font-family: 'Noto Serif Telugu', 'Noto Sans Telugu', var(--font-family-chosen), serif; }
+        body[lang="hi"] { font-family: 'Noto Serif Devanagari', 'Noto Sans Devanagari', var(--font-family-chosen), serif; }
+        body[lang="mr"] { font-family: 'Noto Serif Devanagari', 'Noto Sans Devanagari', var(--font-family-chosen), serif; }
+        body[lang="kn"] { font-family: 'Noto Serif Kannada',   'Noto Sans Kannada',   var(--font-family-chosen), serif; }
+        body[lang="ml"] { font-family: 'Noto Serif Malayalam', 'Noto Sans Malayalam', var(--font-family-chosen), serif; }
+        body[lang="ta"] { font-family: 'Noto Serif Tamil',     'Noto Sans Tamil',     var(--font-family-chosen), serif; }
+        body[lang="bn"] { font-family: 'Noto Serif Bengali',   'Noto Sans Bengali',   var(--font-family-chosen), serif; }
+        body[lang="gu"] { font-family: 'Noto Serif Gujarati',  'Noto Sans Gujarati',  var(--font-family-chosen), serif; }
+        body[lang="pa"] { font-family: 'Noto Serif Gurmukhi',  'Noto Sans Gurmukhi',  var(--font-family-chosen), serif; }
+        body[lang="or"] { font-family: 'Noto Serif Oriya',     'Noto Sans Oriya',     var(--font-family-chosen), serif; }
 
         .newspaper-container {
             border: 1px solid var(--border-color);
@@ -124,7 +331,18 @@
 
         /* Main Content */
         .headline {
-            font-family: 'Playfair Display', 'Noto Sans Telugu', serif;
+            /* Headline: Latin display font + every Indic script Noto as fallback */
+            font-family: 'Playfair Display',
+                         'Noto Serif Telugu',  'Noto Sans Telugu',
+                         'Noto Serif Devanagari', 'Noto Sans Devanagari',
+                         'Noto Serif Kannada',  'Noto Sans Kannada',
+                         'Noto Serif Malayalam','Noto Sans Malayalam',
+                         'Noto Serif Tamil',   'Noto Sans Tamil',
+                         'Noto Serif Bengali', 'Noto Sans Bengali',
+                         'Noto Serif Gujarati','Noto Sans Gujarati',
+                         'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+                         'Noto Serif Oriya',   'Noto Sans Oriya',
+                         serif;
             font-size: 56px;
             font-weight: 900;
             line-height: 1.1;
@@ -134,7 +352,18 @@
         }
 
         .subtitle {
-            font-family: 'Merriweather', 'Noto Sans Telugu', serif;
+            /* Subtitle: same complete fallback stack */
+            font-family: 'Merriweather',
+                         'Noto Serif Telugu',  'Noto Sans Telugu',
+                         'Noto Serif Devanagari', 'Noto Sans Devanagari',
+                         'Noto Serif Kannada',  'Noto Sans Kannada',
+                         'Noto Serif Malayalam','Noto Sans Malayalam',
+                         'Noto Serif Tamil',   'Noto Sans Tamil',
+                         'Noto Serif Bengali', 'Noto Sans Bengali',
+                         'Noto Serif Gujarati','Noto Sans Gujarati',
+                         'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+                         'Noto Serif Oriya',   'Noto Sans Oriya',
+                         serif;
             font-size: 24px;
             font-style: italic;
             text-align: center;

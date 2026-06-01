@@ -152,12 +152,44 @@ class RenderService:
         data["template_id"] = template_key
         if brand_key in branding:
             data.update(branding[brand_key])
-
         lang_map = {
-            "en": "English", "te": "Telugu", "hi": "Hindi",
-            "kn": "Kannada", "ta": "Tamil", "ml": "Malayalam",
+            "en": "English",  "te": "Telugu",   "hi": "Hindi",
+            "kn": "Kannada",  "ta": "Tamil",    "ml": "Malayalam",
+            "mr": "Marathi",  "bn": "Bengali",  "gu": "Gujarati",
+            "pa": "Punjabi",  "or": "Odia",
         }
         data["language_name"] = lang_map.get(data.get("language", "en"), "English")
+
+        # ── Per-language primary font for logging ─────────────────────────────
+        _lang_font_map = {
+            "en": ("Playfair Display / Merriweather", "Latin + full Unicode"),
+            "te": ("Noto Serif Telugu + Noto Sans Telugu", "Telugu Unicode block U+0C00–U+0C7F"),
+            "hi": ("Noto Serif Devanagari + Noto Sans Devanagari", "Devanagari U+0900–U+097F"),
+            "mr": ("Noto Serif Devanagari + Noto Sans Devanagari", "Devanagari U+0900–U+097F"),
+            "kn": ("Noto Serif Kannada + Noto Sans Kannada", "Kannada U+0C80–U+0CFF"),
+            "ml": ("Noto Serif Malayalam + Noto Sans Malayalam", "Malayalam U+0D00–U+0D7F"),
+            "ta": ("Noto Serif Tamil + Noto Sans Tamil", "Tamil U+0B80–U+0BFF"),
+            "bn": ("Noto Serif Bengali + Noto Sans Bengali", "Bengali U+0980–U+09FF"),
+            "gu": ("Noto Serif Gujarati + Noto Sans Gujarati", "Gujarati U+0A80–U+0AFF"),
+            "pa": ("Noto Serif Gurmukhi + Noto Sans Gurmukhi", "Gurmukhi U+0A00–U+0A7F"),
+            "or": ("Noto Serif Oriya + Noto Sans Oriya", "Odia U+0B00–U+0B7F"),
+        }
+        lang_code = data.get("language", "en")
+        _sel_font, _glyph_cov = _lang_font_map.get(lang_code, ("Playfair Display", "Latin Unicode"))
+        _sections = data.get("sections", [])
+        _char_count = sum(len(s) for s in _sections)
+        _headline_chars = len(data.get("headline", ""))
+        _sub_chars = len(data.get("subheadline", "") or data.get("subtitle", ""))
+        _caption_chars = sum(len(c) for c in (data.get("image_captions") or []))
+
+        print(f"[MULTILANG] Language          : {data.get('language_name', 'English')} ({lang_code})")
+        print(f"[MULTILANG] Selected Font     : {_sel_font}")
+        print(f"[MULTILANG] Glyph Coverage    : {_glyph_cov}")
+        print(f"[MULTILANG] Headline chars    : {_headline_chars}")
+        print(f"[MULTILANG] Subheadline chars : {_sub_chars}")
+        print(f"[MULTILANG] Caption chars     : {_caption_chars}")
+        print(f"[MULTILANG] Body chars total  : {_char_count} across {len(_sections)} sections")
+        sys.stdout.flush()
 
         # Resolve render URL — on production use the deployed frontend URL
         if data.get("template_id") == "custom":
