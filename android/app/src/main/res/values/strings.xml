@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NewsCraftMobile</string>
+    <string name="title_activity_main">NewsCraftMobile</string>
+    <string name="package_name">com.newscraft.mobile</string>
+    <string name="custom_url_scheme">com.newscraft.mobile</string>
+    <string name="server_client_id">831106920430-h8h1nj7a5j2iirgki34ve8ariuj8uroi.apps.googleusercontent.com</string>
+</resources>
