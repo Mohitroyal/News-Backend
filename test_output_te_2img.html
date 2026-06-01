@@ -19,7 +19,7 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Lora', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Lora', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     margin: 0;
     padding: 30px;
     display: flex;
@@ -109,7 +109,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 }
 
 .headline {
-    font-family: 'Merriweather', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Merriweather', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     font-size: 52px;
     font-weight: 900;
     line-height: 1.15;
@@ -127,7 +127,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 }
 
 .subheadline {
-    font-family: 'Lora', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Lora', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     font-size: 19.5px;
     font-weight: 600;
     color: #444444;
@@ -196,7 +196,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 /* Modern clean Drop Cap */
 .paragraph.has-dropcap::first-letter {
     float: left;
-    font-family: 'Merriweather', 'Lora', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Merriweather', 'Lora', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     font-size: 58px;
     line-height: 46px;
     padding-top: 3px;
@@ -233,6 +233,14 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     font-weight: bold;
 }
     </style>
+
+            <style id="indic-font-enforcer">
+                /* Force Indic font first, fallback to Latin */
+                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .dateline, .image-caption {
+                    font-family: 'Noto Serif Telugu', 'Noto Sans Telugu', 'Playfair Display', 'Merriweather', serif !important;
+                }
+            </style>
+            
 </head>
 <body>
     <div class="newspaper-container">
@@ -313,16 +321,14 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 
             <!-- IMAGE SECTION -->
             
-            <div class="image-grid" style="display: flex; gap: 10px; margin-bottom: 0;">
+            <div class="image-grid" style="display: flex; gap: 10px; margin-bottom: 0; align-items: flex-start;">
                 
-                <div style="flex: 1; overflow: hidden; border: 1px solid #c8c8c4; padding: 4px; box-sizing: border-box; text-align: center; max-height: 400px; max-width: 100%;">
-                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80" alt="Article Image" style="max-width: 100%; max-height: 400px; width: auto; height: auto; object-fit: contain; display: inline-block;" />
-                    
+                <div style="flex: 1; overflow: hidden; border: 1px solid #c8c8c4; padding: 4px; box-sizing: border-box; text-align: center;">
+                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80" alt="Article Image" style="width: 100%; height: auto; object-fit: contain; display: block;" />
                 </div>
                 
-                <div style="flex: 1; overflow: hidden; border: 1px solid #c8c8c4; padding: 4px; box-sizing: border-box; text-align: center; max-height: 400px; max-width: 100%;">
-                    <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80" alt="Article Image" style="max-width: 100%; max-height: 400px; width: auto; height: auto; object-fit: contain; display: inline-block;" />
-                    
+                <div style="flex: 1; overflow: hidden; border: 1px solid #c8c8c4; padding: 4px; box-sizing: border-box; text-align: center;">
+                    <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80" alt="Article Image" style="width: 100%; height: auto; object-fit: contain; display: block;" />
                 </div>
                 
             </div>
