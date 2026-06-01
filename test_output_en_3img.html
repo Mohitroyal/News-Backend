@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TEST: English - 3 Images (Layout Pagination Limit Test)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@700;900&family=Noto+Serif+Devanagari:wght@400;700&family=Noto+Serif+Telugu:wght@400;700&family=Noto+Serif+Kannada:wght@400;700&family=Noto+Serif+Tamil:wght@400;700&family=Noto+Serif+Malayalam:wght@400;700&display=swap');
+
+/* Color Theme: Royal Midnight Navy, Ivory White, Classic Charcoal, Gold accents */
+:root {
+    --bg-color: #faf9f6;
+    --paper-color: #ffffff;
+    --text-color: #0f172a; /* Slate 900 */
+    --accent-color: #0a192f; /* Deep Navy */
+    --gold-color: #b38f32;
+    --border-color: #0a192f;
+    --column-gap: 24px;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    margin: 0;
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* Multilingual Font Families */
+html[lang="hi"] body, html[lang="hi"] .paragraph, html[lang="hi"] .headline {
+    font-family: 'Noto Serif Devanagari', serif;
+}
+html[lang="te"] body, html[lang="te"] .paragraph, html[lang="te"] .headline {
+    font-family: 'Noto Serif Telugu', serif;
+}
+html[lang="kn"] body, html[lang="kn"] .paragraph, html[lang="kn"] .headline {
+    font-family: 'Noto Serif Kannada', serif;
+}
+html[lang="ta"] body, html[lang="ta"] .paragraph, html[lang="ta"] .headline {
+    font-family: 'Noto Serif Tamil', serif;
+}
+html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
+    font-family: 'Noto Serif Malayalam', serif;
+}
+
+.newspaper-container {
+    width: 1060px; /* Precise broadsheet width */
+    height: auto;
+    min-height: 500px;
+    background: var(--paper-color);
+    border: 2px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(10, 25, 47, 0.04);
+    padding: 35px;
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* HEADER SECTION */
+.header-section {
+    width: 100%;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.logo-container {
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo-container svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* NEWSPAPER META SECTION */
+.meta-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1.5px solid var(--border-color);
+    border-bottom: 1.5px solid var(--border-color);
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 8px;
+    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    color: var(--accent-color);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+}
+
+/* HEADLINE SECTION */
+.headline-section {
+    margin: 25px 0 16px 0;
+    text-align: center;
+}
+
+.headline {
+    font-family: 'Playfair Display', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-size: 50px;
+    font-weight: 900;
+    line-height: 1.15;
+    color: var(--text-color);
+    margin: 0 0 10px 0;
+    letter-spacing: -1px;
+}
+
+/* SUBHEADLINE SECTION */
+.subheadline-section {
+    border-bottom: 0.5px solid #cbd5e1;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.subheadline {
+    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-size: 19px;
+    font-style: italic;
+    color: #475569;
+    margin: 0;
+    line-height: 1.45;
+}
+
+/* CONTENT CONTAINER */
+.newspaper-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex-grow: 1; /* Make the body grow to push footer to the bottom */
+}
+
+/* IMAGE SECTION */
+.image-section {
+    width: 100%;
+    margin-bottom: 10px;
+    border: 1px solid #cbd5e1;
+    padding: 6px;
+    box-sizing: border-box;
+}
+
+.article-image {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    max-height: 450px;
+    object-fit: contain;
+    filter: sepia(30%) grayscale(20%) contrast(102%);
+}
+
+.image-caption {
+    font-size: 13px;
+    font-style: italic;
+    margin-top: 8px;
+    color: #475569;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* ARTICLE CONTENT SECTION - MULTI-COLUMN */
+.article-content {
+    columns: 3;
+    column-gap: var(--column-gap);
+    column-rule: 0.5px solid #cbd5e1;
+    text-align: justify;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #1e293b;
+}
+
+.paragraph {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-indent: 18px;
+}
+
+.paragraph:first-of-type {
+    text-indent: 0;
+}
+
+/* Classic Drop Cap */
+.paragraph.has-dropcap::first-letter {
+    float: left;
+    font-family: 'Cinzel', 'Playfair Display', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-size: 54px;
+    line-height: 42px;
+    padding-top: 4px;
+    padding-right: 6px;
+    font-weight: 900;
+    color: var(--accent-color);
+}
+
+.byline-section {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 12px;
+    color: var(--accent-color);
+    border-bottom: 0.5px solid #cbd5e1;
+    padding-bottom: 4px;
+    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+}
+
+/* FOOTER SECTION */
+.footer-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    word-wrap: break-word;
+    border-top: 1.5px solid var(--border-color);
+    padding-top: 10px;
+    margin-top: auto; /* Push the footer to the bottom of the container */
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #64748b;
+    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-weight: 600;
+}
+    </style>
+</head>
+<body>
+    <div class="newspaper-container">
+        <!-- HEADER SECTION -->
+        <header class="header-section">
+            <div class="logo-container" style="text-align: center;">
+                
+                
+                    <svg viewBox="0 0 1000 280" xmlns="http://www.w3.org/2000/svg" width="1000" height="280" style="max-height: 120px; width: auto; margin: 0 auto;">
+  <!-- Background purple rectangle -->
+  <rect x="0" y="0" width="1000" height="280" fill="#761c9e" />
+  
+  <!-- Thin outer borders -->
+  <rect x="5" y="5" width="990" height="270" fill="none" stroke="#ffffff" stroke-width="2" />
+  <rect x="10" y="10" width="980" height="260" fill="none" stroke="#000000" stroke-width="1.5" />
+  
+  <!-- Main Telugu Text: నేషనల్ న్యూస్ -->
+  <text x="30" y="172" font-family="'Noto Serif Telugu', 'Kohinoor Telugu', serif" font-weight="900" font-size="135" fill="#ffffff" letter-spacing="1">నేషనల్ న్యూస్</text>
+  
+  <!-- Right skew text: రిపోర్టర్ -->
+  <g transform="translate(870, 200) rotate(-10)">
+    <text x="0" y="0" font-family="'Noto Serif Telugu', serif" font-weight="900" font-size="44" fill="#ffffff" text-anchor="middle">రిపోర్టర్</text>
+  </g>
+
+  <!-- Bottom banners block -->
+  <g transform="translate(30, 185)">
+    <!-- White outer border for the banners -->
+    <rect x="0" y="0" width="720" height="75" fill="#ffffff" />
+    <rect x="3" y="3" width="714" height="69" fill="#000000" />
+    
+    <!-- Left Red Banner -->
+    <rect x="5" y="5" width="455" height="65" fill="#cc2424" />
+    <text x="15" y="44" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="42" fill="#ffffff" letter-spacing="4">NATIONAL</text>
+    <text x="15" y="60" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="12" fill="#000000" letter-spacing="1">RNI:APTEL/25/A2293</text>
+    
+    <!-- Right Blue Banner -->
+    <rect x="465" y="5" width="250" height="65" fill="#1b2e4b" />
+    <text x="475" y="44" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="42" fill="#ffffff" letter-spacing="4">NEWS</text>
+    <text x="475" y="60" font-family="'Noto Sans', sans-serif" font-weight="900" font-size="12" fill="#e28743" letter-spacing="1">REPORTER</text>
+  </g>
+</svg>
+                
+            </div>
+        </header>
+
+        <!-- NEWSPAPER META SECTION -->
+        <div class="meta-section" style="justify-content: center; flex-direction: column; gap: 4px;">
+            <div class="meta-item"><span>National News Reporter - Sunday, May 31, 2026</span></div>
+            <div class="meta-item"><span>Wanted Reporters: 7668886666</span></div>
+        </div>
+
+        <div class="newspaper-body">
+            <!-- HEADLINE SECTION -->
+            <div class="headline-section">
+                <h1 class="headline">TEST: English - 3 Images (Layout Pagination Limit Test)</h1>
+            </div>
+
+            <!-- SUBHEADLINE SECTION -->
+            <div class="subheadline-section">
+                <h2 class="subheadline">Validation of updated stable rendering pipeline</h2>
+            </div>
+
+            <!-- IMAGE SECTION -->
+            
+            <div class="image-grid" style="display: flex; gap: 10px; margin-bottom: 0;">
+                
+                <div style="flex: 1; overflow: hidden; border: 1px solid #cbd5e1; padding: 4px; box-sizing: border-box; text-align: center; max-height: 400px; max-width: 100%;">
+                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80" alt="Article Image" style="max-width: 100%; max-height: 400px; width: auto; height: auto; object-fit: contain; display: inline-block;" />
+                    
+                </div>
+                
+                <div style="flex: 1; overflow: hidden; border: 1px solid #cbd5e1; padding: 4px; box-sizing: border-box; text-align: center; max-height: 400px; max-width: 100%;">
+                    <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80" alt="Article Image" style="max-width: 100%; max-height: 400px; width: auto; height: auto; object-fit: contain; display: inline-block;" />
+                    
+                </div>
+                
+                <div style="flex: 1; overflow: hidden; border: 1px solid #cbd5e1; padding: 4px; box-sizing: border-box; text-align: center; max-height: 400px; max-width: 100%;">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80" alt="Article Image" style="max-width: 100%; max-height: 400px; width: auto; height: auto; object-fit: contain; display: inline-block;" />
+                    
+                </div>
+                
+            </div>
+            
+
+            <!-- ARTICLE CONTENT -->
+            <div class="article-content" style="margin-top: 15px;">
+                <div class="byline-section">By By Antigravity QA Agent</div>
+                
+                    <p class="paragraph has-dropcap">
+                        <span class="dateline">HYDERABAD —</span> This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.
+                    </p>
+                
+                
+                    <p class="paragraph">This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.</p>
+                
+                    <p class="paragraph">This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.</p>
+                
+                    <p class="paragraph">This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.</p>
+                
+                    <p class="paragraph">This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.</p>
+                
+                    <p class="paragraph">This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.</p>
+                
+                    <p class="paragraph">This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.</p>
+                
+                    <p class="paragraph">This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.</p>
+                
+                    <p class="paragraph">This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.</p>
+                
+                    <p class="paragraph">This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.</p>
+                
+                    <p class="paragraph">This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.</p>
+                
+                    <p class="paragraph">This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.</p>
+                
+                    <p class="paragraph">This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.</p>
+                
+                    <p class="paragraph">This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.</p>
+                
+                    <p class="paragraph">This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.</p>
+                
+            </div>
+        </div>
+
+        <!-- FOOTER SECTION -->
+        <footer class="footer-section">
+            <div>PAGE 1 • NATIONAL NEWS REPORTER</div>
+            <div>© 2026 NATIONAL NEWSPAPER CORP</div>
+        </footer>
+    </div>
+
+        <script>
+        window.NEWSPAPER_DATA = {"headline": "TEST: English - 3 Images (Layout Pagination Limit Test)", "subheadline": "Validation of updated stable rendering pipeline", "publication_name": "National News Reporter", "publication_date": "Sunday, May 31, 2026", "volume": "CXIV", "edition": "27", "location": "Global Edition", "language_name": "English", "byline": "By Antigravity QA Agent", "dateline": "HYDERABAD", "template_id": "national_news", "logo_url": "http://localhost:8000/static/logos/national_news.svg", "primary_color": "#761c9e", "accent_color": "#cc2424", "border_color": "#761c9e", "layout_columns": 3, "sections": ["This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.", "This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.", "This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.", "This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.", "This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.", "This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.", "This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.", "This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.", "This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.", "This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.", "This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.", "This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.", "This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.", "This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.", "This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable."], "image_urls": ["https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"], "image_captions": []};
+        document.addEventListener("DOMContentLoaded", async () => {
+            const data = window.NEWSPAPER_DATA;
+            if (!data) return;
+
+            const container = document.querySelector('.newspaper-container');
+            if (!container) return;
+
+            // ── SINGLE-PAGE COMPRESSION ENGINE ──────────────────────────────
+            // NEVER creates Page 2 or Page 3.
+            // Compresses font, image height, and spacing until everything fits.
+            // ALL article content is always preserved.
+
+            const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
+            console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
+
+            // Compression ladder: spacious -> compact. Content NEVER removed.
+            const configs = [
+                // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
+                { fontSize: 17.0, lineHeight: 1.65, paraMargin: 18, imgMaxPct: 0.40, padding: 35 },
+                { fontSize: 16.0, lineHeight: 1.62, paraMargin: 16, imgMaxPct: 0.38, padding: 32 },
+                { fontSize: 15.0, lineHeight: 1.58, paraMargin: 14, imgMaxPct: 0.36, padding: 30 },
+                { fontSize: 14.0, lineHeight: 1.54, paraMargin: 12, imgMaxPct: 0.34, padding: 28 },
+                { fontSize: 13.5, lineHeight: 1.50, paraMargin: 10, imgMaxPct: 0.32, padding: 25 },
+                { fontSize: 13.0, lineHeight: 1.46, paraMargin:  9, imgMaxPct: 0.30, padding: 22 },
+                { fontSize: 12.5, lineHeight: 1.42, paraMargin:  8, imgMaxPct: 0.28, padding: 20 },
+                { fontSize: 12.0, lineHeight: 1.38, paraMargin:  7, imgMaxPct: 0.26, padding: 18 },
+                { fontSize: 11.5, lineHeight: 1.35, paraMargin:  6, imgMaxPct: 0.24, padding: 16 },
+                { fontSize: 11.0, lineHeight: 1.32, paraMargin:  5, imgMaxPct: 0.22, padding: 15 },
+                { fontSize: 10.0, lineHeight: 1.28, paraMargin:  4, imgMaxPct: 0.20, padding: 12 },
+                { fontSize:  9.0, lineHeight: 1.25, paraMargin:  3, imgMaxPct: 0.16, padding: 10 }
+            ];
+
+            async function waitReady() {
+                await document.fonts.ready;
+                await Promise.all(Array.from(document.images).map(img =>
+                    img.complete ? Promise.resolve() :
+                    new Promise(r => { img.onload = r; img.onerror = r; })
+                ));
+            }
+
+            // Image layout rebuilding variables
+            const urls = data.image_urls || [];
+            const captions = data.image_captions || [];
+            const imgCount = urls.length;
+            
+            let imgContainer = container.querySelector('.image-grid, .featured-image-container, .extra-image-wrapper');
+            let borderStyle = '1px solid #ddd';
+            let paddingStyle = '4px';
+            
+            if (!imgContainer && imgCount > 0) {
+                // Find first non-logo image parent
+                const nonLogoImg = Array.from(container.querySelectorAll('img')).find(img => 
+                    !img.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+                );
+                if (nonLogoImg) {
+                    let parent = nonLogoImg.parentElement;
+                    if (parent && parent.parentElement && parent.parentElement !== container.querySelector('.col-2') && parent.parentElement !== container.querySelector('.newspaper-body') && parent.parentElement.tagName !== 'BODY') {
+                        imgContainer = parent.parentElement;
+                    } else if (parent) {
+                        imgContainer = parent;
+                    }
+                }
+            }
+
+            if (imgContainer && imgCount > 0) {
+                const firstWrapper = imgContainer.querySelector('div');
+                if (firstWrapper) {
+                    const comp = window.getComputedStyle(firstWrapper);
+                    const bWidth = comp.borderTopWidth || '1px';
+                    const bStyle = comp.borderTopStyle || 'solid';
+                    const bColor = comp.borderTopColor || '#ddd';
+                    borderStyle = `${bWidth} ${bStyle} ${bColor}`;
+                    paddingStyle = comp.padding || paddingStyle;
+                }
+            }
+
+            // Sizing / Aspect Ratio variables (declared in DOMContentLoaded scope)
+            let aspectRatios = [];
+            let orientations = [];
+            let chosenLayoutName = 'Layout 1-Column';
+
+            async function getImageDimensions(url) {
+                const existingImg = Array.from(document.images).find(img => img.src === url || img.getAttribute('src') === url);
+                if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
+                    return { width: existingImg.naturalWidth, height: existingImg.naturalHeight };
+                }
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                    };
+                    img.onerror = () => {
+                        resolve({ width: 0, height: 0 });
+                    };
+                    img.src = url;
+                });
+            }
+
+            // Image layout generation helpers
+            function getLayout1(imgHeightPx) {
+                return `
+                  <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%;">
+                      <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                      ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                  </div>
+                `;
+            }
+
+            // Flex 1-1 layout for 2 images
+            function getLayout2(imgHeightPx) {
+                return `
+                  <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                      </div>
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+                      </div>
+                  </div>
+                `;
+            }
+
+            function applyConfig(conf) {
+                const containerW = container.offsetWidth || 1060;
+                const imgHeightPx = Math.round(conf.imgMaxPct * containerW);
+
+                // Container padding
+                container.style.padding = conf.padding + 'px';
+                
+                // Adjust inner-border padding if it exists
+                const innerBorder = container.querySelector('.inner-border');
+                if (innerBorder) {
+                    innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
+                }
+
+                // Clean up any previously inserted 3rd image
+                const existingThird = container.querySelector('.nc-third-image-wrapper');
+                if (existingThird) {
+                    existingThird.remove();
+                }
+
+                // Article text columns — strictly enforced
+                const selectedCols = parseInt(data.layout_columns) || 3;
+                const articleEl = container.querySelector('.article-content, .article-body');
+                if (articleEl) {
+                    articleEl.style.fontSize      = conf.fontSize + 'px';
+                    articleEl.style.lineHeight    = conf.lineHeight;
+                    articleEl.style.columnCount   = selectedCols;
+                    articleEl.style.columns       = selectedCols;
+                    articleEl.style.webkitColumns = selectedCols;
+                }
+                
+                container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph').forEach(p => {
+                    p.style.fontSize     = conf.fontSize + 'px';
+                    p.style.lineHeight   = conf.lineHeight;
+                    p.style.marginBottom = conf.paraMargin + 'px';
+                    p.style.marginTop    = '0';
+                });
+
+                // Dropcap scaling: should scale proportionally with font size
+                let dcStyle = document.getElementById('nc-dropcap-style');
+                if (!dcStyle) {
+                    dcStyle = document.createElement('style');
+                    dcStyle.id = 'nc-dropcap-style';
+                    document.head.appendChild(dcStyle);
+                }
+                const dropcapFS = Math.round(conf.fontSize * 3.6);
+                const dropcapLH = Math.round(conf.fontSize * 2.8);
+                dcStyle.innerHTML = `
+                    .paragraph.has-dropcap::first-letter,
+                    .article-body p:first-of-type::first-letter {
+                        font-size: ${dropcapFS}px !important;
+                        line-height: ${dropcapLH}px !important;
+                    }
+                `;
+
+                // Headline auto-shrink
+                const headline = container.querySelector('.headline');
+                if (headline) {
+                    let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
+                    headline.style.fontSize = hlSize + 'px';
+                    headline.style.lineHeight = '1.1';
+                    let count = 0;
+                    while (hlSize > 20 && count < 20) {
+                        const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
+                        const lines = Math.round(headline.offsetHeight / lh);
+                        if (lines <= 2) {
+                            break;
+                        }
+                        hlSize -= 2;
+                        headline.style.fontSize = hlSize + 'px';
+                        count++;
+                    }
+                }
+
+                // Subheadline auto-shrink
+                const subheadline = container.querySelector('.subheadline, .subtitle');
+                if (subheadline) {
+                    let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
+                    subheadline.style.fontSize = subSize + 'px';
+                    subheadline.style.lineHeight = '1.3';
+                    let count = 0;
+                    while (subSize > 12 && count < 10) {
+                        const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
+                        const lines = Math.round(subheadline.offsetHeight / lh);
+                        if (lines <= 2) {
+                            break;
+                        }
+                        subSize -= 1.5;
+                        subheadline.style.fontSize = subSize + 'px';
+                        count++;
+                    }
+                }
+
+                // Spacing adjustments
+                const header = container.querySelector('header, .header-section');
+                if (header) {
+                    header.style.marginBottom = Math.round(conf.paraMargin * 1.2) + 'px';
+                }
+                const meta = container.querySelector('.metadata-bar, .meta-section');
+                if (meta) {
+                    meta.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+                    meta.style.marginTop = Math.round(conf.paraMargin * 0.8) + 'px';
+                }
+                const headlineSec = container.querySelector('.headline-section');
+                if (headlineSec) {
+                    headlineSec.style.margin = Math.round(conf.paraMargin * 1.2) + 'px 0 ' + Math.round(conf.paraMargin * 0.8) + 'px 0';
+                }
+                const subheadlineSec = container.querySelector('.subheadline-section');
+                if (subheadlineSec) {
+                    subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+                }
+
+                // Rebuild image container with layout mode and image height
+                if (imgContainer && imgCount > 0) {
+                    if (imgCount === 3) {
+                        chosenLayoutName = 'Layout 2-Column Top + 1-Column In-Text';
+                        imgContainer.innerHTML = getLayout2(imgHeightPx);
+
+                        const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
+                        if (paragraphs.length > 0) {
+                            const insertIndex = Math.min(2, Math.max(1, Math.floor(paragraphs.length / 2)));
+                            const targetPara = paragraphs[Math.min(insertIndex, paragraphs.length - 1)];
+                            
+                            const thirdImgWrapper = document.createElement('div');
+                            thirdImgWrapper.className = 'nc-third-image-wrapper';
+                            thirdImgWrapper.style.margin = '15px 0';
+                            thirdImgWrapper.style.textAlign = 'center';
+                            thirdImgWrapper.style.border = borderStyle;
+                            thirdImgWrapper.style.padding = paddingStyle;
+                            thirdImgWrapper.style.boxSizing = 'border-box';
+                            thirdImgWrapper.style.width = '100%';
+                            thirdImgWrapper.style.breakInside = 'avoid';
+                            thirdImgWrapper.style.webkitColumnBreakInside = 'avoid';
+                            thirdImgWrapper.innerHTML = `
+                                <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
+                                ${captions[2] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[2]}</div>` : ''}
+                            `;
+                            targetPara.after(thirdImgWrapper);
+                        }
+                    } else if (imgCount === 2) {
+                        chosenLayoutName = 'Layout 2-Column';
+                        imgContainer.innerHTML = getLayout2(imgHeightPx);
+                    } else if (imgCount === 1) {
+                        chosenLayoutName = 'Layout 1-Column';
+                        imgContainer.innerHTML = getLayout1(imgHeightPx);
+                    }
+                }
+
+                console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' imgH=' + imgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
+                return imgHeightPx;
+            }
+
+            async function executeLayout() {
+                // Initialize aspect ratios and orientations
+                const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
+                aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
+                orientations = dims.map(d => {
+                    if (!d.width || !d.height) return 'Square';
+                    if (d.height > d.width) return 'Portrait';
+                    if (d.width > d.height) return 'Landscape';
+                    return 'Square';
+                });
+
+                await waitReady();
+
+                // Unlock container — must be auto-height (single page = natural height)
+                container.style.height    = 'auto';
+                container.style.minHeight = 'unset';
+                container.style.overflow  = 'visible';
+
+                let chosenConf = configs[0];
+                let chosenImgH = 0;
+                const TARGET_MAX_HEIGHT = 1500;
+                let fits = false;
+
+                for (let i = 0; i < configs.length; i++) {
+                    const imgH = applyConfig(configs[i]);
+                    chosenConf = configs[i];
+                    chosenImgH = imgH;
+
+                    // Wait two animation frames for layout to settle
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                    // Check if the container fits within target page height
+                    if (container.scrollHeight <= TARGET_MAX_HEIGHT) {
+                        fits = true;
+                        break;
+                    }
+                }
+
+                // Wait final render cycle
+                await waitReady();
+
+                const finalW   = container.offsetWidth;
+                const finalH   = container.scrollHeight;
+                const finalFS  = chosenConf.fontSize;
+                const finalSec = (data.sections || []).length;
+                const finalCh  = (data.sections || []).reduce((s,p) => s + p.length, 0);
+
+                console.log('[LAYOUT] DONE — chars:', finalCh, 'sections:', finalSec, '(ALL PRESERVED)');
+                console.log('[LAYOUT] Font size used:', finalFS + 'px');
+                console.log('[LAYOUT] Image height used:', chosenImgH + 'px');
+                console.log('[LAYOUT] Final clipping dimensions:', finalW + 'x' + finalH + 'px');
+
+                // Print-ready global styles (removes all watermarks, page breaks, margins, etc.)
+                let st = document.getElementById('nc-layout-style');
+                if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
+                st.innerHTML = `
+                    * { -webkit-font-smoothing: antialiased !important; text-rendering: optimizeLegibility !important; }
+                    body { margin: 0 !important; padding: 20px !important; display: flex !important; justify-content: center !important; align-items: flex-start !important; }
+                    .newspaper-container { height: auto !important; min-height: unset !important; overflow: visible !important; }
+                    @media print {
+                        @page { size: auto; margin: 0; }
+                        body { padding: 0 !important; background: #fff !important; }
+                        .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
+                        * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
+                    }
+                    .article-content p, .article-body p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }
+                `;
+
+                // Log image dimensions and layout selection
+                const finalDims = urls.map(url => {
+                    const img = Array.from(document.querySelectorAll('img')).find(i => 
+                        i.src === url && !i.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+                    );
+                    return img ? `${img.offsetWidth}x${img.offsetHeight}px` : 'unknown';
+                }).join(', ');
+
+                window.__IMAGE_LAYOUT_LOGS__ = {
+                    image_count: imgCount,
+                    image_orientations: orientations.join(', '),
+                    selected_layout: chosenLayoutName,
+                    final_dimensions: finalDims
+                };
+
+                // Signal Playwright that layout is complete
+                window.__LAYOUT_DONE__ = true;
+            }
+
+            executeLayout();
+        });
+        </script>
+        </body>
+</html>

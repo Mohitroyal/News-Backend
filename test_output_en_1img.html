@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Noto+Sans:wght@400;700&display=swap');
+
+        body {
+            background-color: #fdfbf7;
+            color: #1a1a1a;
+            font-family: 'Old Standard TT', serif;
+            margin: 0;
+            padding: 40px;
+            width: 1120px; /* Standard broadsheet ratio */
+        }
+
+        .newspaper-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 4px double #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        .masthead {
+            font-family: 'Playfair Display', serif;
+            font-size: 80px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin: 0;
+            letter-spacing: -2px;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #333;
+            border-bottom: 1px solid #333;
+            padding: 5px 0;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .headline {
+            font-family: 'Playfair Display', serif;
+            font-size: 48px;
+            line-height: 1.1;
+            margin: 20px 0 10px 0;
+            text-align: left;
+        }
+
+        .subheadline {
+            font-size: 20px;
+            font-style: italic;
+            color: #555;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            text-align: justify;
+        }
+
+        .paragraph {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            font-size: 17px;
+        }
+
+        .paragraph:first-of-type::first-letter {
+            float: left;
+            font-size: 60px;
+            line-height: 1;
+            padding-right: 8px;
+            font-weight: bold;
+        }
+
+        .byline {
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .dateline {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="newspaper-container">
+        <header>
+            <h1 class="masthead">THE DAILY CHRONICLE</h1>
+            <div class="meta-info">
+                <span>VOL. CLXII... No. 56,234</span>
+                <span>HYDERABAD</span>
+                <span>PRICE TWO CENTS</span>
+            </div>
+        </header>
+
+        <h2 class="headline">TEST: English - 1 Image</h2>
+        <p class="subheadline">Validation of updated stable rendering pipeline</p>
+
+        <div class="byline">By By Antigravity QA Agent</div>
+
+        <div class="columns">
+            <div class="col-1">
+                
+                    <p class="paragraph">
+                        <span class="dateline">[HYDERABAD] — </span>
+                        This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.
+                    </p>
+                
+                    <p class="paragraph">
+                        
+                        This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.
+                    </p>
+                
+                    <p class="paragraph">
+                        
+                        This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.
+                    </p>
+                
+            </div>
+            <div class="col-2">
+                <!-- Additional content or image can go here -->
+                
+                    <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; width: 100%;">
+                        
+                        <div style="overflow:hidden; border:1px solid #000; text-align: center;">
+                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80" style="max-width:100%; max-height:400px; width:auto; height:auto; object-fit:contain; display:inline-block;" />
+                        </div>
+                        
+                    </div>
+                
+                <p class="paragraph">
+                    Continued on Page A2... The impact of this development is expected to be felt across the entire region as experts weigh in on the long-term implications.
+                </p>
+            </div>
+        </div>
+    </div>
+
+        <script>
+        window.NEWSPAPER_DATA = {"headline": "TEST: English - 1 Image", "subheadline": "Validation of updated stable rendering pipeline", "publication_name": "NewsCraft Test Edition", "publication_date": "Sunday, May 31, 2026", "volume": "CXIV", "edition": "27", "location": "Global Edition", "language_name": "English", "byline": "By Antigravity QA Agent", "dateline": "HYDERABAD", "template_id": "classic", "logo_url": "", "primary_color": "#000000", "accent_color": "#333333", "border_color": "#000000", "layout_columns": 3, "sections": ["This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.", "This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.", "This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable."], "image_urls": ["https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80"], "image_captions": []};
+        document.addEventListener("DOMContentLoaded", async () => {
+            const data = window.NEWSPAPER_DATA;
+            if (!data) return;
+
+            const container = document.querySelector('.newspaper-container');
+            if (!container) return;
+
+            // ── SINGLE-PAGE COMPRESSION ENGINE ──────────────────────────────
+            // NEVER creates Page 2 or Page 3.
+            // Compresses font, image height, and spacing until everything fits.
+            // ALL article content is always preserved.
+
+            const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
+            console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
+
+            // Compression ladder: spacious -> compact. Content NEVER removed.
+            const configs = [
+                // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
+                { fontSize: 17.0, lineHeight: 1.65, paraMargin: 18, imgMaxPct: 0.40, padding: 35 },
+                { fontSize: 16.0, lineHeight: 1.62, paraMargin: 16, imgMaxPct: 0.38, padding: 32 },
+                { fontSize: 15.0, lineHeight: 1.58, paraMargin: 14, imgMaxPct: 0.36, padding: 30 },
+                { fontSize: 14.0, lineHeight: 1.54, paraMargin: 12, imgMaxPct: 0.34, padding: 28 },
+                { fontSize: 13.5, lineHeight: 1.50, paraMargin: 10, imgMaxPct: 0.32, padding: 25 },
+                { fontSize: 13.0, lineHeight: 1.46, paraMargin:  9, imgMaxPct: 0.30, padding: 22 },
+                { fontSize: 12.5, lineHeight: 1.42, paraMargin:  8, imgMaxPct: 0.28, padding: 20 },
+                { fontSize: 12.0, lineHeight: 1.38, paraMargin:  7, imgMaxPct: 0.26, padding: 18 },
+                { fontSize: 11.5, lineHeight: 1.35, paraMargin:  6, imgMaxPct: 0.24, padding: 16 },
+                { fontSize: 11.0, lineHeight: 1.32, paraMargin:  5, imgMaxPct: 0.22, padding: 15 },
+                { fontSize: 10.0, lineHeight: 1.28, paraMargin:  4, imgMaxPct: 0.20, padding: 12 },
+                { fontSize:  9.0, lineHeight: 1.25, paraMargin:  3, imgMaxPct: 0.16, padding: 10 }
+            ];
+
+            async function waitReady() {
+                await document.fonts.ready;
+                await Promise.all(Array.from(document.images).map(img =>
+                    img.complete ? Promise.resolve() :
+                    new Promise(r => { img.onload = r; img.onerror = r; })
+                ));
+            }
+
+            // Image layout rebuilding variables
+            const urls = data.image_urls || [];
+            const captions = data.image_captions || [];
+            const imgCount = urls.length;
+            
+            let imgContainer = container.querySelector('.image-grid, .featured-image-container, .extra-image-wrapper');
+            let borderStyle = '1px solid #ddd';
+            let paddingStyle = '4px';
+            
+            if (!imgContainer && imgCount > 0) {
+                // Find first non-logo image parent
+                const nonLogoImg = Array.from(container.querySelectorAll('img')).find(img => 
+                    !img.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+                );
+                if (nonLogoImg) {
+                    let parent = nonLogoImg.parentElement;
+                    if (parent && parent.parentElement && parent.parentElement !== container.querySelector('.col-2') && parent.parentElement !== container.querySelector('.newspaper-body') && parent.parentElement.tagName !== 'BODY') {
+                        imgContainer = parent.parentElement;
+                    } else if (parent) {
+                        imgContainer = parent;
+                    }
+                }
+            }
+
+            if (imgContainer && imgCount > 0) {
+                const firstWrapper = imgContainer.querySelector('div');
+                if (firstWrapper) {
+                    const comp = window.getComputedStyle(firstWrapper);
+                    const bWidth = comp.borderTopWidth || '1px';
+                    const bStyle = comp.borderTopStyle || 'solid';
+                    const bColor = comp.borderTopColor || '#ddd';
+                    borderStyle = `${bWidth} ${bStyle} ${bColor}`;
+                    paddingStyle = comp.padding || paddingStyle;
+                }
+            }
+
+            // Sizing / Aspect Ratio variables (declared in DOMContentLoaded scope)
+            let aspectRatios = [];
+            let orientations = [];
+            let chosenLayoutName = 'Layout 1-Column';
+
+            async function getImageDimensions(url) {
+                const existingImg = Array.from(document.images).find(img => img.src === url || img.getAttribute('src') === url);
+                if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
+                    return { width: existingImg.naturalWidth, height: existingImg.naturalHeight };
+                }
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                    };
+                    img.onerror = () => {
+                        resolve({ width: 0, height: 0 });
+                    };
+                    img.src = url;
+                });
+            }
+
+            // Image layout generation helpers
+            function getLayout1(imgHeightPx) {
+                return `
+                  <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%;">
+                      <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                      ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                  </div>
+                `;
+            }
+
+            // Flex 1-1 layout for 2 images
+            function getLayout2(imgHeightPx) {
+                return `
+                  <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                      </div>
+                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+                      </div>
+                  </div>
+                `;
+            }
+
+            function applyConfig(conf) {
+                const containerW = container.offsetWidth || 1060;
+                const imgHeightPx = Math.round(conf.imgMaxPct * containerW);
+
+                // Container padding
+                container.style.padding = conf.padding + 'px';
+                
+                // Adjust inner-border padding if it exists
+                const innerBorder = container.querySelector('.inner-border');
+                if (innerBorder) {
+                    innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
+                }
+
+                // Clean up any previously inserted 3rd image
+                const existingThird = container.querySelector('.nc-third-image-wrapper');
+                if (existingThird) {
+                    existingThird.remove();
+                }
+
+                // Article text columns — strictly enforced
+                const selectedCols = parseInt(data.layout_columns) || 3;
+                const articleEl = container.querySelector('.article-content, .article-body');
+                if (articleEl) {
+                    articleEl.style.fontSize      = conf.fontSize + 'px';
+                    articleEl.style.lineHeight    = conf.lineHeight;
+                    articleEl.style.columnCount   = selectedCols;
+                    articleEl.style.columns       = selectedCols;
+                    articleEl.style.webkitColumns = selectedCols;
+                }
+                
+                container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph').forEach(p => {
+                    p.style.fontSize     = conf.fontSize + 'px';
+                    p.style.lineHeight   = conf.lineHeight;
+                    p.style.marginBottom = conf.paraMargin + 'px';
+                    p.style.marginTop    = '0';
+                });
+
+                // Dropcap scaling: should scale proportionally with font size
+                let dcStyle = document.getElementById('nc-dropcap-style');
+                if (!dcStyle) {
+                    dcStyle = document.createElement('style');
+                    dcStyle.id = 'nc-dropcap-style';
+                    document.head.appendChild(dcStyle);
+                }
+                const dropcapFS = Math.round(conf.fontSize * 3.6);
+                const dropcapLH = Math.round(conf.fontSize * 2.8);
+                dcStyle.innerHTML = `
+                    .paragraph.has-dropcap::first-letter,
+                    .article-body p:first-of-type::first-letter {
+                        font-size: ${dropcapFS}px !important;
+                        line-height: ${dropcapLH}px !important;
+                    }
+                `;
+
+                // Headline auto-shrink
+                const headline = container.querySelector('.headline');
+                if (headline) {
+                    let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
+                    headline.style.fontSize = hlSize + 'px';
+                    headline.style.lineHeight = '1.1';
+                    let count = 0;
+                    while (hlSize > 20 && count < 20) {
+                        const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
+                        const lines = Math.round(headline.offsetHeight / lh);
+                        if (lines <= 2) {
+                            break;
+                        }
+                        hlSize -= 2;
+                        headline.style.fontSize = hlSize + 'px';
+                        count++;
+                    }
+                }
+
+                // Subheadline auto-shrink
+                const subheadline = container.querySelector('.subheadline, .subtitle');
+                if (subheadline) {
+                    let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
+                    subheadline.style.fontSize = subSize + 'px';
+                    subheadline.style.lineHeight = '1.3';
+                    let count = 0;
+                    while (subSize > 12 && count < 10) {
+                        const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
+                        const lines = Math.round(subheadline.offsetHeight / lh);
+                        if (lines <= 2) {
+                            break;
+                        }
+                        subSize -= 1.5;
+                        subheadline.style.fontSize = subSize + 'px';
+                        count++;
+                    }
+                }
+
+                // Spacing adjustments
+                const header = container.querySelector('header, .header-section');
+                if (header) {
+                    header.style.marginBottom = Math.round(conf.paraMargin * 1.2) + 'px';
+                }
+                const meta = container.querySelector('.metadata-bar, .meta-section');
+                if (meta) {
+                    meta.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+                    meta.style.marginTop = Math.round(conf.paraMargin * 0.8) + 'px';
+                }
+                const headlineSec = container.querySelector('.headline-section');
+                if (headlineSec) {
+                    headlineSec.style.margin = Math.round(conf.paraMargin * 1.2) + 'px 0 ' + Math.round(conf.paraMargin * 0.8) + 'px 0';
+                }
+                const subheadlineSec = container.querySelector('.subheadline-section');
+                if (subheadlineSec) {
+                    subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+                }
+
+                // Rebuild image container with layout mode and image height
+                if (imgContainer && imgCount > 0) {
+                    if (imgCount === 3) {
+                        chosenLayoutName = 'Layout 2-Column Top + 1-Column In-Text';
+                        imgContainer.innerHTML = getLayout2(imgHeightPx);
+
+                        const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
+                        if (paragraphs.length > 0) {
+                            const insertIndex = Math.min(2, Math.max(1, Math.floor(paragraphs.length / 2)));
+                            const targetPara = paragraphs[Math.min(insertIndex, paragraphs.length - 1)];
+                            
+                            const thirdImgWrapper = document.createElement('div');
+                            thirdImgWrapper.className = 'nc-third-image-wrapper';
+                            thirdImgWrapper.style.margin = '15px 0';
+                            thirdImgWrapper.style.textAlign = 'center';
+                            thirdImgWrapper.style.border = borderStyle;
+                            thirdImgWrapper.style.padding = paddingStyle;
+                            thirdImgWrapper.style.boxSizing = 'border-box';
+                            thirdImgWrapper.style.width = '100%';
+                            thirdImgWrapper.style.breakInside = 'avoid';
+                            thirdImgWrapper.style.webkitColumnBreakInside = 'avoid';
+                            thirdImgWrapper.innerHTML = `
+                                <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
+                                ${captions[2] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[2]}</div>` : ''}
+                            `;
+                            targetPara.after(thirdImgWrapper);
+                        }
+                    } else if (imgCount === 2) {
+                        chosenLayoutName = 'Layout 2-Column';
+                        imgContainer.innerHTML = getLayout2(imgHeightPx);
+                    } else if (imgCount === 1) {
+                        chosenLayoutName = 'Layout 1-Column';
+                        imgContainer.innerHTML = getLayout1(imgHeightPx);
+                    }
+                }
+
+                console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' imgH=' + imgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
+                return imgHeightPx;
+            }
+
+            async function executeLayout() {
+                // Initialize aspect ratios and orientations
+                const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
+                aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
+                orientations = dims.map(d => {
+                    if (!d.width || !d.height) return 'Square';
+                    if (d.height > d.width) return 'Portrait';
+                    if (d.width > d.height) return 'Landscape';
+                    return 'Square';
+                });
+
+                await waitReady();
+
+                // Unlock container — must be auto-height (single page = natural height)
+                container.style.height    = 'auto';
+                container.style.minHeight = 'unset';
+                container.style.overflow  = 'visible';
+
+                let chosenConf = configs[0];
+                let chosenImgH = 0;
+                const TARGET_MAX_HEIGHT = 1500;
+                let fits = false;
+
+                for (let i = 0; i < configs.length; i++) {
+                    const imgH = applyConfig(configs[i]);
+                    chosenConf = configs[i];
+                    chosenImgH = imgH;
+
+                    // Wait two animation frames for layout to settle
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                    // Check if the container fits within target page height
+                    if (container.scrollHeight <= TARGET_MAX_HEIGHT) {
+                        fits = true;
+                        break;
+                    }
+                }
+
+                // Wait final render cycle
+                await waitReady();
+
+                const finalW   = container.offsetWidth;
+                const finalH   = container.scrollHeight;
+                const finalFS  = chosenConf.fontSize;
+                const finalSec = (data.sections || []).length;
+                const finalCh  = (data.sections || []).reduce((s,p) => s + p.length, 0);
+
+                console.log('[LAYOUT] DONE — chars:', finalCh, 'sections:', finalSec, '(ALL PRESERVED)');
+                console.log('[LAYOUT] Font size used:', finalFS + 'px');
+                console.log('[LAYOUT] Image height used:', chosenImgH + 'px');
+                console.log('[LAYOUT] Final clipping dimensions:', finalW + 'x' + finalH + 'px');
+
+                // Print-ready global styles (removes all watermarks, page breaks, margins, etc.)
+                let st = document.getElementById('nc-layout-style');
+                if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
+                st.innerHTML = `
+                    * { -webkit-font-smoothing: antialiased !important; text-rendering: optimizeLegibility !important; }
+                    body { margin: 0 !important; padding: 20px !important; display: flex !important; justify-content: center !important; align-items: flex-start !important; }
+                    .newspaper-container { height: auto !important; min-height: unset !important; overflow: visible !important; }
+                    @media print {
+                        @page { size: auto; margin: 0; }
+                        body { padding: 0 !important; background: #fff !important; }
+                        .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
+                        * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
+                    }
+                    .article-content p, .article-body p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }
+                `;
+
+                // Log image dimensions and layout selection
+                const finalDims = urls.map(url => {
+                    const img = Array.from(document.querySelectorAll('img')).find(i => 
+                        i.src === url && !i.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+                    );
+                    return img ? `${img.offsetWidth}x${img.offsetHeight}px` : 'unknown';
+                }).join(', ');
+
+                window.__IMAGE_LAYOUT_LOGS__ = {
+                    image_count: imgCount,
+                    image_orientations: orientations.join(', '),
+                    selected_layout: chosenLayoutName,
+                    final_dimensions: finalDims
+                };
+
+                // Signal Playwright that layout is complete
+                window.__LAYOUT_DONE__ = true;
+            }
+
+            executeLayout();
+        });
+        </script>
+        </body>
+</html>
