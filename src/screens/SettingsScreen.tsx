@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore, useUIStore } from '@/store';
+import { useAuthStore, useUIStore, useGenerationStore } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Trash2, Shield, Check, QrCode } from 'lucide-react';
+import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
 
 const translations = {
   en: {
@@ -31,7 +32,14 @@ const translations = {
     dangerZone: "Danger Zone",
     deleteAcc: "Delete Account",
     deleteAccDesc: "Permanently delete your account and all associated data. This cannot be undone.",
-    logout: "Log Out"
+    logout: "Log Out",
+    logoutTitle: "Log Out",
+    logoutMessage: "Are you sure you want to log out of NewsCraft?",
+    logoutCancel: "Cancel",
+    logoutConfirm: "Log Out",
+    logoutSuccess: "Successfully logged out.",
+    logoutError: "Logout failed. Please try again.",
+    logoutDesc: "Sign out of your account on this device",
   },
   te: {
     settings: "సెట్టింగ్‌లు",
@@ -59,7 +67,14 @@ const translations = {
     dangerZone: "డేంజర్ జోన్",
     deleteAcc: "ఖాతాను తొలగించండి",
     deleteAccDesc: "మీ ఖాతా మరియు డేటాను శాశ్వతంగా తొలగించండి.",
-    logout: "లాగ్ అవుట్"
+    logout: "లాగ్ అవుట్",
+    logoutTitle: "లాగ్ అవుట్",
+    logoutMessage: "మీరు NewsCraft నుండి లాగ్ అవుట్ అవ్వాలనుకుంటున్నారా?",
+    logoutCancel: "రద్దు చేయండి",
+    logoutConfirm: "లాగ్ అవుట్",
+    logoutSuccess: "విజయంగా లాగ్ అవుట్ అయింది.",
+    logoutError: "లాగ్ అవుట్ విఫలమైంది. మళ్ళీ ప్రయత్నించండి.",
+    logoutDesc: "ఈ పరికరంలో మీ ఖాతా నుండి సైన్ అవుట్ అవ్వండి",
   },
   hi: {
     settings: "सेटिंग्स",
@@ -87,7 +102,14 @@ const translations = {
     dangerZone: "डेंजर जोन",
     deleteAcc: "खाता हटाएं",
     deleteAccDesc: "अपना खाता और डेटा स्थायी रूप से हटाएं।",
-    logout: "लॉग आउट"
+    logout: "लॉग आउट",
+    logoutTitle: "लॉग आउट",
+    logoutMessage: "क्या आप NewsCraft से लॉग आउट करना चाहते हैं?",
+    logoutCancel: "रद्द करें",
+    logoutConfirm: "लॉग आउट",
+    logoutSuccess: "सफलतापूर्वक लॉग आउट किया गया।",
+    logoutError: "लॉगआउट विफल। कृपया पुनः प्रयास करें।",
+    logoutDesc: "इस डिवाइस पर अपने खाते से साइन आउट करें",
   }
 };
 
@@ -128,17 +150,40 @@ function SettingsRow({ label, description, control }: { label: string; descripti
   );
 }
 
+// ── Toast Component ─────────────────────────────────────────────────────────────
+function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold whitespace-nowrap
+        ${type === 'success'
+          ? 'bg-gray-900 dark:bg-gray-800 text-white border border-gray-700'
+          : 'bg-red-600 text-white'
+        }`}
+    >
+      {type === 'success' ? (
+        <Check className="w-4 h-4 text-green-400 shrink-0" />
+      ) : (
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+      )}
+      {message}
+    </motion.div>
+  );
+}
+
 export const SettingsScreen = () => {
   const logout = useAuthStore((state) => state.logout);
+  const resetGenerations = useGenerationStore((state) => state.resetConfig);
   const navigate = useNavigate();
 
   // Use persistent UI store
   const theme = useUIStore((state) => state.theme);
   const toggleTheme = useUIStore((state) => state.toggleTheme);
-  const language = useUIStore((state) => state.language);
-  const setLanguage = useUIStore((state) => state.setLanguage);
-  
-  const activeLanguage = language;
+  const language = useUIStore((state) => state.setLanguage);
+  const activeLanguage = useUIStore((state) => state.language);
+  const setLanguage = language;
   const t = translations[activeLanguage as keyof typeof translations] || translations.en;
 
   useEffect(() => {
@@ -156,9 +201,63 @@ export const SettingsScreen = () => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  // ── Logout state ───────────────────────────────────────────────────────────────
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  /**
+   * Full logout sequence:
+   * 1. Sign out from Supabase (invalidates server-side session & JWT)
+   * 2. Clear Zustand auth store (clears token + user from localStorage via persist)
+   * 3. Clear generation store config
+   * 4. Wipe all newscraft-* keys from localStorage (quota cache, profile cache, etc.)
+   * 5. Navigate to /login
+   */
+  const performLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      // 1. Supabase session invalidation
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('[Logout] Supabase signOut error (continuing anyway):', err);
+    }
+
+    try {
+      // 2. Clear Zustand auth store (persisted to localStorage as "newscraft-auth")
+      logout();
+
+      // 3. Clear generation session data from Zustand persist store
+      resetGenerations();
+
+      // 4. Wipe all newscraft-* localStorage keys
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('newscraft')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+      setIsLoggingOut(false);
+      setIsLogoutModalOpen(false);
+      showToast(t.logoutSuccess, 'success');
+
+      // Small delay so toast is visible before navigation
+      setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 800);
+    } catch (err) {
+      console.error('[Logout] Error during logout:', err);
+      setIsLoggingOut(false);
+      showToast(t.logoutError, 'error');
+    }
   };
 
   // Modals state
@@ -203,8 +302,8 @@ export const SettingsScreen = () => {
     <div className="p-6 pb-24 h-full dark:bg-gray-900 transition-colors duration-300">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-gray-700" />
+          <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+            <Shield className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">{t.settings}</h2>
@@ -213,7 +312,7 @@ export const SettingsScreen = () => {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Appearance */}
         <SettingsSection title={t.appearance} icon={Moon}>
           <SettingsRow
@@ -270,7 +369,7 @@ export const SettingsScreen = () => {
             control={
               <button
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="text-xs font-bold text-blue-600 px-4 py-2 bg-blue-50 rounded-xl active:scale-95 transition-transform"
+                className="text-xs font-bold text-blue-600 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl active:scale-95 transition-transform"
               >
                 {t.updateBtn}
               </button>
@@ -283,47 +382,111 @@ export const SettingsScreen = () => {
           />
         </SettingsSection>
 
-        {/* Danger Zone */}
-        <div className="bg-red-50 border border-red-100 rounded-3xl overflow-hidden shadow-[0_4px_20px_-10px_rgba(255,0,0,0.1)]">
-          <div className="px-5 py-4 border-b border-red-100 flex items-center gap-3">
-            <Trash2 className="h-4 w-4 text-red-600" />
-            <h2 className="text-sm font-bold text-red-600">{t.dangerZone}</h2>
-          </div>
-          <div className="px-5 py-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-gray-900">{t.deleteAcc}</p>
-              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{t.deleteAccDesc}</p>
-            </div>
-            <button
-              onClick={() => setIsDeleteModalOpen(true)}
-              className="shrink-0 text-xs font-bold text-white bg-red-600 px-4 py-2 rounded-xl active:scale-95 transition-transform"
-            >
-              {t.deleteAcc}
-            </button>
-          </div>
-        </div>
-
-        {/* Logout Button */}
+        {/* ── Professional Logout Button ─────────────────────────────────────── */}
         <button
-          onClick={handleLogout}
-          className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold active:scale-[0.98] transition-all"
+          id="logout-btn"
+          onClick={() => setIsLogoutModalOpen(true)}
+          disabled={isLoggingOut}
+          className="w-full flex items-center justify-between px-5 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm active:scale-[0.98] transition-all duration-200 group"
         >
-          {t.logout}
+          <div className="flex items-center gap-4">
+            <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-active:bg-gray-200 dark:group-active:bg-gray-600 transition-colors">
+              <LogOut className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{t.logout}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.logoutDesc}</p>
+            </div>
+          </div>
+          {isLoggingOut ? (
+            <div className="w-4 h-4 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" />
+          ) : (
+            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          )}
         </button>
+
+        {/* ── Subtle Delete Account (bottom, demoted) ────────────────────────── */}
+        <div className="pt-2 flex justify-center">
+          <button
+            id="delete-account-btn"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors py-2 px-3 rounded-xl"
+          >
+            <Trash2 className="w-3 h-3" />
+            {t.deleteAcc}
+          </button>
+        </div>
       </div>
 
       {/* Modals Overlay */}
       <AnimatePresence>
+
+        {/* ── Logout Confirmation Modal ──────────────────────────────────────── */}
+        {isLogoutModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="bg-white dark:bg-gray-800 rounded-3xl max-w-xs w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700"
+            >
+              {/* Icon header */}
+              <div className="pt-7 pb-4 flex flex-col items-center gap-3 px-6">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                  <LogOut className="w-7 h-7 text-gray-700 dark:text-gray-300" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t.logoutTitle}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t.logoutMessage}</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="px-6 pb-6 pt-2 flex flex-col gap-2.5">
+                <button
+                  id="logout-confirm-btn"
+                  onClick={performLogout}
+                  disabled={isLoggingOut}
+                  className="w-full py-3.5 bg-gray-900 dark:bg-gray-700 text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {isLoggingOut ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      Logging out…
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="w-4 h-4" />
+                      {t.logoutConfirm}
+                    </>
+                  )}
+                </button>
+                <button
+                  id="logout-cancel-btn"
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  disabled={isLoggingOut}
+                  className="w-full py-3.5 bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-60"
+                >
+                  {t.logoutCancel}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {isPasswordModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-gray-100"
+              className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700"
             >
-              <div className="p-6 border-b border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900">Change Password</h3>
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Change Password</h3>
               </div>
               <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4">
                 {passwordSuccess ? (
@@ -331,7 +494,7 @@ export const SettingsScreen = () => {
                     <div className="h-12 w-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
                       <Check className="h-6 w-6" />
                     </div>
-                    <p className="text-gray-900 font-bold">Password Updated!</p>
+                    <p className="text-gray-900 dark:text-white font-bold">Password Updated!</p>
                   </div>
                 ) : (
                   <>
@@ -342,7 +505,7 @@ export const SettingsScreen = () => {
                         required
                         value={oldPassword}
                         onChange={(e) => setOldPassword(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div className="space-y-1">
@@ -352,7 +515,7 @@ export const SettingsScreen = () => {
                         required
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div className="space-y-1">
@@ -362,14 +525,14 @@ export const SettingsScreen = () => {
                         required
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div className="flex gap-3 justify-end pt-2">
                       <button
                         type="button"
                         onClick={() => setIsPasswordModalOpen(false)}
-                        className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 rounded-xl w-full"
+                        className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-xl w-full"
                       >
                         Cancel
                       </button>
@@ -393,15 +556,15 @@ export const SettingsScreen = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-gray-100"
+              className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700"
             >
-              <div className="p-6 border-b border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900">Enable 2FA</h3>
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Enable 2FA</h3>
               </div>
               <div className="p-6 space-y-6">
                 <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
-                    <QrCode className="h-32 w-32 text-gray-900" />
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
+                    <QrCode className="h-32 w-32 text-gray-900 dark:text-white" />
                   </div>
                   <p className="text-xs text-gray-500 leading-relaxed">
                     Scan with your authenticator app then enter the 6-digit code below.
@@ -414,13 +577,13 @@ export const SettingsScreen = () => {
                     placeholder="123456"
                     value={tfaVerificationCode}
                     onChange={(e) => setTfaVerificationCode(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg text-gray-900 focus:outline-none focus:border-blue-500 font-mono text-center tracking-widest"
+                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 font-mono text-center tracking-widest"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => { setIsTfaModalOpen(false); setTfaVerificationCode(""); }}
-                    className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 rounded-xl w-full"
+                    className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-xl w-full"
                   >
                     Cancel
                   </button>
@@ -449,25 +612,25 @@ export const SettingsScreen = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-red-100"
+              className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-red-100 dark:border-red-900/50"
             >
-              <div className="p-6 border-b border-red-50">
+              <div className="p-6 border-b border-red-50 dark:border-red-900/30">
                 <h3 className="text-lg font-bold text-red-600">Delete Account?</h3>
               </div>
               <div className="p-6 space-y-4">
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                   This action is irreversible. Type <span className="font-bold text-red-600">DELETE</span> to confirm.
                 </p>
                 <input
                   type="text"
                   value={deleteConfirmationText}
                   onChange={(e) => setDeleteConfirmationText(e.target.value)}
-                  className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-900 focus:outline-none focus:border-red-500 font-mono"
+                  className="w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-900 dark:text-red-300 focus:outline-none focus:border-red-500 font-mono"
                 />
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(""); }}
-                    className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 rounded-xl w-full"
+                    className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-xl w-full"
                   >
                     Cancel
                   </button>
@@ -488,6 +651,10 @@ export const SettingsScreen = () => {
             </motion.div>
           </div>
         )}
+
+        {/* ── Toast notification ─────────────────────────────────────────────── */}
+        {toast && <Toast message={toast.message} type={toast.type} />}
+
       </AnimatePresence>
     </div>
   );
