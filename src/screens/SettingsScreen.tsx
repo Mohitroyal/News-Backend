@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 const translations = {
   en: {
@@ -226,6 +227,13 @@ export const SettingsScreen = () => {
       await supabase.auth.signOut();
     } catch (err) {
       console.warn('[Logout] Supabase signOut error (continuing anyway):', err);
+    }
+
+    try {
+      // 1b. Google Auth Sign-Out to force account picker on next login
+      await GoogleAuth.signOut();
+    } catch (err) {
+      console.warn('[Logout] Google Sign-Out error (continuing anyway):', err);
     }
 
     try {
