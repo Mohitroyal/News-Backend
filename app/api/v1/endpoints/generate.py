@@ -456,11 +456,11 @@ async def create_clipping(
         )
 
     # 2. Monthly generation limits check
-    limit = 50
+    limit = 4000
     if current_user.subscription_plan == "pro":
-        limit = 100
+        limit = 4000
     elif current_user.subscription_plan == "enterprise":
-        limit = 99999
+        limit = 4000
 
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     generations_count = db.query(Clipping).filter(
@@ -471,7 +471,7 @@ async def create_clipping(
     if generations_count >= limit:
         raise HTTPException(
             status_code=403,
-            detail=f"Monthly clipping generation limit reached ({generations_count}/{limit}). Please upgrade your plan."
+            detail=f"Monthly clipping generation limit reached ({generations_count}/{limit}). You have used all 4000 clippings allowed per account."
         )
 
     clipping = Clipping(
