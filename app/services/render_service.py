@@ -206,8 +206,48 @@ class RenderService:
             except Exception:
                 template = self.env.get_template("master_layout.html")
 
+
         html = template.render(**data)
-        
+
+        # ── MULTILINGUAL FONT ENFORCER ──────────────────────────────────────────
+        # Prevent Latin fonts (like Merriweather) from falsely claiming Devanagari 
+        # support and rendering vertical bars (||||). We inject an !important CSS rule
+        # to ensure the native Noto font is always the first font for all text blocks.
+        indic_font_override = ""
+        if lang_code in ["hi", "mr"]:
+            indic_font_override = "'Noto Serif Devanagari', 'Noto Sans Devanagari'"
+        elif lang_code == "kn":
+            indic_font_override = "'Noto Serif Kannada', 'Noto Sans Kannada'"
+        elif lang_code == "ml":
+            indic_font_override = "'Noto Serif Malayalam', 'Noto Sans Malayalam'"
+        elif lang_code == "te":
+            indic_font_override = "'Noto Serif Telugu', 'Noto Sans Telugu'"
+        elif lang_code == "ta":
+            indic_font_override = "'Noto Serif Tamil', 'Noto Sans Tamil'"
+        elif lang_code == "bn":
+            indic_font_override = "'Noto Serif Bengali', 'Noto Sans Bengali'"
+        elif lang_code == "gu":
+            indic_font_override = "'Noto Serif Gujarati', 'Noto Sans Gujarati'"
+        elif lang_code == "pa":
+            indic_font_override = "'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi'"
+        elif lang_code == "or":
+            indic_font_override = "'Noto Serif Oriya', 'Noto Sans Oriya'"
+
+        if indic_font_override:
+            override_css = f"""
+            <style id="indic-font-enforcer">
+                /* Force Indic font first, fallback to Latin */
+                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .dateline, .image-caption {{
+                    font-family: {indic_font_override}, 'Playfair Display', 'Merriweather', serif !important;
+                }}
+            </style>
+            """
+            if "</head>" in html:
+                html = html.replace("</head>", f"{override_css}\n</head>")
+            else:
+                html = f"{override_css}\n{html}"
+                
+
         # Single-Page Dynamic Compression Engine Injection
         import json
         serializable_data = {

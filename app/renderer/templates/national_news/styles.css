@@ -14,7 +14,7 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     margin: 0;
     padding: 30px;
     display: flex;
@@ -87,7 +87,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     text-transform: uppercase;
     letter-spacing: 1.5px;
     margin-top: 8px;
-    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     color: var(--accent-color);
 }
 
@@ -103,7 +103,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 }
 
 .headline {
-    font-family: 'Playfair Display', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Playfair Display', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     font-size: 50px;
     font-weight: 900;
     line-height: 1.15;
@@ -121,7 +121,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 }
 
 .subheadline {
-    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Old Standard TT', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     font-size: 19px;
     font-style: italic;
     color: #475569;
@@ -188,7 +188,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 /* Classic Drop Cap */
 .paragraph.has-dropcap::first-letter {
     float: left;
-    font-family: 'Cinzel', 'Playfair Display', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Cinzel', 'Playfair Display', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     font-size: 54px;
     line-height: 42px;
     padding-top: 4px;
@@ -206,7 +206,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     color: var(--accent-color);
     border-bottom: 0.5px solid #cbd5e1;
     padding-bottom: 4px;
-    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
 }
 
 /* FOOTER SECTION */
@@ -223,6 +223,6 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     text-transform: uppercase;
     letter-spacing: 1.5px;
     color: #64748b;
-    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Sans Telugu', serif;
+    font-family: 'Cinzel', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
     font-weight: 600;
 }
