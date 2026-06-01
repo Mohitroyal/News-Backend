@@ -24,19 +24,19 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 relative">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md px-6 py-4 z-10 flex justify-between items-center sticky top-0 border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md px-6 py-4 pt-safe z-10 flex justify-between items-center sticky top-0 border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NewsCraft</h1>
       </header>
 
       {/* Main Content Area (Scrollable) */}
-      <main className="flex-1 overflow-y-auto pb-24">
+      <main className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 fixed bottom-0 w-full pb-safe flex justify-around items-center h-20 z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] transition-colors duration-300">
+      <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 fixed bottom-0 w-full pb-safe flex justify-around items-center h-20 h-nav-safe z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] transition-colors duration-300">
         <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-400'}`}>
           <Home className={`w-6 h-6 ${isActive('/') ? 'fill-blue-100 dark:fill-blue-900/50' : ''}`} />
           <span className="text-[10px] font-medium">Home</span>

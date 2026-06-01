@@ -5,3 +5,11 @@
 body {
   @apply dark:bg-gray-900 dark:text-gray-100;
 }
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+  .mt-safe { margin-top: env(safe-area-inset-top); }
+  .h-nav-safe { height: calc(5rem + env(safe-area-inset-bottom)); }
+}

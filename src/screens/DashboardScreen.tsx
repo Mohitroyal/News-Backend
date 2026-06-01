@@ -10,7 +10,7 @@ export const DashboardScreen = () => {
   const recentGenerations = generations.slice(0, 3);
 
   return (
-    <div className="p-6 pb-24 h-full dark:bg-gray-900 transition-colors duration-300">
+    <div className="p-6 pb-6 dark:bg-gray-900 transition-colors duration-300">
       {/* Welcome Section */}
       <div className="mb-8 flex justify-between items-center">
         <div>

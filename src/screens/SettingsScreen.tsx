@@ -299,7 +299,7 @@ export const SettingsScreen = () => {
   };
 
   return (
-    <div className="p-6 pb-24 h-full dark:bg-gray-900 transition-colors duration-300">
+    <div className="p-6 pb-6 dark:bg-gray-900 transition-colors duration-300">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">

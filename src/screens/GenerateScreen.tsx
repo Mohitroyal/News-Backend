@@ -215,12 +215,12 @@ export const GenerateScreen = () => {
     TEMPLATES_LIST.find(t => t.id === currentConfig.templateId) || TEMPLATES_LIST[0];
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex-none p-4 pb-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Generate</h1>
       </div>
 
-      <div className="p-6 pb-24 max-w-md mx-auto relative h-full">
+      <div className="p-6 max-w-md mx-auto relative" style={{ paddingBottom: '10rem' }}>
         <div className="space-y-6">
 
           {/* Language Selector */}
@@ -357,7 +357,10 @@ export const GenerateScreen = () => {
       </div>
 
       {/* ── Sticky bottom: progress bar + generate button ─────────────────── */}
-      <div className="fixed bottom-20 left-0 w-full px-6 pt-4 pb-2 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-900 dark:via-gray-900 to-transparent z-10 transition-colors duration-300">
+      <div 
+        className="fixed left-0 w-full px-6 pt-4 pb-2 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-900 dark:via-gray-900 to-transparent z-10 transition-colors duration-300"
+        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
+      >
 
         {/* Live progress bar shown during generation */}
         {loading && currentStage && (

@@ -9,7 +9,7 @@ export const HistoryScreen = () => {
   const safeGenerations = Array.isArray(generations) ? generations.filter(Boolean) : [];
 
   return (
-    <div className="p-6 pb-24 h-full dark:bg-gray-900 transition-colors duration-300">
+    <div className="p-6 pb-6 dark:bg-gray-900 transition-colors duration-300">
       <div className="mb-6 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
           <History className="w-5 h-5 text-orange-600 dark:text-orange-400" />
