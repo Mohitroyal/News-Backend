@@ -650,14 +650,18 @@ class RenderService:
                             clearfix.style.clear = 'both';
                             heroSection.appendChild(clearfix);
                             
-                            if (imgCount > 1 && paragraphs.length > 0) {
+                            // Re-query all paragraphs after split to ensure secondary images are never dropped
+                            const allParasAfterSplit = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
+                            
+                            if (imgCount > 1 && allParasAfterSplit.length > 0) {
                                 const remainingImgs = imgCount - 1;
-                                const step = Math.max(1, Math.floor(paragraphs.length / remainingImgs));
+                                const step = Math.max(1, Math.floor(allParasAfterSplit.length / remainingImgs));
                                 for (let i = 1; i < imgCount; i++) {
                                     if (i >= urls.length) break;
-                                    const pIdx = Math.min((i - 1) * step, paragraphs.length - 1);
+                                    // pIdx is based on remaining paragraphs, so we offset by 1 for the first secondary image
+                                    const pIdx = Math.min((i) * step, allParasAfterSplit.length - 1);
                                     const dir = (i % 2 !== 0) ? 'right' : 'left';
-                                    injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 100);
+                                    injectFloatedImage(allParasAfterSplit[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 100);
                                 }
                             }
                         }
@@ -678,6 +682,40 @@ class RenderService:
                             wrapper.style.boxSizing = 'border-box';
                             wrapper.innerHTML = `
                                 <img src="${urls[i]}" style="width: 100%; height: auto; display: block;" />
+                                ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
+                            `;
+                            imgContainer.appendChild(wrapper);
+                        }
+                    }
+                }
+                
+                // FINAL EXPORT CHECK: Verify uploaded_image_count == rendered_image_count
+                // Check how many images were actually rendered inside the container
+                let renderedImages = Array.from(container.querySelectorAll('img')).filter(img => img.src && img.src.startsWith('http')).length;
+                
+                if (imgCount > 0 && renderedImages < imgCount) {
+                    console.log('[LAYOUT] WARNING: Rendered image count mismatch! Expected ' + imgCount + ', found ' + renderedImages + '. Triggering Safe Fallback System.');
+                    
+                    // Abort current layout and wipe advanced layout elements
+                    container.querySelectorAll('.nc-hero-section, .nc-floated-image-wrapper').forEach(el => el.remove());
+                    
+                    // Regenerate using safe image layout
+                    chosenLayoutName = 'Failsafe Mandatory Image Grid';
+                    if (imgContainer) {
+                        imgContainer.innerHTML = '';
+                        imgContainer.style.display = 'flex';
+                        imgContainer.style.flexWrap = 'wrap';
+                        imgContainer.style.gap = '15px';
+                        imgContainer.style.marginBottom = '20px';
+                        
+                        for (let i = 0; i < imgCount; i++) {
+                            if (i >= urls.length) break;
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'nc-fallback-wrapper';
+                            wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
+                            wrapper.style.boxSizing = 'border-box';
+                            wrapper.innerHTML = `
+                                <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
                                 ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
                             `;
                             imgContainer.appendChild(wrapper);
