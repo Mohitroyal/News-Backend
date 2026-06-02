@@ -383,17 +383,16 @@ class RenderService:
             // Image layout generation helpers
             function getLayout1(imgHeightPx) {
                 return `
-                  <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%;">
+                  <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%; margin-bottom: 15px;">
                       <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
                       ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
                   </div>
                 `;
             }
 
-            // Flex 1-1 layout for 2 images
-            function getLayout2(imgHeightPx) {
+            function getLayout2SideBySide(imgHeightPx) {
                 return `
-                  <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
+                  <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
                       <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
                           <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
                           ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
@@ -404,6 +403,38 @@ class RenderService:
                       </div>
                   </div>
                 `;
+            }
+
+            function getLayout2VerticalStack(imgHeightPx) {
+                return `
+                  <div class="nc-image-container-vertical" style="display: flex; flex-direction: column; gap: 15px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+                      <div class="nc-image-wrapper" style="width: 100%; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center;">
+                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${Math.round(imgHeightPx * 0.8)}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+                      </div>
+                      <div class="nc-image-wrapper" style="width: 100%; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center;">
+                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${Math.round(imgHeightPx * 0.8)}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+                      </div>
+                  </div>
+                `;
+            }
+
+            function injectFloatedImage(para, url, caption, imgHeightPx, floatDir, widthPct) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'nc-floated-image-wrapper';
+                wrapper.style.float = floatDir;
+                wrapper.style.width = widthPct + '%';
+                wrapper.style.margin = floatDir === 'left' ? '5px 15px 10px 0' : '5px 0 10px 15px';
+                wrapper.style.border = borderStyle;
+                wrapper.style.padding = paddingStyle;
+                wrapper.style.boxSizing = 'border-box';
+                wrapper.style.textAlign = 'center';
+                wrapper.innerHTML = `
+                    <img src="${url}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
+                    ${caption ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${caption}</div>` : ''}
+                `;
+                para.insertBefore(wrapper, para.firstChild);
             }
 
             function applyConfig(conf) {
@@ -419,14 +450,19 @@ class RenderService:
                     innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
                 }
 
-                // Clean up any previously inserted 3rd image
-                const existingThird = container.querySelector('.nc-third-image-wrapper');
-                if (existingThird) {
-                    existingThird.remove();
+                // Clean up any previously inserted dynamic images
+                container.querySelectorAll('.nc-third-image-wrapper, .nc-floated-image-wrapper').forEach(el => el.remove());
+
+                // Paragraph Size / Text Wrapping optimizations:
+                // Reduce column fragmentation when empty areas might remain.
+                let selectedCols = parseInt(data.layout_columns) || 3;
+                if (totalChars < 900 && selectedCols > 1) {
+                    selectedCols = Math.max(1, selectedCols - 1); 
+                } else if (totalChars < 1600 && selectedCols > 2) {
+                    selectedCols = 2; // Expand text blocks
                 }
 
                 // Article text columns — strictly enforced
-                const selectedCols = parseInt(data.layout_columns) || 3;
                 const articleEl = container.querySelector('.article-content, .article-body');
                 if (articleEl) {
                     articleEl.style.fontSize      = conf.fontSize + 'px';
@@ -519,11 +555,13 @@ class RenderService:
 
                 // Rebuild image container with layout mode and image height
                 if (imgContainer && imgCount > 0) {
+                    const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
+                    
                     if (imgCount === 3) {
                         chosenLayoutName = 'Layout 2-Column Top + 1-Column In-Text';
-                        imgContainer.innerHTML = getLayout2(imgHeightPx);
+                        imgContainer.innerHTML = getLayout2SideBySide(imgHeightPx);
+                        imgContainer.style.display = '';
 
-                        const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
                         if (paragraphs.length > 0) {
                             const insertIndex = Math.min(2, Math.max(1, Math.floor(paragraphs.length / 2)));
                             const targetPara = paragraphs[Math.min(insertIndex, paragraphs.length - 1)];
@@ -545,11 +583,40 @@ class RenderService:
                             targetPara.after(thirdImgWrapper);
                         }
                     } else if (imgCount === 2) {
-                        chosenLayoutName = 'Layout 2-Column';
-                        imgContainer.innerHTML = getLayout2(imgHeightPx);
+                        // Intelligent Layout Engine for 2 Images
+                        const isBothPortrait = orientations[0] === 'Portrait' && orientations[1] === 'Portrait';
+                        const hasEnoughText = paragraphs.length >= 3 && totalChars > 800;
+
+                        if (hasEnoughText) {
+                            // Dynamic Diagonal Layout for optimal text wrapping
+                            imgContainer.innerHTML = '';
+                            imgContainer.style.display = 'none';
+
+                            const midIndex = Math.floor(paragraphs.length / 2);
+                            if (aspectRatios[0] >= aspectRatios[1]) {
+                                chosenLayoutName = 'Layout Diagonal A (Top-Left, Bottom-Right)';
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'left', 48);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'right', 48);
+                            } else {
+                                chosenLayoutName = 'Layout Diagonal B (Top-Right, Bottom-Left)';
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'right', 48);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'left', 48);
+                            }
+                        } else if (isBothPortrait && selectedCols >= 2) {
+                            // Vertical stack if both are portrait to use column space efficiently
+                            chosenLayoutName = 'Layout Vertical Stack';
+                            imgContainer.innerHTML = getLayout2VerticalStack(imgHeightPx);
+                            imgContainer.style.display = '';
+                        } else {
+                            // Default to side-by-side
+                            chosenLayoutName = 'Layout Side-by-Side';
+                            imgContainer.innerHTML = getLayout2SideBySide(imgHeightPx);
+                            imgContainer.style.display = '';
+                        }
                     } else if (imgCount === 1) {
                         chosenLayoutName = 'Layout 1-Column';
                         imgContainer.innerHTML = getLayout1(imgHeightPx);
+                        imgContainer.style.display = '';
                     }
                 }
 
