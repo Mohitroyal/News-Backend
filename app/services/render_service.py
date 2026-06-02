@@ -300,18 +300,18 @@ class RenderService:
             // Compression ladder: spacious -> compact. Content NEVER removed.
             const configs = [
                 // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
-                { fontSize: 17.0, lineHeight: 1.45, paraMargin: 12, imgMaxPct: 0.38, padding: 30 },
-                { fontSize: 16.0, lineHeight: 1.40, paraMargin: 10, imgMaxPct: 0.36, padding: 25 },
-                { fontSize: 15.0, lineHeight: 1.38, paraMargin: 8,  imgMaxPct: 0.34, padding: 22 },
-                { fontSize: 14.0, lineHeight: 1.35, paraMargin: 7,  imgMaxPct: 0.32, padding: 20 },
-                { fontSize: 13.5, lineHeight: 1.32, paraMargin: 6,  imgMaxPct: 0.30, padding: 18 },
-                { fontSize: 13.0, lineHeight: 1.30, paraMargin: 6,  imgMaxPct: 0.28, padding: 16 },
-                { fontSize: 12.5, lineHeight: 1.28, paraMargin: 5,  imgMaxPct: 0.26, padding: 14 },
-                { fontSize: 12.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.24, padding: 12 },
-                { fontSize: 11.5, lineHeight: 1.22, paraMargin: 4,  imgMaxPct: 0.22, padding: 10 },
-                { fontSize: 11.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.20, padding: 10 },
-                { fontSize: 10.0, lineHeight: 1.18, paraMargin: 3,  imgMaxPct: 0.18, padding: 8 },
-                { fontSize:  9.0, lineHeight: 1.15, paraMargin: 2,  imgMaxPct: 0.16, padding: 6 }
+                { fontSize: 17.0, lineHeight: 1.45, paraMargin: 12, imgMaxPct: 0.55, padding: 30 },
+                { fontSize: 16.0, lineHeight: 1.40, paraMargin: 10, imgMaxPct: 0.52, padding: 25 },
+                { fontSize: 15.0, lineHeight: 1.38, paraMargin: 8,  imgMaxPct: 0.49, padding: 22 },
+                { fontSize: 14.0, lineHeight: 1.35, paraMargin: 7,  imgMaxPct: 0.46, padding: 20 },
+                { fontSize: 13.5, lineHeight: 1.32, paraMargin: 6,  imgMaxPct: 0.43, padding: 18 },
+                { fontSize: 13.0, lineHeight: 1.30, paraMargin: 6,  imgMaxPct: 0.40, padding: 16 },
+                { fontSize: 12.5, lineHeight: 1.28, paraMargin: 5,  imgMaxPct: 0.38, padding: 14 },
+                { fontSize: 12.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.36, padding: 12 },
+                { fontSize: 11.5, lineHeight: 1.22, paraMargin: 4,  imgMaxPct: 0.34, padding: 10 },
+                { fontSize: 11.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.32, padding: 10 },
+                { fontSize: 10.0, lineHeight: 1.18, paraMargin: 3,  imgMaxPct: 0.30, padding: 8 },
+                { fontSize:  9.0, lineHeight: 1.15, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
             ];
 
             async function waitReady() {
@@ -595,12 +595,12 @@ class RenderService:
                             const midIndex = Math.floor(paragraphs.length / 2);
                             if (aspectRatios[0] >= aspectRatios[1]) {
                                 chosenLayoutName = 'Layout Diagonal A (Top-Left, Bottom-Right)';
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'left', 48);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'right', 48);
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'left', 50);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'right', 50);
                             } else {
                                 chosenLayoutName = 'Layout Diagonal B (Top-Right, Bottom-Left)';
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'right', 48);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'left', 48);
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'right', 50);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'left', 50);
                             }
                         } else if (isBothPortrait && selectedCols >= 2) {
                             // Vertical stack if both are portrait to use column space efficiently
