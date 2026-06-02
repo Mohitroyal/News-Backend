@@ -600,7 +600,7 @@ class RenderService:
                         
                         if (!isMultiCol) {
                             // 1-COLUMN NATIVE FLOW
-                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', 65);
+                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', 55);
                             
                             if (imgCount > 1) {
                                 const remainingImgs = imgCount - 1;
@@ -624,7 +624,7 @@ class RenderService:
                             heroImg.className = 'nc-floated-image-wrapper';
                             heroImg.style.display = 'block';
                             heroImg.style.float = 'left';
-                            heroImg.style.width = '65%';
+                            heroImg.style.width = '55%';
                             heroImg.style.margin = '8px 25px 15px 0';
                             heroImg.style.boxSizing = 'border-box';
                             heroImg.innerHTML = `
