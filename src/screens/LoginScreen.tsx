@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store';
 import { authService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Mail, Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 export const LoginScreen = () => {
@@ -131,6 +131,15 @@ export const LoginScreen = () => {
           </svg>
           Continue with Google
         </button>
+
+        <div className="mt-8 text-center">
+          <p className="text-gray-400 text-sm">
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
+              Sign Up
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

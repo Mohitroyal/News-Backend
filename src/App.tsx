@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Home, FileText, Settings, History, Plus } from 'lucide-react';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
+import { SignupScreen } from './screens/SignupScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { GenerateScreen } from './screens/GenerateScreen';
 import { TemplatesScreen } from './screens/TemplatesScreen';
@@ -137,6 +138,10 @@ function App() {
         <Route 
           path="/login" 
           element={!isAuthenticated ? <LoginScreen /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/signup" 
+          element={!isAuthenticated ? <SignupScreen /> : <Navigate to="/" />} 
         />
         
         <Route 
