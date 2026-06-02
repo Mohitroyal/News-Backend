@@ -598,9 +598,15 @@ class RenderService:
                         chosenLayoutName = 'Editorial Newspaper Layout';
                         const isMultiCol = selectedCols > 1;
                         
+                        // Diagonal layout determination for 2 images
+                        const isDiagonalB = (imgCount === 2 && aspectRatios[0] < aspectRatios[1]); 
+                        const heroFloatDir = isDiagonalB ? 'right' : 'left';
+                        const heroMargin = isDiagonalB ? '8px 0 15px 25px' : '8px 25px 15px 0';
+                        const secondaryFloatDir = isDiagonalB ? 'left' : 'right';
+
                         if (!isMultiCol) {
                             // 1-COLUMN NATIVE FLOW
-                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', 65);
+                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, heroFloatDir, 65);
                             
                             if (imgCount > 1) {
                                 const remainingImgs = imgCount - 1;
@@ -608,7 +614,7 @@ class RenderService:
                                 for (let i = 1; i < imgCount; i++) {
                                     if (i >= urls.length) break;
                                     const pIdx = Math.min((i) * step, paragraphs.length - 1);
-                                    const dir = (i % 2 !== 0) ? 'right' : 'left';
+                                    const dir = (imgCount === 2) ? secondaryFloatDir : ((i % 2 !== 0) ? 'right' : 'left');
                                     injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 45);
                                 }
                             }
@@ -623,9 +629,9 @@ class RenderService:
                             const heroImg = document.createElement('span');
                             heroImg.className = 'nc-floated-image-wrapper';
                             heroImg.style.display = 'block';
-                            heroImg.style.float = 'left';
+                            heroImg.style.float = heroFloatDir;
                             heroImg.style.width = '65%';
-                            heroImg.style.margin = '8px 25px 15px 0';
+                            heroImg.style.margin = heroMargin;
                             heroImg.style.boxSizing = 'border-box';
                             heroImg.innerHTML = `
                                 <img src="${urls[0]}" class="nc-image" style="width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block;" />
@@ -635,13 +641,21 @@ class RenderService:
                             
                             articleBody.parentNode.insertBefore(heroSection, articleBody);
                             
+                            // Intelligent Text Wrapping Calculation
+                            // Calculate exact characters needed to fill the ~35% remaining space beside the hero image
+                            // Page width = 1120. 35% = 392px. Padding = 40px. Safe text width = 350px.
+                            const textWidth = 350;
+                            const charsPerLine = textWidth / (conf.fontSize * 0.5);
+                            const numLines = layoutImgHeightPx / (conf.fontSize * 1.35);
+                            const targetChars = charsPerLine * numLines * 0.85; // 85% fill density factor
+                            
                             let charsMoved = 0;
                             while (paragraphs.length > 0) {
                                 const p = paragraphs[0];
                                 charsMoved += p.textContent.length;
                                 heroSection.appendChild(p);
                                 paragraphs.shift();
-                                if (charsMoved > 800 && paragraphs.length > 1) {
+                                if (charsMoved >= targetChars) {
                                     break;
                                 }
                             }
@@ -652,12 +666,13 @@ class RenderService:
                             
                             if (imgCount > 1 && paragraphs.length > 0) {
                                 const remainingImgs = imgCount - 1;
+                                // Place secondary images near the bottom/end of the paragraphs to form diagonal
                                 const step = Math.max(1, Math.floor(paragraphs.length / remainingImgs));
                                 for (let i = 1; i < imgCount; i++) {
                                     if (i >= urls.length) break;
-                                    const pIdx = Math.min((i - 1) * step, paragraphs.length - 1);
-                                    const dir = (i % 2 !== 0) ? 'right' : 'left';
-                                    injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 100);
+                                    const pIdx = Math.min((i) * step, paragraphs.length - 1);
+                                    const dir = (imgCount === 2) ? secondaryFloatDir : ((i % 2 !== 0) ? 'right' : 'left');
+                                    injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.6, dir, 100);
                                 }
                             }
                         }
