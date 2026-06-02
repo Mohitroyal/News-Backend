@@ -462,6 +462,14 @@ class RenderService:
                     selectedCols = 2; // Expand text blocks
                 }
 
+                // Dynamic Layout-Aware Image Scaling
+                let layoutImgHeightPx = imgHeightPx;
+                if (selectedCols === 3) {
+                    layoutImgHeightPx = Math.round(imgHeightPx * 0.55); // 55% of single-column size
+                } else if (selectedCols === 2) {
+                    layoutImgHeightPx = Math.round(imgHeightPx * 0.75); // 75% of single-column size
+                }
+
                 // Article text columns — strictly enforced
                 const articleEl = container.querySelector('.article-content, .article-body');
                 if (articleEl) {
@@ -559,7 +567,7 @@ class RenderService:
                     
                     if (imgCount === 3) {
                         chosenLayoutName = 'Layout 2-Column Top + 1-Column In-Text';
-                        imgContainer.innerHTML = getLayout2SideBySide(imgHeightPx);
+                        imgContainer.innerHTML = getLayout2SideBySide(layoutImgHeightPx);
                         imgContainer.style.display = '';
 
                         if (paragraphs.length > 0) {
@@ -577,7 +585,7 @@ class RenderService:
                             thirdImgWrapper.style.breakInside = 'avoid';
                             thirdImgWrapper.style.webkitColumnBreakInside = 'avoid';
                             thirdImgWrapper.innerHTML = `
-                                <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
+                                <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
                                 ${captions[2] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[2]}</div>` : ''}
                             `;
                             targetPara.after(thirdImgWrapper);
@@ -595,33 +603,33 @@ class RenderService:
                             const midIndex = Math.floor(paragraphs.length / 2);
                             if (aspectRatios[0] >= aspectRatios[1]) {
                                 chosenLayoutName = 'Layout Diagonal A (Top-Left, Bottom-Right)';
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'left', 50);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'right', 50);
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', 50);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'right', 50);
                             } else {
                                 chosenLayoutName = 'Layout Diagonal B (Top-Right, Bottom-Left)';
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], imgHeightPx, 'right', 50);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], imgHeightPx, 'left', 50);
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'right', 50);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'left', 50);
                             }
                         } else if (isBothPortrait && selectedCols >= 2) {
                             // Vertical stack if both are portrait to use column space efficiently
                             chosenLayoutName = 'Layout Vertical Stack';
-                            imgContainer.innerHTML = getLayout2VerticalStack(imgHeightPx);
+                            imgContainer.innerHTML = getLayout2VerticalStack(layoutImgHeightPx);
                             imgContainer.style.display = '';
                         } else {
                             // Default to side-by-side
                             chosenLayoutName = 'Layout Side-by-Side';
-                            imgContainer.innerHTML = getLayout2SideBySide(imgHeightPx);
+                            imgContainer.innerHTML = getLayout2SideBySide(layoutImgHeightPx);
                             imgContainer.style.display = '';
                         }
                     } else if (imgCount === 1) {
                         chosenLayoutName = 'Layout 1-Column';
-                        imgContainer.innerHTML = getLayout1(imgHeightPx);
+                        imgContainer.innerHTML = getLayout1(layoutImgHeightPx);
                         imgContainer.style.display = '';
                     }
                 }
 
-                console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' imgH=' + imgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
-                return imgHeightPx;
+                console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' baseImgH=' + imgHeightPx + ' layoutImgH=' + layoutImgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
+                return layoutImgHeightPx;
             }
 
             async function executeLayout() {
