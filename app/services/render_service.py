@@ -734,7 +734,9 @@ class RenderService:
                     }
 
                 // FINAL EXPORT CHECK: Verify uploaded_image_count == rendered_image_count
-                let renderedImages = Array.from(container.querySelectorAll('img')).filter(img => img.src && img.src.startsWith('http')).length;
+                // NOTE: We check using class name, not src.startsWith('http'), because
+                // the new layout engine injects images from the JS `urls` array directly.
+                let renderedImages = container.querySelectorAll('img.nc-image').length;
                 if (imgCount > 0 && renderedImages < imgCount) {
 
                     console.log('[LAYOUT] WARNING: Rendered image count mismatch! Expected ' + imgCount + ', found ' + renderedImages + '. Triggering Safe Fallback System.');
@@ -807,7 +809,8 @@ class RenderService:
                 for (let i = 0; i < configs.length; i++) {
                     if (articleBodyNode) {
                         articleBodyNode.innerHTML = originalArticleHtml;
-                        container.querySelectorAll('.nc-hero-section').forEach(el => el.remove());
+                        // Clean up ALL dynamic elements inserted by previous layout attempts
+                        container.querySelectorAll('.nc-hero-section, .nc-editorial-master, .nc-generated-fallback-grid, .nc-floated-image-wrapper').forEach(el => el.remove());
                         
                         // Clean up fallback container
                         const imgC = container.querySelector('.featured-image-container, .image-grid');
@@ -880,7 +883,17 @@ class RenderService:
                 window.__LAYOUT_DONE__ = true;
             }
 
-            executeLayout();
+            // Wrap executeLayout in try/catch so that ANY JS error still sets
+            // window.__LAYOUT_DONE__ = true, preventing Playwright from hanging forever.
+            (async () => {
+                try {
+                    await executeLayout();
+                } catch(err) {
+                    console.error('[LAYOUT FATAL ERROR]', err && err.message ? err.message : String(err));
+                    // Guarantee the Playwright wait_for_function never hangs
+                    window.__LAYOUT_DONE__ = true;
+                }
+            })();
         });
         </script>
         """.replace("{json_data}", json_str)
@@ -946,7 +959,7 @@ class RenderService:
 
                     print("[PLAYWRIGHT] Waiting for layout to complete...")
                     sys.stdout.flush()
-                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=120000)
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=30000)
                     print("[PLAYWRIGHT] Layout complete!")
                     sys.stdout.flush()
 
@@ -1082,7 +1095,7 @@ class RenderService:
 
                     print("[PLAYWRIGHT] Waiting for layout to complete (PDF)...")
                     sys.stdout.flush()
-                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=120000)
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=30000)
                     print("[PLAYWRIGHT] Layout complete (PDF)!")
                     sys.stdout.flush()
 

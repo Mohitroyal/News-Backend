@@ -431,12 +431,42 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
 
 async def _background_process_clipping(clipping_id: Any):
     """Thin async wrapper registered directly with FastAPI BackgroundTasks.
-    
+
     CRITICAL: Must be async so FastAPI runs it in the SAME uvicorn event loop.
-    Using a sync wrapper (asyncio.run()) creates a new event loop per task,
-    which corrupts the module-level asyncio.Semaphore across generations.
+    Has a hard 300-second wall-clock timeout so a task can NEVER hang forever.
     """
-    await _async_process_clipping_task(clipping_id)
+    print(f"[STEP 1] Task Created - clipping_id={clipping_id}"); sys.stdout.flush()
+    try:
+        await asyncio.wait_for(
+            _async_process_clipping_task(clipping_id),
+            timeout=300.0  # 5-minute hard cap — marks FAILED if exceeded
+        )
+    except asyncio.TimeoutError:
+        print(f"[PIPELINE FATAL] Task {clipping_id} exceeded 300s global timeout. Marking FAILED.")
+        sys.stdout.flush()
+        try:
+            from app.db.session import SessionLocal
+            emergency_db = SessionLocal()
+            try:
+                emergency_clipping = emergency_db.query(Clipping).filter(Clipping.id == clipping_id).first()
+                if emergency_clipping and emergency_clipping.status not in ("completed", "failed"):
+                    emergency_clipping.status = "failed"
+                    emergency_clipping.custom_layout = {
+                        "stage": "Global Timeout",
+                        "error_type": "TimeoutError",
+                        "message": "Generation exceeded 300 second global timeout",
+                        "error": "Generation timed out after 300 seconds",
+                        "details": "The pipeline was forcibly terminated to prevent permanent hang",
+                        "traceback": ""
+                    }
+                    emergency_db.commit()
+                    print(f"[PIPELINE FATAL] Task {clipping_id} marked FAILED in DB."); sys.stdout.flush()
+            finally:
+                emergency_db.close()
+        except Exception as emergency_err:
+            print(f"[PIPELINE FATAL] Could not write timeout failure to DB: {emergency_err}"); sys.stdout.flush()
+    except Exception as e:
+        print(f"[PIPELINE FATAL] Unhandled exception in background task: {type(e).__name__}: {e}"); sys.stdout.flush()
 
 
 @router.post("/", response_model=dict)
