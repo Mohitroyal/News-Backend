@@ -597,81 +597,114 @@ class RenderService:
 
                     const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content');
                     if (articleBody && paragraphs.length > 0) {
-                        chosenLayoutName = 'Editorial Newspaper Layout';
-                        const isMultiCol = selectedCols > 1;
-                        
-                        if (!isMultiCol) {
-                            // 1-COLUMN NATIVE FLOW
-                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', 55);
-                            
-                            if (imgCount > 1) {
-                                const remainingImgs = imgCount - 1;
-                                const step = Math.max(1, Math.floor(paragraphs.length / remainingImgs));
-                                for (let i = 1; i < imgCount; i++) {
-                                    if (i >= urls.length) break;
-                                    const pIdx = Math.min((i) * step, paragraphs.length - 1);
-                                    const dir = (i % 2 !== 0) ? 'right' : 'left';
-                                    injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 45);
+                        chosenLayoutName = 'Reference Diagonal Editorial Layout';
+
+                        // ═══════════════════════════════════════════════════════════
+                        // REFERENCE LAYOUT ENGINE
+                        // Hero Image: Top-Left (float left, 45-50% width)
+                        // Secondary Image: Bottom-Right (float right, 33-38% width)
+                        // Text: Wraps beside and between both images naturally
+                        // ═══════════════════════════════════════════════════════════
+
+                        const masterBlock = document.createElement('div');
+                        masterBlock.className = 'nc-editorial-master';
+                        masterBlock.style.display = 'block';
+                        masterBlock.style.overflow = 'hidden';
+
+                        const heroWidthPct      = selectedCols === 1 ? 50 : (selectedCols === 2 ? 48 : 45);
+                        const secondaryWidthPct = selectedCols === 1 ? 38 : (selectedCols === 2 ? 36 : 33);
+
+                        // HERO IMAGE — float left at top
+                        const heroWrapper = document.createElement('div');
+                        heroWrapper.className = 'nc-hero-img-wrapper';
+                        heroWrapper.style.float = 'left';
+                        heroWrapper.style.width = heroWidthPct + '%';
+                        heroWrapper.style.margin = '0 18px 12px 0';
+                        heroWrapper.style.boxSizing = 'border-box';
+                        heroWrapper.innerHTML = `
+                            <img src="${urls[0]}" class="nc-image" style="width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block;" />
+                            ${captions[0] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px; line-height: 1.2;">${captions[0]}</span>` : ''}
+                        `;
+                        masterBlock.appendChild(heroWrapper);
+
+                        // Walk through paragraphs, injecting secondary/extra images at calculated positions
+                        let secondaryInjected = false;
+                        const totalParas = paragraphs.length;
+                        const secondaryTriggerIdx = Math.max(1, Math.floor(totalParas * 0.6));
+
+                        paragraphs.forEach((p, idx) => {
+                            // SECONDARY IMAGE — inject at ~60% of text, float right (creates diagonal)
+                            if (imgCount >= 2 && !secondaryInjected && idx === secondaryTriggerIdx) {
+                                const secWrapper = document.createElement('div');
+                                secWrapper.className = 'nc-secondary-img-wrapper';
+                                secWrapper.style.float = 'right';
+                                secWrapper.style.width = secondaryWidthPct + '%';
+                                secWrapper.style.margin = '0 0 12px 18px';
+                                secWrapper.style.boxSizing = 'border-box';
+                                secWrapper.style.clear = 'right';
+                                secWrapper.innerHTML = `
+                                    <img src="${urls[1]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.75)}px; object-fit: contain; display: block;" />
+                                    ${captions[1] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px;">${captions[1]}</span>` : ''}
+                                `;
+                                masterBlock.appendChild(secWrapper);
+                                secondaryInjected = true;
+                            }
+
+                            // EXTRA IMAGES (3+) — alternate left/right at even paragraph intervals
+                            if (imgCount > 2) {
+                                for (let ei = 2; ei < imgCount; ei++) {
+                                    const triggerPara = Math.floor(totalParas * (ei / imgCount));
+                                    if (idx === triggerPara && ei < urls.length) {
+                                        const extraWrapper = document.createElement('div');
+                                        extraWrapper.className = 'nc-extra-img-wrapper';
+                                        extraWrapper.style.float = (ei % 2 === 0) ? 'right' : 'left';
+                                        extraWrapper.style.width = secondaryWidthPct + '%';
+                                        extraWrapper.style.margin = (ei % 2 === 0) ? '0 0 12px 18px' : '0 18px 12px 0';
+                                        extraWrapper.style.boxSizing = 'border-box';
+                                        extraWrapper.innerHTML = `
+                                            <img src="${urls[ei]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.65)}px; object-fit: contain; display: block;" />
+                                            ${captions[ei] ? `<span class="image-caption" style="display: block; font-size: 11px; color: #555; margin-top: 4px; font-style: italic;">${captions[ei]}</span>` : ''}
+                                        `;
+                                        masterBlock.appendChild(extraWrapper);
+                                    }
                                 }
                             }
-                        } else {
-                            // MULTI-COLUMN SPLIT (Hero Section + Multi-Col Body)
-                            const heroSection = document.createElement('div');
-                            heroSection.className = 'nc-hero-section';
-                            heroSection.style.marginBottom = '15px';
-                            heroSection.style.display = 'block';
-                            heroSection.style.columns = '1';
-                            
-                            const heroImg = document.createElement('span');
-                            heroImg.className = 'nc-floated-image-wrapper';
-                            heroImg.style.display = 'block';
-                            heroImg.style.float = 'left';
-                            heroImg.style.width = '55%';
-                            heroImg.style.margin = '8px 25px 15px 0';
-                            heroImg.style.boxSizing = 'border-box';
-                            heroImg.innerHTML = `
-                                <img src="${urls[0]}" class="nc-image" style="width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block;" />
-                                ${captions[0] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px; line-height: 1.2;">${captions[0]}</span>` : ''}
+
+                            masterBlock.appendChild(p);
+                        });
+
+                        // Clearfix
+                        const cf = document.createElement('div');
+                        cf.style.clear = 'both';
+                        masterBlock.appendChild(cf);
+
+                        // Guarantee secondary image rendered even if not enough paragraphs
+                        if (imgCount >= 2 && !secondaryInjected) {
+                            const secWrapper = document.createElement('div');
+                            secWrapper.className = 'nc-secondary-img-wrapper';
+                            secWrapper.style.float = 'right';
+                            secWrapper.style.width = secondaryWidthPct + '%';
+                            secWrapper.style.margin = '0 0 12px 18px';
+                            secWrapper.style.boxSizing = 'border-box';
+                            secWrapper.innerHTML = `
+                                <img src="${urls[1]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.75)}px; object-fit: contain; display: block;" />
+                                ${captions[1] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px;">${captions[1]}</span>` : ''}
                             `;
-                            heroSection.appendChild(heroImg);
-                            
-                            articleBody.parentNode.insertBefore(heroSection, articleBody);
-                            
-                            let charsMoved = 0;
-                            while (paragraphs.length > 0) {
-                                const p = paragraphs[0];
-                                charsMoved += p.textContent.length;
-                                heroSection.appendChild(p);
-                                paragraphs.shift();
-                                if (charsMoved > 800 && paragraphs.length > 1) {
-                                    break;
-                                }
-                            }
-                            
-                            const clearfix = document.createElement('div');
-                            clearfix.style.clear = 'both';
-                            heroSection.appendChild(clearfix);
-                            
-                            // Re-query all paragraphs after split to ensure secondary images are never dropped
-                            const allParasAfterSplit = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
-                            
-                            if (imgCount > 1 && allParasAfterSplit.length > 0) {
-                                const remainingImgs = imgCount - 1;
-                                const step = Math.max(1, Math.floor(allParasAfterSplit.length / remainingImgs));
-                                for (let i = 1; i < imgCount; i++) {
-                                    if (i >= urls.length) break;
-                                    // pIdx is based on remaining paragraphs, so we offset by 1 for the first secondary image
-                                    const pIdx = Math.min((i) * step, allParasAfterSplit.length - 1);
-                                    const dir = (i % 2 !== 0) ? 'right' : 'left';
-                                    injectFloatedImage(allParasAfterSplit[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 100);
-                                }
-                            }
+                            masterBlock.insertBefore(secWrapper, cf);
                         }
+
+                        // CSS columns are incompatible with float-based layout — disable them
+                        articleBody.style.columnCount = '1';
+                        articleBody.style.columns     = '1';
+                        articleBody.style.webkitColumns = '1';
+
+                        // Mount the entire master editorial block before the article body
+                        articleBody.parentNode.insertBefore(masterBlock, articleBody);
+
                     } else {
-                        // CRITICAL FALLBACK: If advanced layout fails (e.g. no paragraphs or no articleBody found),
-                        // we MUST render the images to prevent text-only output regression.
+                        // CRITICAL FALLBACK: no paragraphs or no articleBody found — always render images
                         chosenLayoutName = 'Safe Fallback Image Grid';
-                        
+
                         let fallbackContainer = imgContainer;
                         if (!fallbackContainer) {
                             fallbackContainer = document.createElement('div');
@@ -680,12 +713,12 @@ class RenderService:
                             if (target) target.parentNode.insertBefore(fallbackContainer, target);
                             else container.appendChild(fallbackContainer);
                         }
-                        
+                        fallbackContainer.innerHTML = '';
                         fallbackContainer.style.display = 'flex';
                         fallbackContainer.style.flexWrap = 'wrap';
                         fallbackContainer.style.gap = '15px';
                         fallbackContainer.style.marginBottom = '20px';
-                        
+
                         for (let i = 0; i < imgCount; i++) {
                             if (i >= urls.length) break;
                             const wrapper = document.createElement('div');
@@ -693,19 +726,17 @@ class RenderService:
                             wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
                             wrapper.style.boxSizing = 'border-box';
                             wrapper.innerHTML = `
-                                <img src="${urls[i]}" style="width: 100%; height: auto; display: block;" />
+                                <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
                                 ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
                             `;
                             fallbackContainer.appendChild(wrapper);
                         }
                     }
-                }
-                
+
                 // FINAL EXPORT CHECK: Verify uploaded_image_count == rendered_image_count
-                // Check how many images were actually rendered inside the container
                 let renderedImages = Array.from(container.querySelectorAll('img')).filter(img => img.src && img.src.startsWith('http')).length;
-                
                 if (imgCount > 0 && renderedImages < imgCount) {
+
                     console.log('[LAYOUT] WARNING: Rendered image count mismatch! Expected ' + imgCount + ', found ' + renderedImages + '. Triggering Safe Fallback System.');
                     
                     // Abort current layout and wipe advanced layout elements
