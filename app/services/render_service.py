@@ -300,18 +300,18 @@ class RenderService:
             // Compression ladder: spacious -> compact. Content NEVER removed.
             const configs = [
                 // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
-                { fontSize: 17.0, lineHeight: 1.65, paraMargin: 18, imgMaxPct: 0.40, padding: 35 },
-                { fontSize: 16.0, lineHeight: 1.62, paraMargin: 16, imgMaxPct: 0.38, padding: 32 },
-                { fontSize: 15.0, lineHeight: 1.58, paraMargin: 14, imgMaxPct: 0.36, padding: 30 },
-                { fontSize: 14.0, lineHeight: 1.54, paraMargin: 12, imgMaxPct: 0.34, padding: 28 },
-                { fontSize: 13.5, lineHeight: 1.50, paraMargin: 10, imgMaxPct: 0.32, padding: 25 },
-                { fontSize: 13.0, lineHeight: 1.46, paraMargin:  9, imgMaxPct: 0.30, padding: 22 },
-                { fontSize: 12.5, lineHeight: 1.42, paraMargin:  8, imgMaxPct: 0.28, padding: 20 },
-                { fontSize: 12.0, lineHeight: 1.38, paraMargin:  7, imgMaxPct: 0.26, padding: 18 },
-                { fontSize: 11.5, lineHeight: 1.35, paraMargin:  6, imgMaxPct: 0.24, padding: 16 },
-                { fontSize: 11.0, lineHeight: 1.32, paraMargin:  5, imgMaxPct: 0.22, padding: 15 },
-                { fontSize: 10.0, lineHeight: 1.28, paraMargin:  4, imgMaxPct: 0.20, padding: 12 },
-                { fontSize:  9.0, lineHeight: 1.25, paraMargin:  3, imgMaxPct: 0.16, padding: 10 }
+                { fontSize: 17.0, lineHeight: 1.45, paraMargin: 12, imgMaxPct: 0.38, padding: 30 },
+                { fontSize: 16.0, lineHeight: 1.40, paraMargin: 10, imgMaxPct: 0.36, padding: 25 },
+                { fontSize: 15.0, lineHeight: 1.38, paraMargin: 8,  imgMaxPct: 0.34, padding: 22 },
+                { fontSize: 14.0, lineHeight: 1.35, paraMargin: 7,  imgMaxPct: 0.32, padding: 20 },
+                { fontSize: 13.5, lineHeight: 1.32, paraMargin: 6,  imgMaxPct: 0.30, padding: 18 },
+                { fontSize: 13.0, lineHeight: 1.30, paraMargin: 6,  imgMaxPct: 0.28, padding: 16 },
+                { fontSize: 12.5, lineHeight: 1.28, paraMargin: 5,  imgMaxPct: 0.26, padding: 14 },
+                { fontSize: 12.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.24, padding: 12 },
+                { fontSize: 11.5, lineHeight: 1.22, paraMargin: 4,  imgMaxPct: 0.22, padding: 10 },
+                { fontSize: 11.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.20, padding: 10 },
+                { fontSize: 10.0, lineHeight: 1.18, paraMargin: 3,  imgMaxPct: 0.18, padding: 8 },
+                { fontSize:  9.0, lineHeight: 1.15, paraMargin: 2,  imgMaxPct: 0.16, padding: 6 }
             ];
 
             async function waitReady() {
