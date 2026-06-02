@@ -101,7 +101,7 @@ class GrokService:
         headline_fallback = sections[0][:60] + "..." if len(sections[0]) > 60 else sections[0]
         return {
             "headline": headline_fallback,
-            "subheadline": "Generated offline with local backup layout parser",
+            "subheadline": "",
             "sections": sections,
             "dateline": "NEW DELHI",
             "byline": "",

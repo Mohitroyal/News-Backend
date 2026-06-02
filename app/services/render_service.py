@@ -593,33 +593,72 @@ class RenderService:
                     imgContainer.innerHTML = '';
                     imgContainer.style.display = 'none';
 
-                    if (paragraphs.length > 0) {
-                        if (imgCount === 1) {
-                            chosenLayoutName = 'Layout 1-Column Inline Feature';
-                            // 1 image: large feature image. 
-                            // If 1 column, it floats 50% so text wraps. If multi-column, it fills 100% of the column so text flows beneath it.
-                            const imgWidthPct = selectedCols === 1 ? 50 : 100;
-                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', imgWidthPct);
-                        } else if (imgCount === 2) {
-                            chosenLayoutName = 'Layout Diagonal Flow';
-                            const imgWidthPct = selectedCols === 1 ? 50 : 100;
-                            const midIndex = Math.min(Math.floor(paragraphs.length / 2), paragraphs.length - 1);
-                            if (aspectRatios[0] >= aspectRatios[1]) {
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', imgWidthPct);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'right', imgWidthPct);
-                            } else {
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'right', imgWidthPct);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'left', imgWidthPct);
+                    const articleBody = container.querySelector('.article-body, .extra-news-layout');
+                    if (articleBody && paragraphs.length > 0) {
+                        chosenLayoutName = 'Editorial Newspaper Layout';
+                        const isMultiCol = selectedCols > 1;
+                        
+                        if (!isMultiCol) {
+                            // 1-COLUMN NATIVE FLOW
+                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', 65);
+                            
+                            if (imgCount > 1) {
+                                const remainingImgs = imgCount - 1;
+                                const step = Math.max(1, Math.floor(paragraphs.length / remainingImgs));
+                                for (let i = 1; i < imgCount; i++) {
+                                    if (i >= urls.length) break;
+                                    const pIdx = Math.min((i) * step, paragraphs.length - 1);
+                                    const dir = (i % 2 !== 0) ? 'right' : 'left';
+                                    injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 45);
+                                }
                             }
-                        } else if (imgCount >= 3) {
-                            chosenLayoutName = 'Layout Multi-Image Flow';
-                            const imgWidthPct = selectedCols === 1 ? 45 : 100;
-                            const step = Math.max(1, Math.floor(paragraphs.length / imgCount));
-                            for (let i = 0; i < imgCount; i++) {
-                                if (i >= urls.length) break;
-                                const pIdx = Math.min(i * step, paragraphs.length - 1);
-                                const dir = (i % 2 === 0) ? 'left' : 'right';
-                                injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx, dir, imgWidthPct);
+                        } else {
+                            // MULTI-COLUMN SPLIT (Hero Section + Multi-Col Body)
+                            const heroSection = document.createElement('div');
+                            heroSection.className = 'nc-hero-section';
+                            heroSection.style.marginBottom = '15px';
+                            heroSection.style.display = 'block';
+                            heroSection.style.columns = '1';
+                            
+                            const heroImg = document.createElement('span');
+                            heroImg.className = 'nc-floated-image-wrapper';
+                            heroImg.style.display = 'block';
+                            heroImg.style.float = 'left';
+                            heroImg.style.width = '65%';
+                            heroImg.style.margin = '8px 25px 15px 0';
+                            heroImg.style.boxSizing = 'border-box';
+                            heroImg.innerHTML = `
+                                <img src="${urls[0]}" class="nc-image" style="width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block;" />
+                                ${captions[0] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px; line-height: 1.2;">${captions[0]}</span>` : ''}
+                            `;
+                            heroSection.appendChild(heroImg);
+                            
+                            articleBody.parentNode.insertBefore(heroSection, articleBody);
+                            
+                            let charsMoved = 0;
+                            while (paragraphs.length > 0) {
+                                const p = paragraphs[0];
+                                charsMoved += p.textContent.length;
+                                heroSection.appendChild(p);
+                                paragraphs.shift();
+                                if (charsMoved > 800 && paragraphs.length > 1) {
+                                    break;
+                                }
+                            }
+                            
+                            const clearfix = document.createElement('div');
+                            clearfix.style.clear = 'both';
+                            heroSection.appendChild(clearfix);
+                            
+                            if (imgCount > 1 && paragraphs.length > 0) {
+                                const remainingImgs = imgCount - 1;
+                                const step = Math.max(1, Math.floor(paragraphs.length / remainingImgs));
+                                for (let i = 1; i < imgCount; i++) {
+                                    if (i >= urls.length) break;
+                                    const pIdx = Math.min((i - 1) * step, paragraphs.length - 1);
+                                    const dir = (i % 2 !== 0) ? 'right' : 'left';
+                                    injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx * 0.7, dir, 100);
+                                }
                             }
                         }
                     }
@@ -642,6 +681,9 @@ class RenderService:
 
                 await waitReady();
 
+                const articleBodyNode = container.querySelector('.article-body, .extra-news-layout');
+                const originalArticleHtml = articleBodyNode ? articleBodyNode.innerHTML : '';
+
                 // Unlock container — must be auto-height (single page = natural height)
                 container.style.height    = 'auto';
                 container.style.minHeight = 'unset';
@@ -653,6 +695,11 @@ class RenderService:
                 let fits = false;
 
                 for (let i = 0; i < configs.length; i++) {
+                    if (articleBodyNode) {
+                        articleBodyNode.innerHTML = originalArticleHtml;
+                        container.querySelectorAll('.nc-hero-section').forEach(el => el.remove());
+                    }
+                    const conf = configs[i];
                     const imgH = applyConfig(configs[i]);
                     chosenConf = configs[i];
                     chosenImgH = imgH;
