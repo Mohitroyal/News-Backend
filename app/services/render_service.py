@@ -585,13 +585,15 @@ class RenderService:
                     subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
                 }
 
-                // Rebuild image container with layout mode and image height
-                if (imgContainer && imgCount > 0) {
+                // Inject images using the advanced Reference Layout engine
+                if (imgCount > 0) {
                     const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
                     
                     // NEVER use the legacy isolated container at the top
-                    imgContainer.innerHTML = '';
-                    imgContainer.style.display = 'none';
+                    if (imgContainer) {
+                        imgContainer.innerHTML = '';
+                        imgContainer.style.display = 'none';
+                    }
 
                     const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content');
                     if (articleBody && paragraphs.length > 0) {
@@ -669,10 +671,20 @@ class RenderService:
                         // CRITICAL FALLBACK: If advanced layout fails (e.g. no paragraphs or no articleBody found),
                         // we MUST render the images to prevent text-only output regression.
                         chosenLayoutName = 'Safe Fallback Image Grid';
-                        imgContainer.style.display = 'flex';
-                        imgContainer.style.flexWrap = 'wrap';
-                        imgContainer.style.gap = '15px';
-                        imgContainer.style.marginBottom = '20px';
+                        
+                        let fallbackContainer = imgContainer;
+                        if (!fallbackContainer) {
+                            fallbackContainer = document.createElement('div');
+                            fallbackContainer.className = 'nc-generated-fallback-grid';
+                            const target = container.querySelector('.article-body, .extra-news-layout, .article-content, .newspaper-body, .columns');
+                            if (target) target.parentNode.insertBefore(fallbackContainer, target);
+                            else container.appendChild(fallbackContainer);
+                        }
+                        
+                        fallbackContainer.style.display = 'flex';
+                        fallbackContainer.style.flexWrap = 'wrap';
+                        fallbackContainer.style.gap = '15px';
+                        fallbackContainer.style.marginBottom = '20px';
                         
                         for (let i = 0; i < imgCount; i++) {
                             if (i >= urls.length) break;
@@ -684,7 +696,7 @@ class RenderService:
                                 <img src="${urls[i]}" style="width: 100%; height: auto; display: block;" />
                                 ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
                             `;
-                            imgContainer.appendChild(wrapper);
+                            fallbackContainer.appendChild(wrapper);
                         }
                     }
                 }
@@ -701,25 +713,33 @@ class RenderService:
                     
                     // Regenerate using safe image layout
                     chosenLayoutName = 'Failsafe Mandatory Image Grid';
-                    if (imgContainer) {
-                        imgContainer.innerHTML = '';
-                        imgContainer.style.display = 'flex';
-                        imgContainer.style.flexWrap = 'wrap';
-                        imgContainer.style.gap = '15px';
-                        imgContainer.style.marginBottom = '20px';
-                        
-                        for (let i = 0; i < imgCount; i++) {
-                            if (i >= urls.length) break;
-                            const wrapper = document.createElement('div');
-                            wrapper.className = 'nc-fallback-wrapper';
-                            wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
-                            wrapper.style.boxSizing = 'border-box';
-                            wrapper.innerHTML = `
-                                <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
-                                ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
-                            `;
-                            imgContainer.appendChild(wrapper);
-                        }
+                    
+                    let exportFallbackContainer = container.querySelector('.featured-image-container, .image-grid, .nc-generated-fallback-grid');
+                    if (!exportFallbackContainer) {
+                        exportFallbackContainer = document.createElement('div');
+                        exportFallbackContainer.className = 'nc-generated-fallback-grid';
+                        const t = container.querySelector('.article-body, .extra-news-layout, .article-content, .newspaper-body, .columns');
+                        if (t) t.parentNode.insertBefore(exportFallbackContainer, t);
+                        else container.appendChild(exportFallbackContainer);
+                    }
+                    
+                    exportFallbackContainer.innerHTML = '';
+                    exportFallbackContainer.style.display = 'flex';
+                    exportFallbackContainer.style.flexWrap = 'wrap';
+                    exportFallbackContainer.style.gap = '15px';
+                    exportFallbackContainer.style.marginBottom = '20px';
+                    
+                    for (let i = 0; i < imgCount; i++) {
+                        if (i >= urls.length) break;
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'nc-fallback-wrapper';
+                        wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
+                        wrapper.style.boxSizing = 'border-box';
+                        wrapper.innerHTML = `
+                            <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
+                            ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
+                        `;
+                        exportFallbackContainer.appendChild(wrapper);
                     }
                 }
 
