@@ -442,21 +442,21 @@ class RenderService:
             }
 
             function injectFloatedImage(para, url, caption, imgHeightPx, floatDir, widthPct) {
-                const wrapper = document.createElement('div');
+                // Use a span with block display to remain valid HTML inside a <p> tag and prevent text breaks
+                const wrapper = document.createElement('span');
                 wrapper.className = 'nc-floated-image-wrapper';
+                wrapper.style.display = 'block';
                 wrapper.style.float = floatDir;
                 wrapper.style.width = widthPct + '%';
                 wrapper.style.margin = floatDir === 'left' ? '5px 15px 10px 0' : '5px 0 10px 15px';
                 if (widthPct >= 100) {
                     wrapper.style.margin = '10px 0'; // Prevent horizontal overflow when 100% width
                 }
-                wrapper.style.border = borderStyle;
-                wrapper.style.padding = paddingStyle;
                 wrapper.style.boxSizing = 'border-box';
                 wrapper.style.textAlign = 'center';
                 wrapper.innerHTML = `
                     <img src="${url}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
-                    ${caption ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${caption}</div>` : ''}
+                    ${caption ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px; line-height: 1.2;">${caption}</span>` : ''}
                 `;
                 para.insertBefore(wrapper, para.firstChild);
             }
