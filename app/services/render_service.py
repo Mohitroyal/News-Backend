@@ -102,6 +102,27 @@ class RenderService:
         elif len(data.get("sections", [])) == 0:
             data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
+        # 2b. Merge short sections to ensure tight newspaper density (no 1-line paragraphs)
+        if isinstance(data.get("sections"), list) and len(data["sections"]) > 1:
+            merged_sections = []
+            current_section = ""
+            for sec in data["sections"]:
+                if current_section:
+                    current_section += " " + sec
+                else:
+                    current_section = sec
+                
+                # Maintain dense newspaper blocks (min ~180 chars)
+                if len(current_section) > 180:
+                    merged_sections.append(current_section)
+                    current_section = ""
+            if current_section:
+                if merged_sections:
+                    merged_sections[-1] += " " + current_section
+                else:
+                    merged_sections.append(current_section)
+            data["sections"] = merged_sections
+
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
             fallback_img = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80"
@@ -300,18 +321,18 @@ class RenderService:
             // Compression ladder: spacious -> compact. Content NEVER removed.
             const configs = [
                 // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
-                { fontSize: 17.0, lineHeight: 1.45, paraMargin: 12, imgMaxPct: 0.55, padding: 30 },
-                { fontSize: 16.0, lineHeight: 1.40, paraMargin: 10, imgMaxPct: 0.52, padding: 25 },
-                { fontSize: 15.0, lineHeight: 1.38, paraMargin: 8,  imgMaxPct: 0.49, padding: 22 },
-                { fontSize: 14.0, lineHeight: 1.35, paraMargin: 7,  imgMaxPct: 0.46, padding: 20 },
-                { fontSize: 13.5, lineHeight: 1.32, paraMargin: 6,  imgMaxPct: 0.43, padding: 18 },
-                { fontSize: 13.0, lineHeight: 1.30, paraMargin: 6,  imgMaxPct: 0.40, padding: 16 },
-                { fontSize: 12.5, lineHeight: 1.28, paraMargin: 5,  imgMaxPct: 0.38, padding: 14 },
-                { fontSize: 12.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.36, padding: 12 },
-                { fontSize: 11.5, lineHeight: 1.22, paraMargin: 4,  imgMaxPct: 0.34, padding: 10 },
-                { fontSize: 11.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.32, padding: 10 },
-                { fontSize: 10.0, lineHeight: 1.18, paraMargin: 3,  imgMaxPct: 0.30, padding: 8 },
-                { fontSize:  9.0, lineHeight: 1.15, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
+                { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
+                { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
+                { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
+                { fontSize: 13.5, lineHeight: 1.28, paraMargin: 6,  imgMaxPct: 0.46, padding: 20 },
+                { fontSize: 13.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.43, padding: 18 },
+                { fontSize: 12.5, lineHeight: 1.22, paraMargin: 5,  imgMaxPct: 0.40, padding: 16 },
+                { fontSize: 12.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.38, padding: 14 },
+                { fontSize: 11.5, lineHeight: 1.18, paraMargin: 4,  imgMaxPct: 0.36, padding: 12 },
+                { fontSize: 11.0, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.34, padding: 10 },
+                { fontSize: 10.5, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.32, padding: 10 },
+                { fontSize: 10.0, lineHeight: 1.12, paraMargin: 2,  imgMaxPct: 0.30, padding: 8 },
+                { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
             ];
 
             async function waitReady() {
