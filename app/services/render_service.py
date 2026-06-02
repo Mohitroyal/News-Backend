@@ -447,6 +447,9 @@ class RenderService:
                 wrapper.style.float = floatDir;
                 wrapper.style.width = widthPct + '%';
                 wrapper.style.margin = floatDir === 'left' ? '5px 15px 10px 0' : '5px 0 10px 15px';
+                if (widthPct >= 100) {
+                    wrapper.style.margin = '10px 0'; // Prevent horizontal overflow when 100% width
+                }
                 wrapper.style.border = borderStyle;
                 wrapper.style.padding = paddingStyle;
                 wrapper.style.boxSizing = 'border-box';
@@ -586,66 +589,39 @@ class RenderService:
                 if (imgContainer && imgCount > 0) {
                     const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
                     
-                    if (imgCount === 3) {
-                        chosenLayoutName = 'Layout 2-Column Top + 1-Column In-Text';
-                        imgContainer.innerHTML = getLayout2SideBySide(layoutImgHeightPx);
-                        imgContainer.style.display = '';
+                    // NEVER use the legacy isolated container at the top
+                    imgContainer.innerHTML = '';
+                    imgContainer.style.display = 'none';
 
-                        if (paragraphs.length > 0) {
-                            const insertIndex = Math.min(2, Math.max(1, Math.floor(paragraphs.length / 2)));
-                            const targetPara = paragraphs[Math.min(insertIndex, paragraphs.length - 1)];
-                            
-                            const thirdImgWrapper = document.createElement('div');
-                            thirdImgWrapper.className = 'nc-third-image-wrapper';
-                            thirdImgWrapper.style.margin = '15px 0';
-                            thirdImgWrapper.style.textAlign = 'center';
-                            thirdImgWrapper.style.border = borderStyle;
-                            thirdImgWrapper.style.padding = paddingStyle;
-                            thirdImgWrapper.style.boxSizing = 'border-box';
-                            thirdImgWrapper.style.width = '100%';
-                            thirdImgWrapper.style.breakInside = 'avoid';
-                            thirdImgWrapper.style.webkitColumnBreakInside = 'avoid';
-                            thirdImgWrapper.innerHTML = `
-                                <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
-                                ${captions[2] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[2]}</div>` : ''}
-                            `;
-                            targetPara.after(thirdImgWrapper);
-                        }
-                    } else if (imgCount === 2) {
-                        // Intelligent Layout Engine for 2 Images
-                        const isBothPortrait = orientations[0] === 'Portrait' && orientations[1] === 'Portrait';
-                        const hasEnoughText = paragraphs.length >= 3 && totalChars > 800;
-
-                        if (hasEnoughText) {
-                            // Dynamic Diagonal Layout for optimal text wrapping
-                            imgContainer.innerHTML = '';
-                            imgContainer.style.display = 'none';
-
-                            const midIndex = Math.floor(paragraphs.length / 2);
+                    if (paragraphs.length > 0) {
+                        if (imgCount === 1) {
+                            chosenLayoutName = 'Layout 1-Column Inline Feature';
+                            // 1 image: large feature image. 
+                            // If 1 column, it floats 50% so text wraps. If multi-column, it fills 100% of the column so text flows beneath it.
+                            const imgWidthPct = selectedCols === 1 ? 50 : 100;
+                            injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', imgWidthPct);
+                        } else if (imgCount === 2) {
+                            chosenLayoutName = 'Layout Diagonal Flow';
+                            const imgWidthPct = selectedCols === 1 ? 50 : 100;
+                            const midIndex = Math.min(Math.floor(paragraphs.length / 2), paragraphs.length - 1);
                             if (aspectRatios[0] >= aspectRatios[1]) {
-                                chosenLayoutName = 'Layout Diagonal A (Top-Left, Bottom-Right)';
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', 50);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'right', 50);
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'left', imgWidthPct);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'right', imgWidthPct);
                             } else {
-                                chosenLayoutName = 'Layout Diagonal B (Top-Right, Bottom-Left)';
-                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'right', 50);
-                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'left', 50);
+                                injectFloatedImage(paragraphs[0], urls[0], captions[0], layoutImgHeightPx, 'right', imgWidthPct);
+                                injectFloatedImage(paragraphs[midIndex], urls[1], captions[1], layoutImgHeightPx, 'left', imgWidthPct);
                             }
-                        } else if (isBothPortrait && selectedCols >= 2) {
-                            // Vertical stack if both are portrait to use column space efficiently
-                            chosenLayoutName = 'Layout Vertical Stack';
-                            imgContainer.innerHTML = getLayout2VerticalStack(layoutImgHeightPx);
-                            imgContainer.style.display = '';
-                        } else {
-                            // Default to side-by-side
-                            chosenLayoutName = 'Layout Side-by-Side';
-                            imgContainer.innerHTML = getLayout2SideBySide(layoutImgHeightPx);
-                            imgContainer.style.display = '';
+                        } else if (imgCount >= 3) {
+                            chosenLayoutName = 'Layout Multi-Image Flow';
+                            const imgWidthPct = selectedCols === 1 ? 45 : 100;
+                            const step = Math.max(1, Math.floor(paragraphs.length / imgCount));
+                            for (let i = 0; i < imgCount; i++) {
+                                if (i >= urls.length) break;
+                                const pIdx = Math.min(i * step, paragraphs.length - 1);
+                                const dir = (i % 2 === 0) ? 'left' : 'right';
+                                injectFloatedImage(paragraphs[pIdx], urls[i], captions[i], layoutImgHeightPx, dir, imgWidthPct);
+                            }
                         }
-                    } else if (imgCount === 1) {
-                        chosenLayoutName = 'Layout 1-Column';
-                        imgContainer.innerHTML = getLayout1(layoutImgHeightPx);
-                        imgContainer.style.display = '';
                     }
                 }
 
