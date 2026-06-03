@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsCraft — Newspaper Clipping</title>
+    <meta name="description" content="NewsCraft newspaper clipping — fixed-grid broadsheet layout with hero image, diagonal secondary gallery, and multi-column text flow.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@700;900&family=Noto+Serif+Devanagari:wght@400;700&family=Noto+Serif+Telugu:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ─── DESIGN TOKENS ─────────────────────────────────────── */
+        :root {
+            --bg:         #faf9f6;
+            --paper:      #ffffff;
+            --ink:        #0f172a;
+            --accent:     #0a192f;
+            --gold:       #b38f32;
+            --rule:       #0a192f;
+            --muted:      #475569;
+            --divider:    #cbd5e1;
+            --col-gap:    22px;
+            --container-w: 1060px;
+            --container-pad: 34px;
+        }
+
+        /* ─── RESET ─────────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Old Standard TT', serif;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        /* ─── NEWSPAPER CONTAINER ───────────────────────────────── */
+        .newspaper-container {
+            width: var(--container-w);
+            background: var(--paper);
+            border: 2px solid var(--rule);
+            box-shadow: 0 10px 40px rgba(10,25,47,0.08);
+            padding: var(--container-pad);
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* ─── MASTHEAD / HEADER ─────────────────────────────────── */
+        .header-section {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .header-section svg {
+            width: 100%;
+            height: auto;
+            max-height: 120px;
+            display: block;
+        }
+
+        /* ─── META BAR ──────────────────────────────────────────── */
+        .meta-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 3px;
+            border-top: 1.5px solid var(--rule);
+            border-bottom: 1.5px solid var(--rule);
+            padding: 5px 12px;
+            font-family: 'Cinzel', serif;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.6px;
+            color: var(--accent);
+            margin-bottom: 0;
+        }
+
+        /* ─── HEADLINE BLOCK ────────────────────────────────────── */
+        .headline-block {
+            text-align: center;
+            margin: 22px 0 14px;
+        }
+        .headline {
+            font-family: 'Playfair Display', serif;
+            font-size: 50px;
+            font-weight: 900;
+            line-height: 1.12;
+            letter-spacing: -1px;
+            color: var(--ink);
+        }
+
+        /* ─── SUBHEADLINE ───────────────────────────────────────── */
+        .subheadline-block {
+            text-align: center;
+            border-bottom: 0.5px solid var(--divider);
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+        }
+        .subheadline {
+            font-family: 'Old Standard TT', serif;
+            font-size: 18px;
+            font-style: italic;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           TOP SECTION: 65% hero image | 35% article text
+           ─ Pure CSS grid. No absolute positioning. No overlap.
+           ═══════════════════════════════════════════════════════════ */
+        .top-section {
+            display: grid;
+            grid-template-columns: 65% 35%;
+            gap: var(--col-gap);
+            margin-bottom: 20px;
+        }
+
+        /* Hero image column */
+        .hero-col {
+            /* 65% of container width */
+        }
+        .hero-image-frame {
+            border: 1px solid var(--divider);
+            padding: 5px;
+            width: 100%;
+            height: 380px;          /* fixed slot height */
+        }
+        .hero-image-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: sepia(25%) grayscale(15%) contrast(103%);
+        }
+        .hero-caption {
+            font-size: 12px;
+            font-style: italic;
+            color: var(--muted);
+            margin-top: 7px;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        /* Right text column */
+        .right-text-col {
+            /* 35% of container width */
+            overflow: hidden;       /* text NEVER spills outside */
+        }
+        .byline-bar {
+            font-family: 'Cinzel', serif;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.3px;
+            color: var(--accent);
+            border-bottom: 0.5px solid var(--divider);
+            padding-bottom: 4px;
+            margin-bottom: 11px;
+        }
+        .right-text-col .paragraph {
+            font-size: 14.5px;
+            line-height: 1.62;
+            color: #1e293b;
+            margin-bottom: 14px;
+            text-align: justify;
+            text-indent: 0;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .right-text-col .paragraph.has-dropcap::first-letter {
+            float: left;
+            font-family: 'Cinzel', 'Playfair Display', serif;
+            font-size: 52px;
+            line-height: 40px;
+            padding-top: 3px;
+            padding-right: 5px;
+            font-weight: 900;
+            color: var(--accent);
+        }
+        .dateline { font-weight: 700; }
+
+        /* ═══════════════════════════════════════════════════════════
+           MIDDLE SECTION: Diagonal secondary images in fixed slots
+           Slots A-D are predefined. No JS movement allowed.
+           ═══════════════════════════════════════════════════════════ */
+        .middle-section {
+            margin-bottom: 20px;
+        }
+        .middle-section-label {
+            font-family: 'Cinzel', serif;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--gold);
+            border-top: 1px solid var(--gold);
+            border-bottom: 1px solid var(--gold);
+            padding: 4px 0;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        /*
+         * The diagonal gallery uses a container with a fixed height
+         * and position:relative. Each slot is position:absolute with
+         * FIXED left/top coordinates — no dynamic calculation.
+         * Slot widths are fixed percentages. Height is fixed px.
+         */
+        .diagonal-gallery {
+            position: relative;
+            width: 100%;
+            height: 740px;          /* tall enough to contain all 4 slots */
+            overflow: visible;
+        }
+
+        /* SLOT DEFINITIONS — fixed, never recalculated */
+        .slot {
+            position: absolute;
+            width: 28%;             /* each image tile width */
+        }
+
+        /* Slot A: top-left */
+        .slot-a {
+            left: 0%;
+            top: 0px;
+        }
+        /* Slot B: shifted right + down */
+        .slot-b {
+            left: 15%;
+            top: 180px;
+        }
+        /* Slot C: further right + down */
+        .slot-c {
+            left: 30%;
+            top: 360px;
+        }
+        /* Slot D: furthest right + down */
+        .slot-d {
+            left: 45%;
+            top: 540px;
+        }
+
+        .slot-frame {
+            border: 1px solid var(--divider);
+            padding: 5px;
+            background: var(--paper);
+        }
+        .slot-frame img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+            filter: sepia(25%) grayscale(15%) contrast(103%);
+        }
+        .slot-caption {
+            font-size: 11px;
+            font-style: italic;
+            color: var(--muted);
+            margin-top: 5px;
+            line-height: 1.35;
+            text-align: center;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           BOTTOM TEXT SECTION: 3-column newspaper text flow
+           Text is in independent container blocks, never wrapping
+           around irregular image boundaries.
+           ═══════════════════════════════════════════════════════════ */
+        .bottom-text-section {
+            margin-top: 16px;
+            border-top: 1.5px solid var(--rule);
+            padding-top: 16px;
+        }
+        .article-content {
+            columns: 3;
+            column-gap: var(--col-gap);
+            column-rule: 0.5px solid var(--divider);
+            text-align: justify;
+            font-size: 14.5px;
+            line-height: 1.62;
+            color: #1e293b;
+        }
+        .article-content .paragraph {
+            margin-top: 0;
+            margin-bottom: 14px;
+            text-indent: 17px;
+            break-inside: avoid;
+        }
+        .article-content .paragraph:first-of-type {
+            text-indent: 0;
+        }
+        .article-content .paragraph.has-dropcap::first-letter {
+            float: left;
+            font-family: 'Cinzel', 'Playfair Display', serif;
+            font-size: 52px;
+            line-height: 40px;
+            padding-top: 3px;
+            padding-right: 5px;
+            font-weight: 900;
+            color: var(--accent);
+        }
+
+        /* ─── FOOTER ────────────────────────────────────────────── */
+        .footer-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1.5px solid var(--rule);
+            padding-top: 10px;
+            margin-top: 24px;
+            font-family: 'Cinzel', serif;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div class="newspaper-container" id="newspaper-container">
+
+    <!-- ── HEADER / MASTHEAD ─────────────────────────────────── -->
+    <header class="header-section">
+        <svg viewBox="0 0 1000 280" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="1000" height="280" fill="#761c9e"/>
+            <rect x="5" y="5" width="990" height="270" fill="none" stroke="#ffffff" stroke-width="2"/>
+            <rect x="10" y="10" width="980" height="260" fill="none" stroke="#000000" stroke-width="1.5"/>
+            <text x="30" y="172" font-family="'Noto Serif Telugu',serif" font-weight="900" font-size="135" fill="#ffffff" letter-spacing="1">నేషనల్ న్యూస్</text>
+            <g transform="translate(870,200) rotate(-10)">
+                <text x="0" y="0" font-family="'Noto Serif Telugu',serif" font-weight="900" font-size="44" fill="#ffffff" text-anchor="middle">రిపోర్టర్</text>
+            </g>
+            <g transform="translate(30,185)">
+                <rect x="0" y="0" width="720" height="75" fill="#ffffff"/>
+                <rect x="3" y="3" width="714" height="69" fill="#000000"/>
+                <rect x="5" y="5" width="455" height="65" fill="#cc2424"/>
+                <text x="15" y="44" font-family="'Noto Sans',sans-serif" font-weight="900" font-size="42" fill="#ffffff" letter-spacing="4">NATIONAL</text>
+                <text x="15" y="60" font-family="'Noto Sans',sans-serif" font-weight="900" font-size="12" fill="#000000" letter-spacing="1">RNI:APTEL/25/A2293</text>
+                <rect x="465" y="5" width="250" height="65" fill="#1b2e4b"/>
+                <text x="475" y="44" font-family="'Noto Sans',sans-serif" font-weight="900" font-size="42" fill="#ffffff" letter-spacing="4">NEWS</text>
+                <text x="475" y="60" font-family="'Noto Sans',sans-serif" font-weight="900" font-size="12" fill="#e28743" letter-spacing="1">REPORTER</text>
+            </g>
+        </svg>
+    </header>
+
+    <!-- ── META BAR ──────────────────────────────────────────── -->
+    <div class="meta-bar">
+        <span>National News Reporter &mdash; Tuesday, June 3, 2026</span>
+        <span>Wanted Reporters: 7668886666</span>
+    </div>
+
+    <!-- ── HEADLINE ──────────────────────────────────────────── -->
+    <div class="headline-block">
+        <h1 class="headline">Breaking: Major Development Reshapes The Region</h1>
+    </div>
+
+    <!-- ── SUBHEADLINE ───────────────────────────────────────── -->
+    <div class="subheadline-block">
+        <h2 class="subheadline">Exclusive reporting from our correspondent on the ground as events unfold rapidly across multiple fronts</h2>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TOP SECTION — Hero (65%) | Article Text (35%)
+         Fixed grid. Text never wraps around hero image.
+         ══════════════════════════════════════════════════════════ -->
+    <div class="top-section">
+
+        <!-- HERO IMAGE — 65% column -->
+        <div class="hero-col">
+            <div class="hero-image-frame">
+                <img
+                    id="hero-img"
+                    src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80"
+                    alt="Primary article image showing the scene of the developing story"
+                    loading="eager"
+                >
+            </div>
+            <p class="hero-caption">Scenes from the developing story — Our correspondent reports live from the ground. <em>(Photo: National News Reporter)</em></p>
+        </div>
+
+        <!-- ARTICLE TEXT — 35% column — independent container, never wraps hero -->
+        <div class="right-text-col">
+            <div class="byline-bar">By Our Special Correspondent &nbsp;|&nbsp; Hyderabad</div>
+
+            <p class="paragraph has-dropcap">
+                <span class="dateline">HYDERABAD —</span> This is the first paragraph of a breaking news story. The layout engine places text in its own fixed column so it never wraps around or overlaps the hero image placed to the left.
+            </p>
+            <p class="paragraph">
+                This is the second paragraph of the story. It contains further details about the unfolding event. The font face and spacing should remain perfectly readable throughout the entire article column.
+            </p>
+            <p class="paragraph">
+                This is the third paragraph. We are testing how the fixed-grid column layout handles medium-length English content. Page rendering should be fast, stable, and pixel-accurate.
+            </p>
+            <p class="paragraph">
+                Experts from multiple agencies have weighed in on the long-term implications of this development, noting that the consequences are expected to reverberate across the entire sub-continent.
+            </p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         MIDDLE SECTION — Diagonal fixed-slot secondary images
+         Slots A-D are absolute positions, never recalculated.
+         ══════════════════════════════════════════════════════════ -->
+    <div class="middle-section">
+        <div class="middle-section-label">&#9670; Developing Story — Photo Gallery &#9670;</div>
+
+        <div class="diagonal-gallery" id="diagonal-gallery">
+
+            <!-- SLOT A: left:0%, top:0px -->
+            <div class="slot slot-a">
+                <div class="slot-frame">
+                    <img
+                        id="img-slot-a"
+                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+                        alt="Secondary image slot A — portrait"
+                        loading="eager"
+                    >
+                    <p class="slot-caption">Residents react to the news at a local community centre in the city.</p>
+                </div>
+            </div>
+
+            <!-- SLOT B: left:15%, top:180px -->
+            <div class="slot slot-b">
+                <div class="slot-frame">
+                    <img
+                        id="img-slot-b"
+                        src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80"
+                        alt="Secondary image slot B — official statement"
+                        loading="eager"
+                    >
+                    <p class="slot-caption">Officials gather for an emergency press conference to address public concerns.</p>
+                </div>
+            </div>
+
+            <!-- SLOT C: left:30%, top:360px -->
+            <div class="slot slot-c">
+                <div class="slot-frame">
+                    <img
+                        id="img-slot-c"
+                        src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80"
+                        alt="Secondary image slot C — expert analysis"
+                        loading="eager"
+                    >
+                    <p class="slot-caption">Analysts assess the broader impact of the developing situation at regional HQ.</p>
+                </div>
+            </div>
+
+            <!-- SLOT D: left:45%, top:540px -->
+            <div class="slot slot-d">
+                <div class="slot-frame">
+                    <img
+                        id="img-slot-d"
+                        src="https://images.unsplash.com/photo-1488161628813-04466f872be2?auto=format&fit=crop&w=800&q=80"
+                        alt="Secondary image slot D — follow-up"
+                        loading="eager"
+                    >
+                    <p class="slot-caption">Follow-up activities continue as the story develops into the evening hours.</p>
+                </div>
+            </div>
+
+        </div><!-- /.diagonal-gallery -->
+    </div><!-- /.middle-section -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         BOTTOM TEXT — Independent 3-column newspaper flow
+         Text blocks are self-contained. No irregular wrapping.
+         ══════════════════════════════════════════════════════════ -->
+    <div class="bottom-text-section">
+        <div class="article-content" id="article-content">
+
+            <p class="paragraph has-dropcap">
+                Continuing our comprehensive coverage of this developing story, our correspondents across the region have filed detailed reports on the situation as it evolves. The layout engine auto-wraps content into independent column containers, ensuring a clean and readable broadsheet experience.
+            </p>
+
+            <p class="paragraph">
+                Multiple sources within the administration confirmed late last night that contingency plans have been activated in response to the unprecedented nature of the event. Senior officials spoke on the condition of anonymity and stressed the need for calm and measured response.
+            </p>
+
+            <p class="paragraph">
+                The economic implications of these events are being assessed by a high-level task force that has been constituted by the central government. Preliminary estimates suggest significant impact on trade and commerce in the region, with early indicators showing volatility in commodity markets.
+            </p>
+
+            <p class="paragraph">
+                In the international arena, foreign governments have issued carefully worded statements expressing solidarity and offering assistance where required. Diplomatic channels remain open and active as multilateral consultations proceed through various forums.
+            </p>
+
+            <p class="paragraph">
+                Local communities have shown remarkable resilience in the face of adversity. Grassroots organisations and civil society groups have mobilised resources at an extraordinary pace, demonstrating once again the depth of social capital present in affected areas.
+            </p>
+
+            <p class="paragraph">
+                The media pool stationed at the state secretariat was briefed by senior officials who emphasised that all possible steps have been taken to ensure public safety and welfare. A full press conference is scheduled for tomorrow morning at which further details will be released.
+            </p>
+
+            <p class="paragraph">
+                Historians who specialise in the affairs of this region drew parallels with past episodes while noting that the current situation has unique characteristics that make direct comparison difficult. Regardless, the consensus view is that thoughtful and measured handling of the matter will be decisive for long-term outcomes.
+            </p>
+
+            <p class="paragraph">
+                As this story continues to unfold, the National News Reporter will provide round-the-clock coverage across print, digital, and broadcast platforms. Our editorial team remains committed to delivering accurate, verified, and responsible journalism throughout this critical period.
+            </p>
+
+        </div>
+    </div>
+
+    <!-- ── FOOTER ────────────────────────────────────────────── -->
+    <footer class="footer-section">
+        <div>Page 1 &bull; National News Reporter</div>
+        <div>&copy; 2026 National Newspaper Corp</div>
+    </footer>
+
+</div><!-- /.newspaper-container -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     RENDERING SCRIPT
+     - Waits ONLY for image load.
+     - No layout recalculation.
+     - No collision detection.
+     - No dynamic repositioning.
+     - Sets window.__LAYOUT_DONE__ immediately after images load.
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+
+    /* Collect all article images (max 5, lazy loading already disabled via loading="eager") */
+    var articleImages = Array.from(document.querySelectorAll(
+        '#hero-img, #img-slot-a, #img-slot-b, #img-slot-c, #img-slot-d'
+    ));
+
+    function onAllImagesReady() {
+        /* Apply print-ready global styles */
+        var st = document.createElement('style');
+        st.id = 'nc-ready-style';
+        st.textContent = [
+            '* { -webkit-font-smoothing: antialiased !important; text-rendering: optimizeLegibility !important; }',
+            '.article-content p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }',
+            '@media print {',
+            '  @page { size: auto; margin: 0; }',
+            '  body { padding: 0 !important; background: #fff !important; }',
+            '  .newspaper-container { border: none !important; box-shadow: none !important; }',
+            '}'
+        ].join('\n');
+        document.head.appendChild(st);
+
+        /* Log final dimensions */
+        var container = document.getElementById('newspaper-container');
+        if (container) {
+            console.log('[LAYOUT] DONE — container:', container.offsetWidth + 'x' + container.scrollHeight + 'px');
+        }
+
+        /* Signal Playwright / screenshot engine that layout is complete */
+        window.__LAYOUT_DONE__ = true;
+    }
+
+    /* Wait only for image loading — no layout recalculation */
+    var pending = articleImages.length;
+
+    if (pending === 0) {
+        onAllImagesReady();
+        return;
+    }
+
+    function checkDone() {
+        pending--;
+        if (pending <= 0) {
+            onAllImagesReady();
+        }
+    }
+
+    articleImages.forEach(function (img) {
+        if (img.complete) {
+            checkDone();
+        } else {
+            img.addEventListener('load',  checkDone, { once: true });
+            img.addEventListener('error', checkDone, { once: true });
+        }
+    });
+
+    /* Safety fallback: 4-second timeout */
+    setTimeout(function () {
+        if (!window.__LAYOUT_DONE__) {
+            console.warn('[LAYOUT] Timeout fallback triggered.');
+            onAllImagesReady();
+        }
+    }, 4000);
+
+}());
+</script>
+
+</body>
+</html>
