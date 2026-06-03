@@ -102,26 +102,9 @@ class RenderService:
         elif len(data.get("sections", [])) == 0:
             data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
-        # 2b. Merge short sections to ensure tight newspaper density (no 1-line paragraphs)
-        if isinstance(data.get("sections"), list) and len(data["sections"]) > 1:
-            merged_sections = []
-            current_section = ""
-            for sec in data["sections"]:
-                if current_section:
-                    current_section += " " + sec
-                else:
-                    current_section = sec
-                
-                # Maintain dense newspaper blocks (min ~180 chars)
-                if len(current_section) > 180:
-                    merged_sections.append(current_section)
-                    current_section = ""
-            if current_section:
-                if merged_sections:
-                    merged_sections[-1] += " " + current_section
-                else:
-                    merged_sections.append(current_section)
-            data["sections"] = merged_sections
+        # 2b. Let JS handle paragraph layout. Do not merge sections here.
+        if isinstance(data.get("sections"), list) and len(data["sections"]) > 0:
+            pass # Keep sections as provided by the client
 
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
@@ -660,7 +643,7 @@ class RenderService:
                         imgContainer.style.display = 'none';
                     }
 
-                    const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content');
+                    const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content, .columns, .col-1');
                     if (articleBody && paragraphs.length > 0) {
                         chosenLayoutName = 'Reference Diagonal Editorial Layout';
 
@@ -692,12 +675,38 @@ class RenderService:
                         `;
                         masterBlock.appendChild(heroWrapper);
 
+                        // If we don't have enough paragraphs to weave images through, chunk large paragraphs into ~150 char pieces!
+                        if (paragraphs.length <= imgCount + 1) {
+                            paragraphs.forEach(p => {
+                                let text = p.textContent;
+                                while (text.length > 250) {
+                                    let splitPoint = 150;
+                                    let spaceIdx = text.indexOf(' ', splitPoint);
+                                    if (spaceIdx === -1 || spaceIdx > 300) spaceIdx = text.lastIndexOf(' ', 250);
+                                    if (spaceIdx <= 0) break; // emergency break
+                                    
+                                    const chunkText = text.substring(0, spaceIdx);
+                                    text = text.substring(spaceIdx + 1);
+                                    
+                                    const pChunk = document.createElement('p');
+                                    pChunk.className = p.className;
+                                    pChunk.innerHTML = chunkText;
+                                    p.parentNode.insertBefore(pChunk, p);
+                                }
+                                // Update original p with remaining text
+                                p.innerHTML = text;
+                            });
+                        }
+                        
+                        // Re-fetch paragraphs after potential splitting
+                        const dynamicParagraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
+
                         // Walk through paragraphs, injecting secondary/extra images at calculated positions
                         let secondaryInjected = false;
-                        const totalParas = paragraphs.length;
+                        const totalParas = dynamicParagraphs.length;
                         const secondaryTriggerIdx = Math.max(1, Math.floor(totalParas * 0.4));
 
-                        paragraphs.forEach((p, idx) => {
+                        dynamicParagraphs.forEach((p, idx) => {
                             // SECONDARY IMAGE — inject at ~40% of text, float right (creates diagonal)
                             if (imgCount >= 2 && !secondaryInjected && idx === secondaryTriggerIdx) {
                                 const secWrapper = document.createElement('div');
@@ -866,7 +875,7 @@ class RenderService:
                 await waitReady();
                 console.log('COLUMN FLOW COMPLETE: fonts + initial images settled');
 
-                const articleBodyNode = container.querySelector('.article-body, .extra-news-layout, .article-content');
+                const articleBodyNode = container.querySelector('.article-body, .extra-news-layout, .article-content, .columns, .col-1');
                 const originalArticleHtml = articleBodyNode ? articleBodyNode.innerHTML : '';
 
                 // Unlock container — must be auto-height (single page = natural height)
