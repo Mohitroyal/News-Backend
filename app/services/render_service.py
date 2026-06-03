@@ -309,11 +309,9 @@ class RenderService:
 {json_str}
 </script>"""
 
-        script_block = """
+        script_block = r"""
         <script>
         // ── window.onerror: Report JS errors with exact file/line/column ────
-        // This fires on ANY syntax or runtime error, forwarded by Playwright's
-        // page.on('pageerror') to Render logs so failures are never silent.
         window.onerror = function(msg, src, line, col, err) {
             console.error(
                 'JS ERROR:', msg,
@@ -321,7 +319,6 @@ class RenderService:
                 'LINE:', line,
                 'COLUMN:', col
             );
-            // Ensure Playwright never hangs even on uncaught errors
             if (!window.__LAYOUT_DONE__) {
                 window.__LAYOUT_DONE__ = true;
             }
@@ -329,6 +326,9 @@ class RenderService:
         };
         
         document.addEventListener("DOMContentLoaded", async () => {
+            // Global layout constants visible to all nested functions
+            const TARGET_MAX_HEIGHT = 1500;
+
             try {
                 const dataEl = document.getElementById('newspaper-data');
                 if (dataEl) {
@@ -347,17 +347,12 @@ class RenderService:
             const container = document.querySelector('.newspaper-container');
             if (!container) return;
 
-            // ── SINGLE-PAGE COMPRESSION ENGINE ──────────────────────────────
-            // NEVER creates Page 2 or Page 3.
-            // Compresses font, image height, and spacing until everything fits.
-            // ALL article content is always preserved.
-
             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
-            // Compression ladder: spacious -> compact. Content NEVER removed.
+            // Compression configurations: from spacious to compact
             const configs = [
-                // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
+                // fontSize, lineHeight, paraMargin, imgMaxPct, padding
                 { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
                 { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
                 { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
@@ -372,21 +367,15 @@ class RenderService:
                 { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
             ];
 
-            // ── FIX 1: waitReady with hard 8-second timeout ─────────────────
-            // The old version hung forever when dynamically injected <img> tags
-            // (hero, secondary, extras) had no onload/onerror listeners because
-            // they were created after page load. document.images is a live
-            // NodeList — new images are included, but their load events may
-            // never fire on Render (slow CDN, Chromium --disable-dev-shm-usage).
+            // waitReady utility with timeout
             async function waitReady() {
-                console.log('IMAGES LOADED: waiting for fonts + images...');
-                const WAIT_TIMEOUT = 8000; // 8 s max — never hang
+                const WAIT_TIMEOUT = 8000;
                 try {
                     await Promise.race([
                         document.fonts.ready,
                         new Promise(r => setTimeout(r, WAIT_TIMEOUT))
                     ]);
-                } catch(e) { /* fonts timeout — continue */ }
+                } catch(e) {}
 
                 const imgPromises = Array.from(document.images).map(img => {
                     if (img.complete) return Promise.resolve();
@@ -395,58 +384,20 @@ class RenderService:
                             img.addEventListener('load',  r, { once: true });
                             img.addEventListener('error', r, { once: true });
                         }),
-                        new Promise(r => setTimeout(r, WAIT_TIMEOUT)) // per-image timeout
+                        new Promise(r => setTimeout(r, WAIT_TIMEOUT))
                     ]);
                 });
                 await Promise.all(imgPromises);
-                console.log('IMAGES LOADED: all images settled (or timed out).');
             }
 
-            // Image layout rebuilding variables
             const urls = data.image_urls || [];
             const captions = data.image_captions || [];
             const imgCount = urls.length;
             
-            let imgContainer = container.querySelector('.image-grid, .featured-image-container, .extra-image-wrapper');
-            let borderStyle = '1px solid #ddd';
-            let paddingStyle = '4px';
-            
-            if (!imgContainer && imgCount > 0) {
-                // Find first non-logo image parent
-                const nonLogoImg = Array.from(container.querySelectorAll('img')).find(img => 
-                    !img.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
-                );
-                if (nonLogoImg) {
-                    let parent = nonLogoImg.parentElement;
-                    if (parent && parent.parentElement && parent.parentElement !== container.querySelector('.col-2') && parent.parentElement !== container.querySelector('.newspaper-body') && parent.parentElement.tagName !== 'BODY') {
-                        imgContainer = parent.parentElement;
-                    } else if (parent) {
-                        imgContainer = parent;
-                    }
-                }
-            }
-
-            if (imgContainer && imgCount > 0) {
-                const firstWrapper = imgContainer.querySelector('div');
-                if (firstWrapper) {
-                    const comp = window.getComputedStyle(firstWrapper);
-                    const bWidth = comp.borderTopWidth || '1px';
-                    const bStyle = comp.borderTopStyle || 'solid';
-                    const bColor = comp.borderTopColor || '#ddd';
-                    borderStyle = `${bWidth} ${bStyle} ${bColor}`;
-                    paddingStyle = comp.padding || paddingStyle;
-                }
-            }
-
-            // Sizing / Aspect Ratio variables (declared in DOMContentLoaded scope)
             let aspectRatios = [];
             let orientations = [];
-            let chosenLayoutName = 'Layout 1-Column';
 
-            // ── FIX 2: getImageDimensions with 8-second timeout ──────────────
-            // Old version had no timeout. If a Supabase/Unsplash URL stalled,
-            // the Promise hung indefinitely, blocking executeLayout() entirely
-            // before __LAYOUT_DONE__ was ever reached.
+            // getImageDimensions utility
             async function getImageDimensions(url) {
                 const existingImg = Array.from(document.images).find(img => img.src === url || img.getAttribute('src') === url);
                 if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
@@ -456,407 +407,313 @@ class RenderService:
                     new Promise((resolve) => {
                         const img = new Image();
                         img.onload  = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-                        img.onerror = () => resolve({ width: 800, height: 600 }); // fallback dimensions
+                        img.onerror = () => resolve({ width: 800, height: 600 });
                         img.src = url;
                     }),
                     new Promise(resolve => setTimeout(() => {
-                        console.log('IMAGES LOADED: dimension fetch timeout for', url, '— using fallback 800x600');
-                        resolve({ width: 800, height: 600 }); // fallback — never block
+                        resolve({ width: 800, height: 600 });
                     }, 8000))
                 ]);
             }
 
-            // Image layout generation helpers
-            function getLayout1(imgHeightPx) {
-                return `
-                  <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%; margin-bottom: 15px;">
-                      <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                      ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
-                  </div>
-                `;
-            }
-
-            function getLayout2SideBySide(imgHeightPx) {
-                return `
-                  <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
-                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
-                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
-                      </div>
-                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
-                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
-                      </div>
-                  </div>
-                `;
-            }
-
-            function getLayout2VerticalStack(imgHeightPx) {
-                return `
-                  <div class="nc-image-container-vertical" style="display: flex; flex-direction: column; gap: 15px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
-                      <div class="nc-image-wrapper" style="width: 100%; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center;">
-                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${Math.round(imgHeightPx * 0.8)}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
-                      </div>
-                      <div class="nc-image-wrapper" style="width: 100%; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center;">
-                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${Math.round(imgHeightPx * 0.8)}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
-                      </div>
-                  </div>
-                `;
-            }
-
-            function injectFloatedImage(para, url, caption, imgHeightPx, floatDir, widthPct) {
-                // Use a span with block display to remain valid HTML inside a <p> tag and prevent text breaks
-                const wrapper = document.createElement('span');
-                wrapper.className = 'nc-floated-image-wrapper';
-                wrapper.style.display = 'block';
-                wrapper.style.float = floatDir;
-                wrapper.style.width = widthPct + '%';
-                wrapper.style.margin = floatDir === 'left' ? '5px 15px 10px 0' : '5px 0 10px 15px';
-                if (widthPct >= 100) {
-                    wrapper.style.margin = '10px 0'; // Prevent horizontal overflow when 100% width
-                }
-                wrapper.style.boxSizing = 'border-box';
-                wrapper.style.textAlign = 'center';
-                wrapper.innerHTML = `
-                    <img src="${url}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
-                    ${caption ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px; line-height: 1.2;">${caption}</span>` : ''}
-                `;
-                para.insertBefore(wrapper, para.firstChild);
+            // Ensure we have a compositor-canvas element
+            let canvas = document.getElementById('compositor-canvas');
+            if (!canvas) {
+                canvas = document.createElement('div');
+                canvas.id = 'compositor-canvas';
+                canvas.style.position = 'relative';
+                canvas.style.width = '100%';
+                canvas.style.boxSizing = 'border-box';
+                container.appendChild(canvas);
             }
 
             function applyConfig(conf) {
-                const containerW = container.offsetWidth || 1060;
-                const imgHeightPx = Math.round(conf.imgMaxPct * containerW);
-
-                // Container padding
-                container.style.padding = conf.padding + 'px';
+                // Clear the compositor canvas
+                canvas.innerHTML = '';
                 
-                // Adjust inner-border padding if it exists
-                const innerBorder = container.querySelector('.inner-border');
-                if (innerBorder) {
-                    innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
-                }
-
-                // Clean up any previously inserted dynamic images
-                container.querySelectorAll('.nc-third-image-wrapper, .nc-floated-image-wrapper').forEach(el => el.remove());
-
-                // Paragraph Size / Text Wrapping optimizations:
-                // Reduce column fragmentation when empty areas might remain.
-                let selectedCols = parseInt(data.layout_columns) || 3;
-                if (totalChars < 900 && selectedCols > 1) {
-                    selectedCols = Math.max(1, selectedCols - 1); 
-                } else if (totalChars < 1600 && selectedCols > 2) {
-                    selectedCols = 2; // Expand text blocks
-                }
-
-                // Dynamic Layout-Aware Image Scaling
-                let layoutImgHeightPx = imgHeightPx;
-                if (selectedCols === 3) {
-                    layoutImgHeightPx = Math.round(imgHeightPx * 0.55); // 55% of single-column size
-                } else if (selectedCols === 2) {
-                    layoutImgHeightPx = Math.round(imgHeightPx * 0.75); // 75% of single-column size
-                }
-
-                // Article text columns — strictly enforced
-                const articleEl = container.querySelector('.article-content, .article-body');
-                if (articleEl) {
-                    articleEl.style.fontSize      = conf.fontSize + 'px';
-                    articleEl.style.lineHeight    = conf.lineHeight;
-                    articleEl.style.columnCount   = selectedCols;
-                    articleEl.style.columns       = selectedCols;
-                    articleEl.style.webkitColumns = selectedCols;
-                }
+                // Get canvas width
+                const W_canvas = canvas.offsetWidth || 1060;
                 
-                container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph').forEach(p => {
-                    p.style.fontSize     = conf.fontSize + 'px';
-                    p.style.lineHeight   = conf.lineHeight;
-                    p.style.marginBottom = conf.paraMargin + 'px';
-                    p.style.marginTop    = '0';
-                });
-
-                // Dropcap scaling: should scale proportionally with font size
-                let dcStyle = document.getElementById('nc-dropcap-style');
-                if (!dcStyle) {
-                    dcStyle = document.createElement('style');
-                    dcStyle.id = 'nc-dropcap-style';
-                    document.head.appendChild(dcStyle);
-                }
-                const dropcapFS = Math.round(conf.fontSize * 3.6);
-                const dropcapLH = Math.round(conf.fontSize * 2.8);
-                dcStyle.innerHTML = `
-                    .paragraph.has-dropcap::first-letter,
-                    .article-body p:first-of-type::first-letter {
-                        font-size: ${dropcapFS}px !important;
-                        line-height: ${dropcapLH}px !important;
-                    }
-                `;
-
-                // Headline auto-shrink
-                const headline = container.querySelector('.headline');
-                if (headline) {
-                    let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
-                    headline.style.fontSize = hlSize + 'px';
-                    headline.style.lineHeight = '1.1';
-                    let count = 0;
-                    while (hlSize > 20 && count < 20) {
-                        const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
-                        const lines = Math.round(headline.offsetHeight / lh);
-                        if (lines <= 2) {
-                            break;
-                        }
-                        hlSize -= 2;
-                        headline.style.fontSize = hlSize + 'px';
-                        count++;
-                    }
-                }
-
-                // Subheadline auto-shrink
-                const subheadline = container.querySelector('.subheadline, .subtitle');
-                if (subheadline) {
-                    let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
-                    subheadline.style.fontSize = subSize + 'px';
-                    subheadline.style.lineHeight = '1.3';
-                    let count = 0;
-                    while (subSize > 12 && count < 10) {
-                        const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
-                        const lines = Math.round(subheadline.offsetHeight / lh);
-                        if (lines <= 2) {
-                            break;
-                        }
-                        subSize -= 1.5;
-                        subheadline.style.fontSize = subSize + 'px';
-                        count++;
-                    }
-                }
-
-                // Spacing adjustments
-                const header = container.querySelector('header, .header-section');
-                if (header) {
-                    header.style.marginBottom = Math.round(conf.paraMargin * 1.2) + 'px';
-                }
-                const meta = container.querySelector('.metadata-bar, .meta-section');
-                if (meta) {
-                    meta.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
-                    meta.style.marginTop = Math.round(conf.paraMargin * 0.8) + 'px';
-                }
-                const headlineSec = container.querySelector('.headline-section');
-                if (headlineSec) {
-                    headlineSec.style.margin = Math.round(conf.paraMargin * 1.2) + 'px 0 ' + Math.round(conf.paraMargin * 0.8) + 'px 0';
-                }
-                const subheadlineSec = container.querySelector('.subheadline-section');
-                if (subheadlineSec) {
-                    subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
-                }
-
-                // Inject images using the advanced Reference Layout engine
-                if (imgCount > 0) {
-                    const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
+                // Calculate columns
+                const N = parseInt(data.layout_columns) || 3;
+                const G = 24; // Column gap in pixels
+                const W_col = (W_canvas - (N - 1) * G) / N;
+                
+                // Calculate image dimensions and create absolute obstacles
+                const obstacles = [];
+                const imgHeightPx = Math.round(conf.imgMaxPct * W_canvas);
+                
+                if (urls.length > 0) {
+                    // Hero Image
+                    const aspect0 = aspectRatios[0] || 1.2;
+                    let w0 = W_canvas * 0.65;
+                    let h0 = w0 / aspect0;
+                    h0 = Math.min(h0, imgHeightPx);
+                    obstacles.push({
+                        url: urls[0],
+                        caption: captions[0] || '',
+                        x: 0,
+                        y: 0,
+                        w: w0,
+                        h: h0
+                    });
                     
-                    // NEVER use the legacy isolated container at the top
-                    if (imgContainer) {
-                        imgContainer.innerHTML = '';
-                        imgContainer.style.display = 'none';
-                    }
-
-                    const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content');
-                    if (articleBody && paragraphs.length > 0) {
-                        chosenLayoutName = 'Reference Diagonal Editorial Layout';
-
-                        // ═══════════════════════════════════════════════════════════
-                        // REFERENCE LAYOUT ENGINE
-                        // Hero Image: Top-Left (float left, 45-50% width)
-                        // Secondary Image: Bottom-Right (float right, 33-38% width)
-                        // Text: Wraps beside and between both images naturally
-                        // ═══════════════════════════════════════════════════════════
-
-                        const masterBlock = document.createElement('div');
-                        masterBlock.className = 'nc-editorial-master';
-                        masterBlock.style.display = 'block';
-                        masterBlock.style.overflow = 'hidden';
-
-                        const heroWidthPct      = 65; 
-                        const secondaryWidthPct = 35; 
-
-                        // HERO IMAGE - float left at top
-                        const heroWrapper = document.createElement('div');
-                        heroWrapper.className = 'nc-hero-img-wrapper';
-                        heroWrapper.style.float = 'left';
-                        heroWrapper.style.width = heroWidthPct + '%';
-                        heroWrapper.style.margin = '0 18px 12px 0';
-                        heroWrapper.style.shapeOutside = 'margin-box';
-                        heroWrapper.style.boxSizing = 'border-box';
-                        heroWrapper.innerHTML = `
-                            <img src="${urls[0]}" class="nc-image" style="width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block;" />
-                            ${captions[0] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px; line-height: 1.2;">${captions[0]}</span>` : ''}
-                        `;
-                        masterBlock.appendChild(heroWrapper);
-
-                        // Walk through paragraphs, injecting secondary/extra images at calculated positions
-                        let secondaryInjected = false;
-                        const totalParas = paragraphs.length;
-                        const secondaryTriggerIdx = Math.max(1, Math.floor(totalParas * 0.4));
-
-                        paragraphs.forEach((p, idx) => {
-                            // SECONDARY IMAGE - inject at ~40% of text, float right (creates diagonal)
-                            if (imgCount >= 2 && !secondaryInjected && idx === secondaryTriggerIdx) {
-                                const secWrapper = document.createElement('div');
-                                secWrapper.className = 'nc-secondary-img-wrapper';
-                                secWrapper.style.float = 'right';
-                                secWrapper.style.width = secondaryWidthPct + '%';
-                                secWrapper.style.margin = '0 0 12px 18px';
-                                secWrapper.style.shapeOutside = 'margin-box';
-                                secWrapper.style.boxSizing = 'border-box';
-                                secWrapper.style.clear = 'right';
-                                secWrapper.innerHTML = `
-                                    <img src="${urls[1]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.75)}px; object-fit: contain; display: block;" />
-                                    ${captions[1] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px;">${captions[1]}</span>` : ''}
-                                `;
-                                masterBlock.appendChild(secWrapper);
-                                secondaryInjected = true;
-                            }
-
-                            // EXTRA IMAGES (3+) - alternate left/right at even paragraph intervals
-                            if (imgCount > 2) {
-                                for (let ei = 2; ei < imgCount; ei++) {
-                                    const triggerPara = Math.floor(totalParas * (ei / imgCount));
-                                    if (idx === triggerPara && ei < urls.length) {
-                                        const extraWrapper = document.createElement('div');
-                                        extraWrapper.className = 'nc-extra-img-wrapper';
-                                        
-                                        // Image 3 (ei=2) -> float left
-                                        // Image 4 (ei=3) -> float right
-                                        const isLeft = (ei % 2 === 0);
-                                        extraWrapper.style.float = isLeft ? 'left' : 'right';
-                                        extraWrapper.style.clear = isLeft ? 'left' : 'right';
-                                        extraWrapper.style.width = secondaryWidthPct + '%';
-                                        extraWrapper.style.margin = isLeft ? '0 18px 12px 0' : '0 0 12px 18px';
-                                        extraWrapper.style.shapeOutside = 'margin-box';
-                                        extraWrapper.style.boxSizing = 'border-box';
-                                        extraWrapper.innerHTML = `
-                                            <img src="${urls[ei]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.65)}px; object-fit: contain; display: block;" />
-                                            ${captions[ei] ? `<span class="image-caption" style="display: block; font-size: 11px; color: #555; margin-top: 4px; font-style: italic;">${captions[ei]}</span>` : ''}
-                                        `;
-                                        masterBlock.appendChild(extraWrapper);
-                                    }
-                                }
-                            }
-
-                            masterBlock.appendChild(p);
+                    if (urls.length > 1) {
+                        // Secondary Image
+                        const aspect1 = aspectRatios[1] || 1.0;
+                        let w1 = W_canvas * 0.35;
+                        let h1 = w1 / aspect1;
+                        h1 = Math.min(h1, imgHeightPx * 0.75);
+                        let y1 = h0 + 40; // Spacing below Hero
+                        obstacles.push({
+                            url: urls[1],
+                            caption: captions[1] || '',
+                            x: W_canvas - w1,
+                            y: y1,
+                            w: w1,
+                            h: h1
                         });
-
-                        // Clearfix
-                        const cf = document.createElement('div');
-                        cf.style.clear = 'both';
-                        masterBlock.appendChild(cf);
-
-                        // Guarantee secondary image rendered even if not enough paragraphs
-                        if (imgCount >= 2 && !secondaryInjected) {
-                            const secWrapper = document.createElement('div');
-                            secWrapper.className = 'nc-secondary-img-wrapper';
-                            secWrapper.style.float = 'right';
-                            secWrapper.style.width = secondaryWidthPct + '%';
-                            secWrapper.style.margin = '0 0 12px 18px';
-                            secWrapper.style.boxSizing = 'border-box';
-                            secWrapper.innerHTML = `
-                                <img src="${urls[1]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.75)}px; object-fit: contain; display: block;" />
-                                ${captions[1] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px;">${captions[1]}</span>` : ''}
-                            `;
-                            masterBlock.insertBefore(secWrapper, cf);
+                        
+                        if (urls.length > 2) {
+                            // Third Image
+                            const aspect2 = aspectRatios[2] || 0.8;
+                            let w2 = W_canvas * 0.35;
+                            let h2 = w2 / aspect2;
+                            h2 = Math.min(h2, imgHeightPx * 0.65);
+                            let y2 = y1 + h1 + 40;
+                            obstacles.push({
+                                url: urls[2],
+                                caption: captions[2] || '',
+                                x: 0,
+                                y: y2,
+                                w: w2,
+                                h: h2
+                            });
                         }
-
-                        // CSS columns are incompatible with float-based layout — disable them
-                        articleBody.style.columnCount = '1';
-                        articleBody.style.columns     = '1';
-                        articleBody.style.webkitColumns = '1';
-
-                        // Mount the entire master editorial block before the article body
-                        articleBody.parentNode.insertBefore(masterBlock, articleBody);
-
-                    } else {
-                        // CRITICAL FALLBACK: no paragraphs or no articleBody found — always render images
-                        chosenLayoutName = 'Safe Fallback Image Grid';
-
-                        let fallbackContainer = imgContainer;
-                        if (!fallbackContainer) {
-                            fallbackContainer = document.createElement('div');
-                            fallbackContainer.className = 'nc-generated-fallback-grid';
-                            const target = container.querySelector('.article-body, .extra-news-layout, .article-content, .newspaper-body, .columns');
-                            if (target) target.parentNode.insertBefore(fallbackContainer, target);
-                            else container.appendChild(fallbackContainer);
-                        }
-                        fallbackContainer.innerHTML = '';
-                        fallbackContainer.style.display = 'flex';
-                        fallbackContainer.style.flexWrap = 'wrap';
-                        fallbackContainer.style.gap = '15px';
-                        fallbackContainer.style.marginBottom = '20px';
-
-                        for (let i = 0; i < imgCount; i++) {
-                            if (i >= urls.length) break;
-                            const wrapper = document.createElement('div');
-                            wrapper.className = 'nc-fallback-wrapper';
-                            wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
-                            wrapper.style.boxSizing = 'border-box';
-                            wrapper.innerHTML = `
-                                <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
-                                ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
-                            `;
-                            fallbackContainer.appendChild(wrapper);
-                        }
-                    }
-
-                // FINAL EXPORT CHECK: Verify uploaded_image_count == rendered_image_count
-                // NOTE: We check using class name, not src.startsWith('http'), because
-                // the new layout engine injects images from the JS `urls` array directly.
-                let renderedImages = container.querySelectorAll('img.nc-image').length;
-                if (imgCount > 0 && renderedImages < imgCount) {
-
-                    console.log('[LAYOUT] WARNING: Rendered image count mismatch! Expected ' + imgCount + ', found ' + renderedImages + '. Triggering Safe Fallback System.');
-                    
-                    // Abort current layout and wipe advanced layout elements
-                    container.querySelectorAll('.nc-hero-section, .nc-floated-image-wrapper').forEach(el => el.remove());
-                    
-                    // Regenerate using safe image layout
-                    chosenLayoutName = 'Failsafe Mandatory Image Grid';
-                    
-                    let exportFallbackContainer = container.querySelector('.featured-image-container, .image-grid, .nc-generated-fallback-grid');
-                    if (!exportFallbackContainer) {
-                        exportFallbackContainer = document.createElement('div');
-                        exportFallbackContainer.className = 'nc-generated-fallback-grid';
-                        const t = container.querySelector('.article-body, .extra-news-layout, .article-content, .newspaper-body, .columns');
-                        if (t) t.parentNode.insertBefore(exportFallbackContainer, t);
-                        else container.appendChild(exportFallbackContainer);
-                    }
-                    
-                    exportFallbackContainer.innerHTML = '';
-                    exportFallbackContainer.style.display = 'flex';
-                    exportFallbackContainer.style.flexWrap = 'wrap';
-                    exportFallbackContainer.style.gap = '15px';
-                    exportFallbackContainer.style.marginBottom = '20px';
-                    
-                    for (let i = 0; i < imgCount; i++) {
-                        if (i >= urls.length) break;
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'nc-fallback-wrapper';
-                        wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
-                        wrapper.style.boxSizing = 'border-box';
-                        wrapper.innerHTML = `
-                            <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
-                            ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
-                        `;
-                        exportFallbackContainer.appendChild(wrapper);
                     }
                 }
+                
+                // Render absolute images onto canvas
+                obstacles.forEach(obs => {
+                    const imgEl = document.createElement('div');
+                    imgEl.className = 'nc-absolute-image';
+                    imgEl.style.position = 'absolute';
+                    imgEl.style.left = `${obs.x}px`;
+                    imgEl.style.top = `${obs.y}px`;
+                    imgEl.style.width = `${obs.w}px`;
+                    imgEl.style.height = `${obs.h}px`;
+                    imgEl.style.boxSizing = 'border-box';
+                    imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
+                    imgEl.style.padding = '4px';
+                    imgEl.style.background = '#fff';
+                    imgEl.style.zIndex = '5';
+                    
+                    const imgH = obs.h - (obs.caption ? 24 : 8);
+                    imgEl.innerHTML = `
+                        <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                        ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 14px; line-height: 14px;">${obs.caption}</div>` : ''}
+                    `;
+                    canvas.appendChild(imgEl);
+                });
+                
+                // Set up columns and their virtual float spacers
+                const colDivs = [];
+                for (let c = 0; c < N; c++) {
+                    const L_c = c * (W_col + G);
+                    const R_c = L_c + W_col;
+                    
+                    const colSpacers = [];
+                    obstacles.forEach(obs => {
+                        const xStart = obs.x;
+                        const xEnd = obs.x + obs.w;
+                        const yStart = obs.y;
+                        const yEnd = obs.y + obs.h;
+                        
+                        const overlapStart = Math.max(L_c, xStart);
+                        const overlapEnd = Math.min(R_c, xEnd);
+                        if (overlapStart < overlapEnd) {
+                            let wOverlap = overlapEnd - overlapStart;
+                            let floatDir = 'left';
+                            if (xStart > L_c) {
+                                floatDir = 'right';
+                            }
+                            if (W_col - wOverlap < 80) {
+                                wOverlap = W_col;
+                                floatDir = 'left';
+                            }
+                            colSpacers.push({
+                                yStart: yStart,
+                                yEnd: yEnd,
+                                w: wOverlap,
+                                floatDir: floatDir
+                            });
+                        }
+                    });
+                    
+                    colSpacers.sort((a, b) => a.yStart - b.yStart);
+                    
+                    const colDiv = document.createElement('div');
+                    colDiv.className = `nc-column col-${c}`;
+                    colDiv.style.position = 'absolute';
+                    colDiv.style.left = `${L_c}px`;
+                    colDiv.style.top = '0px';
+                    colDiv.style.width = `${W_col}px`;
+                    colDiv.style.boxSizing = 'border-box';
+                    
+                    // Inject spacers
+                    let yCurrentLeft = 0;
+                    let yCurrentRight = 0;
+                    colSpacers.forEach(sp => {
+                        const side = sp.floatDir;
+                        const yCurr = (side === 'left') ? yCurrentLeft : yCurrentRight;
+                        if (sp.yStart > yCurr) {
+                            const pushSpacer = document.createElement('div');
+                            pushSpacer.style.float = side;
+                            pushSpacer.style.clear = side;
+                            pushSpacer.style.width = '1px';
+                            pushSpacer.style.height = `${sp.yStart - yCurr}px`;
+                            colDiv.appendChild(pushSpacer);
+                        }
+                        
+                        const spacer = document.createElement('div');
+                        spacer.style.float = side;
+                        spacer.style.clear = side;
+                        spacer.style.width = `${sp.w}px`;
+                        if (sp.w < W_col) {
+                            spacer.style.width = `${sp.w + 8}px`;
+                            if (side === 'left') {
+                                spacer.style.marginRight = '8px';
+                            } else {
+                                spacer.style.marginLeft = '8px';
+                            }
+                        }
+                        spacer.style.height = `${sp.yEnd - sp.yStart + 10}px`;
+                        colDiv.appendChild(spacer);
+                        
+                        if (side === 'left') {
+                            yCurrentLeft = sp.yEnd + 10;
+                        } else {
+                            yCurrentRight = sp.yEnd + 10;
+                        }
+                    });
+                    
+                    canvas.appendChild(colDiv);
+                    colDivs.push(colDiv);
                 }
-
-                console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' baseImgH=' + imgHeightPx + ' layoutImgH=' + layoutImgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
-                return layoutImgHeightPx;
+                
+                // Get maximum height limit
+                const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
+                const H_max = TARGET_MAX_HEIGHT - canvasTop - 60;
+                
+                // Flow the text
+                const paragraphs = [...data.sections];
+                if (paragraphs.length > 0 && data.dateline) {
+                    const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
+                    paragraphs[0] = prefix + paragraphs[0];
+                }
+                
+                let colIndex = 0;
+                let currentCol = colDivs[colIndex];
+                let fits = true;
+                
+                for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+                    const text = paragraphs[pIdx];
+                    const p = document.createElement('p');
+                    p.innerText = text;
+                    p.style.fontSize = `${conf.fontSize}px`;
+                    p.style.lineHeight = conf.lineHeight;
+                    p.style.marginBottom = `${conf.paraMargin}px`;
+                    p.style.marginTop = '0';
+                    p.style.textAlign = 'justify';
+                    p.style.wordBreak = 'break-word';
+                    p.style.overflowWrap = 'break-word';
+                    p.style.hyphens = 'auto';
+                    
+                    if (colIndex === 0 && currentCol.querySelectorAll('p').length === 0) {
+                        p.className = 'has-dropcap';
+                    }
+                    
+                    currentCol.appendChild(p);
+                    
+                    if (currentCol.offsetHeight > H_max) {
+                        currentCol.removeChild(p);
+                        
+                        const words = text.split(/\s+/);
+                        const testP = document.createElement('p');
+                        testP.style.fontSize = `${conf.fontSize}px`;
+                        testP.style.lineHeight = conf.lineHeight;
+                        testP.style.marginBottom = `${conf.paraMargin}px`;
+                        testP.style.marginTop = '0';
+                        testP.style.textAlign = 'justify';
+                        testP.style.wordBreak = 'break-word';
+                        testP.style.overflowWrap = 'break-word';
+                        testP.style.hyphens = 'auto';
+                        
+                        if (colIndex === 0 && currentCol.querySelectorAll('p').length === 0) {
+                            testP.className = 'has-dropcap';
+                        }
+                        
+                        currentCol.appendChild(testP);
+                        
+                        let i = 0;
+                        for (; i < words.length; i++) {
+                            testP.innerText = words.slice(0, i + 1).join(' ');
+                            if (currentCol.offsetHeight > H_max) {
+                                break;
+                            }
+                        }
+                        currentCol.removeChild(testP);
+                        
+                        if (i > 0) {
+                            const fitP = document.createElement('p');
+                            fitP.innerText = words.slice(0, i).join(' ');
+                            fitP.style.fontSize = `${conf.fontSize}px`;
+                            fitP.style.lineHeight = conf.lineHeight;
+                            fitP.style.marginBottom = `${conf.paraMargin}px`;
+                            fitP.style.marginTop = '0';
+                            fitP.style.textAlign = 'justify';
+                            fitP.style.wordBreak = 'break-word';
+                            fitP.style.overflowWrap = 'break-word';
+                            fitP.style.hyphens = 'auto';
+                            
+                            if (colIndex === 0 && currentCol.querySelectorAll('p').length === 0) {
+                                fitP.className = 'has-dropcap';
+                            }
+                            
+                            currentCol.appendChild(fitP);
+                        }
+                        
+                        const remainingText = words.slice(i).join(' ');
+                        if (remainingText.trim().length > 0) {
+                            paragraphs.splice(pIdx + 1, 0, remainingText);
+                        }
+                        
+                        colIndex++;
+                        if (colIndex >= N) {
+                            fits = false;
+                            break;
+                        }
+                        currentCol = colDivs[colIndex];
+                    }
+                }
+                
+                if (fits) {
+                    const finalH = Math.max(...colDivs.map(c => c.offsetHeight), ...obstacles.map(o => o.y + o.h));
+                    canvas.style.height = `${finalH}px`;
+                }
+                
+                window.__IMAGE_LAYOUT_LOGS__ = {
+                    image_count: imgCount,
+                    image_orientations: orientations.join(', '),
+                    selected_layout: 'Region-Based Newspaper Page Compositor',
+                    final_dimensions: obstacles.map(obs => `${obs.w}x${obs.h}px`).join(', ')
+                };
+                
+                return fits;
             }
 
             async function executeLayout() {
                 console.log('LAYOUT START');
-                // Initialize aspect ratios and orientations
                 const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
                 aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
                 orientations = dims.map(d => {
@@ -867,65 +724,92 @@ class RenderService:
                 });
 
                 await waitReady();
-                console.log('COLUMN FLOW COMPLETE: fonts + initial images settled');
 
-                const articleBodyNode = container.querySelector('.article-body, .extra-news-layout, .article-content');
-                const originalArticleHtml = articleBodyNode ? articleBodyNode.innerHTML : '';
-
-                // Unlock container — must be auto-height (single page = natural height)
                 container.style.height    = 'auto';
                 container.style.minHeight = 'unset';
                 container.style.overflow  = 'visible';
 
                 let chosenConf = configs[0];
-                let chosenImgH = 0;
-                const TARGET_MAX_HEIGHT = 1500;
                 let fits = false;
 
                 for (let i = 0; i < configs.length; i++) {
-                    if (articleBodyNode) {
-                        articleBodyNode.innerHTML = originalArticleHtml;
-                        // Clean up ALL dynamic elements inserted by previous layout attempts
-                        container.querySelectorAll('.nc-hero-section, .nc-editorial-master, .nc-generated-fallback-grid, .nc-floated-image-wrapper').forEach(el => el.remove());
-                        
-                        // Clean up fallback container
-                        const imgC = container.querySelector('.featured-image-container, .image-grid');
-                        if (imgC) {
-                            imgC.innerHTML = '';
-                            imgC.style.display = 'none';
+                    const conf = configs[i];
+                    container.style.padding = conf.padding + 'px';
+                    
+                    const innerBorder = container.querySelector('.inner-border');
+                    if (innerBorder) {
+                        innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
+                    }
+
+                    const headline = container.querySelector('.headline');
+                    if (headline) {
+                        let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
+                        headline.style.fontSize = hlSize + 'px';
+                        headline.style.lineHeight = '1.1';
+                        let count = 0;
+                        while (hlSize > 20 && count < 20) {
+                            const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
+                            const lines = Math.round(headline.offsetHeight / lh);
+                            if (lines <= 2) {
+                                break;
+                            }
+                            hlSize -= 2;
+                            headline.style.fontSize = hlSize + 'px';
+                            count++;
                         }
                     }
-                    const conf = configs[i];
-                    const imgH = applyConfig(configs[i]);
-                    chosenConf = configs[i];
-                    chosenImgH = imgH;
 
-                    // Wait two animation frames for layout to settle
+                    const subheadline = container.querySelector('.subheadline, .subtitle');
+                    if (subheadline) {
+                        let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
+                        subheadline.style.fontSize = subSize + 'px';
+                        subheadline.style.lineHeight = '1.3';
+                        let count = 0;
+                        while (subSize > 12 && count < 10) {
+                            const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
+                            const lines = Math.round(subheadline.offsetHeight / lh);
+                            if (lines <= 2) {
+                                break;
+                            }
+                            subSize -= 1.5;
+                            subheadline.style.fontSize = subSize + 'px';
+                            count++;
+                        }
+                    }
+
+                    let dcStyle = document.getElementById('nc-dropcap-style');
+                    if (!dcStyle) {
+                        dcStyle = document.createElement('style');
+                        dcStyle.id = 'nc-dropcap-style';
+                        document.head.appendChild(dcStyle);
+                    }
+                    const dropcapFS = Math.round(conf.fontSize * 3.6);
+                    const dropcapLH = Math.round(conf.fontSize * 2.8);
+                    dcStyle.innerHTML = `
+                        .paragraph.has-dropcap::first-letter,
+                        .has-dropcap::first-letter {
+                            font-size: ${dropcapFS}px !important;
+                            line-height: ${dropcapLH}px !important;
+                            font-family: 'Playfair Display', serif;
+                            float: left;
+                            font-weight: bold;
+                            color: var(--primary-color);
+                            padding-right: 8px;
+                        }
+                    `;
+
+                    fits = applyConfig(conf);
+                    chosenConf = conf;
+
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-                    // Check if the container fits within target page height
-                    if (container.scrollHeight <= TARGET_MAX_HEIGHT) {
-                        fits = true;
+                    if (fits && container.scrollHeight <= TARGET_MAX_HEIGHT) {
                         break;
                     }
                 }
 
-                // Wait final render cycle (with timeout guard)
-                console.log('IMAGE POSITIONING COMPLETE: compression loop done');
                 await waitReady();
 
-                const finalW   = container.offsetWidth;
-                const finalH   = container.scrollHeight;
-                const finalFS  = chosenConf.fontSize;
-                const finalSec = (data.sections || []).length;
-                const finalCh  = (data.sections || []).reduce((s,p) => s + p.length, 0);
-
-                console.log('[LAYOUT] DONE — chars:', finalCh, 'sections:', finalSec, '(ALL PRESERVED)');
-                console.log('[LAYOUT] Font size used:', finalFS + 'px');
-                console.log('[LAYOUT] Image height used:', chosenImgH + 'px');
-                console.log('[LAYOUT] Final clipping dimensions:', finalW + 'x' + finalH + 'px');
-
-                // Print-ready global styles (removes all watermarks, page breaks, margins, etc.)
                 let st = document.getElementById('nc-layout-style');
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
                 st.innerHTML = `
@@ -938,35 +822,12 @@ class RenderService:
                         .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
                         * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
                     }
-                    .article-content p, .article-body p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }
                 `;
 
-                // Log image dimensions and layout selection
-                const finalDims = urls.map(url => {
-                    const img = Array.from(document.querySelectorAll('img')).find(i => 
-                        i.src === url && !i.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
-                    );
-                    return img ? `${img.offsetWidth}x${img.offsetHeight}px` : 'unknown';
-                }).join(', ');
-
-                window.__IMAGE_LAYOUT_LOGS__ = {
-                    image_count: imgCount,
-                    image_orientations: orientations.join(', '),
-                    selected_layout: chosenLayoutName,
-                    final_dimensions: finalDims
-                };
-
                 console.log('LAYOUT COMPLETE');
-                console.log('SETTING __LAYOUT_DONE__');
-                // Signal Playwright that layout is complete
                 window.__LAYOUT_DONE__ = true;
             }
 
-            // ── FIX 3: Unconditional 10-second setTimeout failsafe ───────────
-            // The old try/catch only catches *thrown* errors. A hanging Promise
-            // (e.g., stalled image load) is NOT a thrown error — the await just
-            // freezes forever, the catch block is never reached, and Playwright
-            // times out at 30 s. This setTimeout fires regardless of Promise state.
             setTimeout(function() {
                 if (!window.__LAYOUT_DONE__) {
                     console.log('FORCED LAYOUT COMPLETE: 10s failsafe triggered — setting __LAYOUT_DONE__');
@@ -974,16 +835,12 @@ class RenderService:
                 }
             }, 10000);
 
-            // Wrap executeLayout in try/catch so that ANY JS error still sets
-            // window.__LAYOUT_DONE__ = true, preventing Playwright from hanging forever.
             (async () => {
                 try {
                     await executeLayout();
                 } catch(err) {
                     console.error('[LAYOUT FATAL ERROR]', err && err.message ? err.message : String(err));
-                    // Guarantee the Playwright wait_for_function never hangs
                     if (!window.__LAYOUT_DONE__) {
-                        console.log('SETTING __LAYOUT_DONE__ via catch block');
                         window.__LAYOUT_DONE__ = true;
                     }
                 }
@@ -991,8 +848,8 @@ class RenderService:
         });
         </script>
         """
-        
-        # Combine the data block and the logic block
+
+                # Combine the data block and the logic block
         script_block = data_script + "\n" + script_block
 
         if "</body>" in html:
@@ -1079,14 +936,10 @@ class RenderService:
                     layout_info = await page.evaluate("""
                         () => {
                             const container = document.querySelector('.newspaper-container');
-                            const articleEl = document.querySelector('.article-content, .article-body');
+                            const cols = document.querySelectorAll('.nc-column');
                             const data = window.NEWSPAPER_DATA || {};
                             
-                            let renderedCols = data.layout_columns || 3;
-                            if (articleEl) {
-                                const compStyle = window.getComputedStyle(articleEl);
-                                renderedCols = compStyle.columnCount || compStyle.columns || data.layout_columns || 3;
-                            }
+                            let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
                             
                             return {
                                 width: container ? container.offsetWidth : 1200,
@@ -1220,14 +1073,10 @@ class RenderService:
                     layout_info = await page.evaluate("""
                         () => {
                             const container = document.querySelector('.newspaper-container');
-                            const articleEl = document.querySelector('.article-content, .article-body');
+                            const cols = document.querySelectorAll('.nc-column');
                             const data = window.NEWSPAPER_DATA || {};
                             
-                            let renderedCols = data.layout_columns || 3;
-                            if (articleEl) {
-                                const compStyle = window.getComputedStyle(articleEl);
-                                renderedCols = compStyle.columnCount || compStyle.columns || data.layout_columns || 3;
-                            }
+                            let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
                             
                             return {
                                 width: container ? container.offsetWidth : 1060,

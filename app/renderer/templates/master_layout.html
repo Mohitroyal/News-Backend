@@ -623,70 +623,7 @@
                 {% if byline %}By <span>{{ byline }}</span> | {% endif %}{{ dateline }}
             </div>
 
-            <!-- Article Content -->
-            {% if template_id == 'extra_news' %}
-            <div class="extra-news-layout">
-                {% if image_urls and image_urls | length > 0 %}
-                    <div class="extra-image-wrapper {% if image_urls | length > 1 %}multi-img{% endif %}">
-                        {% for img in image_urls %}
-                            <img src="{{ img }}" alt="Featured Image" class="extra-img {% if loop.first and image_urls|length == 3 %}featured-top{% endif %}" />
-                        {% endfor %}
-                    </div>
-                {% elif image_url %}
-                    <div class="extra-image-wrapper">
-                        <img src="{{ image_url }}" alt="Featured Image" class="extra-img" />
-                    </div>
-                {% endif %}
-
-                {% for para in sections %}
-                    <p class="extra-paragraph">
-                        {% if loop.first %}<span class="dateline">{{ dateline }} — </span>{% endif %}
-                        {{ para }}
-                    </p>
-                {% endfor %}
-                <div style="clear: both;"></div>
-            </div>
-            {% else %}
-            <div class="content-wrapper">
-                {% if image_urls and image_urls | length > 0 %}
-                    {% if image_urls | length == 3 %}
-                        <div class="featured-image-container images-3-grid">
-                            <div style="overflow:hidden; text-align:center;">
-                                <img src="{{ image_urls[0] }}" alt="Featured" style="width:100%; height:auto; object-fit:contain; display:block; filter:grayscale(20%) contrast(110%);">
-                            </div>
-                            <div class="images-3-side">
-                                <div style="overflow:hidden; text-align:center;">
-                                    <img src="{{ image_urls[1] }}" alt="Featured" style="width:100%; height:auto; object-fit:contain; display:block; filter:grayscale(20%) contrast(110%);">
-                                </div>
-                                <div style="overflow:hidden; text-align:center;">
-                                    <img src="{{ image_urls[2] }}" alt="Featured" style="width:100%; height:auto; object-fit:contain; display:block; filter:grayscale(20%) contrast(110%);">
-                                </div>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="featured-image-container images-{{ image_urls | length }}">
-                            {% for img in image_urls %}
-                                <div style="overflow:hidden; text-align:center;">
-                                    <img src="{{ img }}" alt="Featured" style="width:100%; height:auto; object-fit:contain; display:block; filter:grayscale(20%) contrast(110%);">
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% elif image_url %}
-                <div class="featured-image-container images-1">
-                    <div style="overflow:hidden; text-align:center; width:100%;">
-                        <img src="{{ image_url }}" alt="Featured" style="width:100%; height:auto; object-fit:contain; display:block; filter:grayscale(20%) contrast(110%);">
-                    </div>
-                </div>
-                {% endif %}
-
-                <div class="article-body">
-                    {% for section in sections %}
-                        <p>{{ section }}</p>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
+            <div id="compositor-canvas"></div>
 
             <!-- Footer -->
             <div class="footer" style="white-space: normal; word-wrap: break-word; text-align: center;">
