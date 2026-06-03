@@ -102,9 +102,26 @@ class RenderService:
         elif len(data.get("sections", [])) == 0:
             data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
-        # 2b. Let JS handle paragraph layout. Do not merge sections here.
-        if isinstance(data.get("sections"), list) and len(data["sections"]) > 0:
-            pass # Keep sections as provided by the client
+        # 2b. Merge short sections to ensure tight newspaper density (no 1-line paragraphs)
+        if isinstance(data.get("sections"), list) and len(data["sections"]) > 1:
+            merged_sections = []
+            current_section = ""
+            for sec in data["sections"]:
+                if current_section:
+                    current_section += " " + sec
+                else:
+                    current_section = sec
+                
+                # Maintain dense newspaper blocks (min ~180 chars)
+                if len(current_section) > 180:
+                    merged_sections.append(current_section)
+                    current_section = ""
+            if current_section:
+                if merged_sections:
+                    merged_sections[-1] += " " + current_section
+                else:
+                    merged_sections.append(current_section)
+            data["sections"] = merged_sections
 
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
@@ -643,7 +660,7 @@ class RenderService:
                         imgContainer.style.display = 'none';
                     }
 
-                    const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content, .columns, .col-1');
+                    const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content');
                     if (articleBody && paragraphs.length > 0) {
                         chosenLayoutName = 'Reference Diagonal Editorial Layout';
 
@@ -662,12 +679,13 @@ class RenderService:
                         const heroWidthPct      = 65; 
                         const secondaryWidthPct = 35; 
 
-                        // HERO IMAGE — float left at top
+                        // HERO IMAGE - float left at top
                         const heroWrapper = document.createElement('div');
                         heroWrapper.className = 'nc-hero-img-wrapper';
                         heroWrapper.style.float = 'left';
                         heroWrapper.style.width = heroWidthPct + '%';
                         heroWrapper.style.margin = '0 18px 12px 0';
+                        heroWrapper.style.shapeOutside = 'margin-box';
                         heroWrapper.style.boxSizing = 'border-box';
                         heroWrapper.innerHTML = `
                             <img src="${urls[0]}" class="nc-image" style="width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block;" />
@@ -675,45 +693,20 @@ class RenderService:
                         `;
                         masterBlock.appendChild(heroWrapper);
 
-                        // If we don't have enough paragraphs to weave images through, chunk large paragraphs into ~150 char pieces!
-                        if (paragraphs.length <= imgCount + 1) {
-                            paragraphs.forEach(p => {
-                                let text = p.textContent;
-                                while (text.length > 250) {
-                                    let splitPoint = 150;
-                                    let spaceIdx = text.indexOf(' ', splitPoint);
-                                    if (spaceIdx === -1 || spaceIdx > 300) spaceIdx = text.lastIndexOf(' ', 250);
-                                    if (spaceIdx <= 0) break; // emergency break
-                                    
-                                    const chunkText = text.substring(0, spaceIdx);
-                                    text = text.substring(spaceIdx + 1);
-                                    
-                                    const pChunk = document.createElement('p');
-                                    pChunk.className = p.className;
-                                    pChunk.innerHTML = chunkText;
-                                    p.parentNode.insertBefore(pChunk, p);
-                                }
-                                // Update original p with remaining text
-                                p.innerHTML = text;
-                            });
-                        }
-                        
-                        // Re-fetch paragraphs after potential splitting
-                        const dynamicParagraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
-
                         // Walk through paragraphs, injecting secondary/extra images at calculated positions
                         let secondaryInjected = false;
-                        const totalParas = dynamicParagraphs.length;
+                        const totalParas = paragraphs.length;
                         const secondaryTriggerIdx = Math.max(1, Math.floor(totalParas * 0.4));
 
-                        dynamicParagraphs.forEach((p, idx) => {
-                            // SECONDARY IMAGE — inject at ~40% of text, float right (creates diagonal)
+                        paragraphs.forEach((p, idx) => {
+                            // SECONDARY IMAGE - inject at ~40% of text, float right (creates diagonal)
                             if (imgCount >= 2 && !secondaryInjected && idx === secondaryTriggerIdx) {
                                 const secWrapper = document.createElement('div');
                                 secWrapper.className = 'nc-secondary-img-wrapper';
                                 secWrapper.style.float = 'right';
                                 secWrapper.style.width = secondaryWidthPct + '%';
                                 secWrapper.style.margin = '0 0 12px 18px';
+                                secWrapper.style.shapeOutside = 'margin-box';
                                 secWrapper.style.boxSizing = 'border-box';
                                 secWrapper.style.clear = 'right';
                                 secWrapper.innerHTML = `
@@ -724,7 +717,7 @@ class RenderService:
                                 secondaryInjected = true;
                             }
 
-                            // EXTRA IMAGES (3+) — alternate left/right at even paragraph intervals
+                            // EXTRA IMAGES (3+) - alternate left/right at even paragraph intervals
                             if (imgCount > 2) {
                                 for (let ei = 2; ei < imgCount; ei++) {
                                     const triggerPara = Math.floor(totalParas * (ei / imgCount));
@@ -739,6 +732,7 @@ class RenderService:
                                         extraWrapper.style.clear = isLeft ? 'left' : 'right';
                                         extraWrapper.style.width = secondaryWidthPct + '%';
                                         extraWrapper.style.margin = isLeft ? '0 18px 12px 0' : '0 0 12px 18px';
+                                        extraWrapper.style.shapeOutside = 'margin-box';
                                         extraWrapper.style.boxSizing = 'border-box';
                                         extraWrapper.innerHTML = `
                                             <img src="${urls[ei]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.65)}px; object-fit: contain; display: block;" />
@@ -875,7 +869,7 @@ class RenderService:
                 await waitReady();
                 console.log('COLUMN FLOW COMPLETE: fonts + initial images settled');
 
-                const articleBodyNode = container.querySelector('.article-body, .extra-news-layout, .article-content, .columns, .col-1');
+                const articleBodyNode = container.querySelector('.article-body, .extra-news-layout, .article-content');
                 const originalArticleHtml = articleBodyNode ? articleBodyNode.innerHTML : '';
 
                 // Unlock container — must be auto-height (single page = natural height)
