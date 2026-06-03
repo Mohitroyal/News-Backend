@@ -267,6 +267,24 @@ class RenderService:
                 html = html.replace("</head>", f"{override_css}\n</head>")
             else:
                 html = f"{override_css}\n{html}"
+
+        # Headline breaking news style override
+        headline_style_override = """
+        <style id="headline-style-override">
+            .headline {
+                color: #D60000 !important;
+                font-weight: 900 !important;
+                text-shadow: 0 1px 0 rgba(0,0,0,0.08) !important;
+            }
+            .headline-section {
+                border-left-color: #D60000 !important;
+            }
+        </style>
+        """
+        if "</head>" in html:
+            html = html.replace("</head>", f"{headline_style_override}\n</head>")
+        else:
+            html = f"{headline_style_override}\n{html}"
                 
 
         # Single-Page Dynamic Compression Engine Injection
@@ -890,6 +908,8 @@ class RenderService:
                         .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
                         * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
                     }
+                    .headline { color: #D60000 !important; font-weight: 900 !important; text-shadow: 0 1px 0 rgba(0,0,0,0.08) !important; }
+                    .headline-section { border-left-color: #D60000 !important; }
                 `;
 
                 console.log('LAYOUT COMPLETE');
