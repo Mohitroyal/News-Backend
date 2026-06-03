@@ -335,12 +335,34 @@ class RenderService:
                 { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
             ];
 
+            // ── FIX 1: waitReady with hard 8-second timeout ─────────────────
+            // The old version hung forever when dynamically injected <img> tags
+            // (hero, secondary, extras) had no onload/onerror listeners because
+            // they were created after page load. document.images is a live
+            // NodeList — new images are included, but their load events may
+            // never fire on Render (slow CDN, Chromium --disable-dev-shm-usage).
             async function waitReady() {
-                await document.fonts.ready;
-                await Promise.all(Array.from(document.images).map(img =>
-                    img.complete ? Promise.resolve() :
-                    new Promise(r => { img.onload = r; img.onerror = r; })
-                ));
+                console.log('IMAGES LOADED: waiting for fonts + images...');
+                const WAIT_TIMEOUT = 8000; // 8 s max — never hang
+                try {
+                    await Promise.race([
+                        document.fonts.ready,
+                        new Promise(r => setTimeout(r, WAIT_TIMEOUT))
+                    ]);
+                } catch(e) { /* fonts timeout — continue */ }
+
+                const imgPromises = Array.from(document.images).map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return Promise.race([
+                        new Promise(r => {
+                            img.addEventListener('load',  r, { once: true });
+                            img.addEventListener('error', r, { once: true });
+                        }),
+                        new Promise(r => setTimeout(r, WAIT_TIMEOUT)) // per-image timeout
+                    ]);
+                });
+                await Promise.all(imgPromises);
+                console.log('IMAGES LOADED: all images settled (or timed out).');
             }
 
             // Image layout rebuilding variables
@@ -384,21 +406,27 @@ class RenderService:
             let orientations = [];
             let chosenLayoutName = 'Layout 1-Column';
 
+            // ── FIX 2: getImageDimensions with 8-second timeout ──────────────
+            // Old version had no timeout. If a Supabase/Unsplash URL stalled,
+            // the Promise hung indefinitely, blocking executeLayout() entirely
+            // before __LAYOUT_DONE__ was ever reached.
             async function getImageDimensions(url) {
                 const existingImg = Array.from(document.images).find(img => img.src === url || img.getAttribute('src') === url);
                 if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
                     return { width: existingImg.naturalWidth, height: existingImg.naturalHeight };
                 }
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-                    };
-                    img.onerror = () => {
-                        resolve({ width: 0, height: 0 });
-                    };
-                    img.src = url;
-                });
+                return Promise.race([
+                    new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload  = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                        img.onerror = () => resolve({ width: 800, height: 600 }); // fallback dimensions
+                        img.src = url;
+                    }),
+                    new Promise(resolve => setTimeout(() => {
+                        console.log('IMAGES LOADED: dimension fetch timeout for', url, '— using fallback 800x600');
+                        resolve({ width: 800, height: 600 }); // fallback — never block
+                    }, 8000))
+                ]);
             }
 
             // Image layout generation helpers
@@ -781,6 +809,7 @@ class RenderService:
             }
 
             async function executeLayout() {
+                console.log('LAYOUT START');
                 // Initialize aspect ratios and orientations
                 const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
                 aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
@@ -792,6 +821,7 @@ class RenderService:
                 });
 
                 await waitReady();
+                console.log('COLUMN FLOW COMPLETE: fonts + initial images settled');
 
                 const articleBodyNode = container.querySelector('.article-body, .extra-news-layout, .article-content');
                 const originalArticleHtml = articleBodyNode ? articleBodyNode.innerHTML : '';
@@ -834,7 +864,8 @@ class RenderService:
                     }
                 }
 
-                // Wait final render cycle
+                // Wait final render cycle (with timeout guard)
+                console.log('IMAGE POSITIONING COMPLETE: compression loop done');
                 await waitReady();
 
                 const finalW   = container.offsetWidth;
@@ -879,9 +910,23 @@ class RenderService:
                     final_dimensions: finalDims
                 };
 
+                console.log('LAYOUT COMPLETE');
+                console.log('SETTING __LAYOUT_DONE__');
                 // Signal Playwright that layout is complete
                 window.__LAYOUT_DONE__ = true;
             }
+
+            // ── FIX 3: Unconditional 10-second setTimeout failsafe ───────────
+            // The old try/catch only catches *thrown* errors. A hanging Promise
+            // (e.g., stalled image load) is NOT a thrown error — the await just
+            // freezes forever, the catch block is never reached, and Playwright
+            // times out at 30 s. This setTimeout fires regardless of Promise state.
+            setTimeout(function() {
+                if (!window.__LAYOUT_DONE__) {
+                    console.log('FORCED LAYOUT COMPLETE: 10s failsafe triggered — setting __LAYOUT_DONE__');
+                    window.__LAYOUT_DONE__ = true;
+                }
+            }, 10000);
 
             // Wrap executeLayout in try/catch so that ANY JS error still sets
             // window.__LAYOUT_DONE__ = true, preventing Playwright from hanging forever.
@@ -891,7 +936,10 @@ class RenderService:
                 } catch(err) {
                     console.error('[LAYOUT FATAL ERROR]', err && err.message ? err.message : String(err));
                     // Guarantee the Playwright wait_for_function never hangs
-                    window.__LAYOUT_DONE__ = true;
+                    if (!window.__LAYOUT_DONE__) {
+                        console.log('SETTING __LAYOUT_DONE__ via catch block');
+                        window.__LAYOUT_DONE__ = true;
+                    }
                 }
             })();
         });
@@ -946,6 +994,11 @@ class RenderService:
                     print(f"PAGE CREATED (PNG)"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] New Page Success")
                     sys.stdout.flush()
+
+                    # FIX 4: Forward browser console logs to backend logs
+                    # Without this, JS errors/hangs are invisible in Render logs.
+                    page.on("console", lambda msg: print(f"[BROWSER] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
+                    page.on("pageerror", lambda err: print(f"[BROWSER ERROR] {err}") or sys.stdout.flush())
                     
                     page.set_default_timeout(300000)
 
@@ -959,7 +1012,8 @@ class RenderService:
 
                     print("[PLAYWRIGHT] Waiting for layout to complete...")
                     sys.stdout.flush()
-                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=30000)
+                    # 25s timeout: JS 10s failsafe fires first, then this resolves cleanly.
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
                     print("[PLAYWRIGHT] Layout complete!")
                     sys.stdout.flush()
 
@@ -1082,7 +1136,11 @@ class RenderService:
                     print(f"PAGE CREATED (PDF)"); sys.stdout.flush()
                     print(f"[PLAYWRIGHT] New Page Success (PDF)")
                     sys.stdout.flush()
-                    
+
+                    # FIX 4: Forward browser console logs to backend logs (PDF path)
+                    page.on("console", lambda msg: print(f"[BROWSER PDF] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
+                    page.on("pageerror", lambda err: print(f"[BROWSER PDF ERROR] {err}") or sys.stdout.flush())
+
                     page.set_default_timeout(300000)
                     
                     if html_content.startswith("http://") or html_content.startswith("https://"):
@@ -1095,7 +1153,8 @@ class RenderService:
 
                     print("[PLAYWRIGHT] Waiting for layout to complete (PDF)...")
                     sys.stdout.flush()
-                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=30000)
+                    # 25s timeout: JS 10s failsafe fires first, then this resolves cleanly.
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
                     print("[PLAYWRIGHT] Layout complete (PDF)!")
                     sys.stdout.flush()
 
