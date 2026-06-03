@@ -292,7 +292,21 @@ class RenderService:
             "image_urls": data.get("image_urls", []),
             "image_captions": data.get("image_captions", [])
         }
-        json_str = json.dumps(serializable_data)
+        json_str = json.dumps(serializable_data, ensure_ascii=False)
+
+        # ── CRITICAL FIX: Escape </script> and <!-- in JSON ───────────────────
+        # json.dumps does NOT escape </script>. If any article text, headline,
+        # caption, or image URL contains the literal string </script>, the HTML
+        # parser will prematurely close the <script> tag. The rest of the JSON
+        # becomes raw HTML, and the orphaned }); at the end is what Chrome
+        # reports as: "Unexpected token ')'"
+        # Fix: replace the slash so the browser never sees a literal </script>.
+        json_str = (
+            json_str
+            .replace('</script>', '<\/script>')   # breaks the HTML parser
+            .replace('</SCRIPT>', '<\/SCRIPT>')   # case-insensitive safety
+            .replace('<!--',      '<\!--')         # prevent HTML comment injection
+        )
 
         # Log original article stats
         sections = data.get("sections", [])
@@ -302,6 +316,22 @@ class RenderService:
 
         script_block = """
         <script>
+        // ── window.onerror: Report JS errors with exact file/line/column ────
+        // This fires on ANY syntax or runtime error, forwarded by Playwright's
+        // page.on('pageerror') to Render logs so failures are never silent.
+        window.onerror = function(msg, src, line, col, err) {
+            console.error(
+                'JS ERROR:', msg,
+                'FILE:', src,
+                'LINE:', line,
+                'COLUMN:', col
+            );
+            // Ensure Playwright never hangs even on uncaught errors
+            if (!window.__LAYOUT_DONE__) {
+                window.__LAYOUT_DONE__ = true;
+            }
+            return false;
+        };
         window.NEWSPAPER_DATA = {json_data};
         document.addEventListener("DOMContentLoaded", async () => {
             const data = window.NEWSPAPER_DATA;
