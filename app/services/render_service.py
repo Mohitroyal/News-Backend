@@ -687,24 +687,13 @@ class RenderService:
                 let currentRegionIdx = 0;
                 let activeRegion = regions[currentRegionIdx];
                 let fits = true;
-                let flowingOriginal = true;
                 
                 while (activeRegion) {
                     if (pIdx >= paragraphs.length) {
-                        flowingOriginal = false;
+                        break;
                     }
                     
-                    let text = "";
-                    if (flowingOriginal) {
-                        text = paragraphs[pIdx];
-                    } else {
-                        // Filler system: duplicate content to guarantee 95%+ utilization
-                        const fillerIdx = (pIdx - paragraphs.length) % paragraphs.length;
-                        text = paragraphs[fillerIdx];
-                        if (fillerIdx === 0) {
-                            text = (data.language === 'te') ? `మరింత సమాచారం... ${text}` : `Continued... ${text}`;
-                        }
-                    }
+                    let text = paragraphs[pIdx];
                     
                     const p = document.createElement('p');
                     p.innerText = text;
@@ -759,11 +748,7 @@ class RenderService:
                         
                         const remainingText = words.slice(wIdx).join(' ');
                         if (remainingText.trim().length > 0) {
-                            if (flowingOriginal) {
-                                paragraphs.splice(pIdx, 1, remainingText);
-                            } else {
-                                pIdx++;
-                            }
+                            paragraphs.splice(pIdx, 1, remainingText);
                         } else {
                             pIdx++;
                         }
@@ -772,7 +757,7 @@ class RenderService:
                         activeRegion = regions[currentRegionIdx];
                         
                         if (!activeRegion) {
-                            if (flowingOriginal && pIdx < paragraphs.length) {
+                            if (pIdx < paragraphs.length) {
                                 fits = false;
                             }
                             break;

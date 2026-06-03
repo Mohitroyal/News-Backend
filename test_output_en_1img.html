@@ -11,7 +11,7 @@
             font-family: 'Old Standard TT', serif;
             margin: 0;
             padding: 40px;
-            width: 1120px; /* Standard broadsheet ratio */
+            width: 1120px;
         }
 
         .newspaper-container {
@@ -21,20 +21,14 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.05);
         }
 
-        header {
-            text-align: center;
-            border-bottom: 4px double #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-        }
-
         .masthead {
             font-family: 'Playfair Display', serif;
-            font-size: 80px;
+            font-size: 60px;
             font-weight: 900;
             text-transform: uppercase;
             margin: 0;
-            letter-spacing: -2px;
+            letter-spacing: -1px;
+            text-align: center;
         }
 
         .meta-info {
@@ -42,34 +36,25 @@
             justify-content: space-between;
             border-top: 1px solid #333;
             border-bottom: 1px solid #333;
-            padding: 5px 0;
+            padding: 3px 0;
             font-size: 14px;
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
         .headline {
             font-family: 'Playfair Display', serif;
-            font-size: 48px;
+            font-size: 40px;
             line-height: 1.1;
-            margin: 20px 0 10px 0;
+            margin: 0;
             text-align: left;
         }
 
         .subheadline {
-            font-size: 20px;
+            font-size: 17px;
             font-style: italic;
             color: #555;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        .columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            text-align: justify;
+            margin: 0;
         }
 
         .paragraph {
@@ -78,359 +63,514 @@
             font-size: 17px;
         }
 
-        .paragraph:first-of-type::first-letter {
-            float: left;
-            font-size: 60px;
-            line-height: 1;
-            padding-right: 8px;
-            font-weight: bold;
-        }
-
         .byline {
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 20px;
+            margin: 0;
             font-size: 13px;
-        }
-
-        .dateline {
-            font-weight: bold;
-            margin-right: 10px;
         }
     </style>
 </head>
 <body>
     <div class="newspaper-container">
-        <header>
-            <h1 class="masthead">THE DAILY CHRONICLE</h1>
-            <div class="meta-info">
-                <span>VOL. CLXII... No. 56,234</span>
-                <span>HYDERABAD</span>
-                <span>PRICE TWO CENTS</span>
-            </div>
-        </header>
-
-        <h2 class="headline">TEST: English - 1 Image</h2>
-        <p class="subheadline">Validation of updated stable rendering pipeline</p>
-
-        <div class="byline">By By Antigravity QA Agent</div>
-
-        <div class="columns">
-            <div class="col-1">
-                
-                    <p class="paragraph">
-                        <span class="dateline">[HYDERABAD] — </span>
-                        This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.
-                    </p>
-                
-                    <p class="paragraph">
-                        
-                        This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.
-                    </p>
-                
-                    <p class="paragraph">
-                        
-                        This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable.
-                    </p>
-                
-            </div>
-            <div class="col-2">
-                <!-- Additional content or image can go here -->
-                
-                    <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; width: 100%;">
-                        
-                        <div style="overflow:hidden; border:1px solid #000; text-align: center;">
-                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80" style="width:100%; height:auto; object-fit:contain; display:block;" />
-                        </div>
-                        
-                    </div>
-                
-                <p class="paragraph">
-                    Continued on Page A2... The impact of this development is expected to be felt across the entire region as experts weigh in on the long-term implications.
-                </p>
-            </div>
+        <!-- Fixed Header Area: 140px -->
+        <div class="header-block" style="height: 140px; overflow: hidden; border-bottom: 4px double #333; margin-bottom: 10px; box-sizing: border-box;">
+            <header style="margin: 0; padding: 0; border: none;">
+                <h1 class="masthead">THE DAILY CHRONICLE</h1>
+                <div class="meta-info" style="margin-top: 5px;">
+                    <span>VOL. CLXII... No. 56,234</span>
+                    <span>HYDERABAD</span>
+                    <span>PRICE TWO CENTS</span>
+                </div>
+            </header>
         </div>
+
+        <!-- Fixed Headline Area: 120px -->
+        <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
+            <h2 class="headline" style="margin: 0 0 5px 0; font-size: 40px; line-height: 1.1;">TEST: English - 1 Image</h2>
+            <p class="subheadline" style="margin: 0 0 5px 0; font-size: 16px;">Validation of updated stable rendering pipeline</p>
+            <div class="byline" style="margin: 0;">By By Antigravity QA Agent</div>
+        </div>
+
+        <div id="compositor-canvas"></div>
     </div>
+<script type="application/json" id="newspaper-data">
+{"headline": "TEST: English - 1 Image", "subheadline": "Validation of updated stable rendering pipeline", "publication_name": "NewsCraft Test Edition", "publication_date": "Sunday, May 31, 2026", "volume": "CXIV", "edition": "27", "location": "Global Edition", "language_name": "English", "byline": "By Antigravity QA Agent", "dateline": "HYDERABAD", "template_id": "classic", "logo_url": "", "primary_color": "#000000", "accent_color": "#333333", "border_color": "#000000", "layout_columns": 3, "sections": ["This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page. This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable. This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable."], "image_urls": ["https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80"], "image_captions": []}
+</script>
 
         <script>
-        window.NEWSPAPER_DATA = {"headline": "TEST: English - 1 Image", "subheadline": "Validation of updated stable rendering pipeline", "publication_name": "NewsCraft Test Edition", "publication_date": "Sunday, May 31, 2026", "volume": "CXIV", "edition": "27", "location": "Global Edition", "language_name": "English", "byline": "By Antigravity QA Agent", "dateline": "HYDERABAD", "template_id": "classic", "logo_url": "", "primary_color": "#000000", "accent_color": "#333333", "border_color": "#000000", "layout_columns": 3, "sections": ["This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page.", "This is the second paragraph of the story. It contains more details about the event. The font face and spacing should remain perfectly readable.", "This is the third paragraph. We are testing how pagination behaves with medium-length English content. Page rendering should be fast and stable."], "image_urls": ["https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80"], "image_captions": []};
+        // ── window.onerror: Report JS errors with exact file/line/column ────
+        window.onerror = function(msg, src, line, col, err) {
+            console.error(
+                'JS ERROR:', msg,
+                'FILE:', src,
+                'LINE:', line,
+                'COLUMN:', col
+            );
+            if (!window.__LAYOUT_DONE__) {
+                window.__LAYOUT_DONE__ = true;
+            }
+            return false;
+        };
+        
         document.addEventListener("DOMContentLoaded", async () => {
+            // Global layout constants visible to all nested functions
+            const TARGET_MAX_HEIGHT = 1500;
+
+            try {
+                const dataEl = document.getElementById('newspaper-data');
+                if (dataEl) {
+                    window.NEWSPAPER_DATA = JSON.parse(dataEl.textContent);
+                }
+            } catch (e) {
+                console.error('[LAYOUT] JSON Parse Error:', e);
+            }
             const data = window.NEWSPAPER_DATA;
-            if (!data) return;
+            if (!data) {
+                console.error('[LAYOUT] No data found.');
+                window.__LAYOUT_DONE__ = true;
+                return;
+            }
 
             const container = document.querySelector('.newspaper-container');
             if (!container) return;
 
-            // ── SINGLE-PAGE COMPRESSION ENGINE ──────────────────────────────
-            // NEVER creates Page 2 or Page 3.
-            // Compresses font, image height, and spacing until everything fits.
-            // ALL article content is always preserved.
-
             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
-            // Compression ladder: spacious -> compact. Content NEVER removed.
+            // Compression configurations: from spacious to compact
             const configs = [
-                // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
-                { fontSize: 17.0, lineHeight: 1.65, paraMargin: 18, imgMaxPct: 0.40, padding: 35 },
-                { fontSize: 16.0, lineHeight: 1.62, paraMargin: 16, imgMaxPct: 0.38, padding: 32 },
-                { fontSize: 15.0, lineHeight: 1.58, paraMargin: 14, imgMaxPct: 0.36, padding: 30 },
-                { fontSize: 14.0, lineHeight: 1.54, paraMargin: 12, imgMaxPct: 0.34, padding: 28 },
-                { fontSize: 13.5, lineHeight: 1.50, paraMargin: 10, imgMaxPct: 0.32, padding: 25 },
-                { fontSize: 13.0, lineHeight: 1.46, paraMargin:  9, imgMaxPct: 0.30, padding: 22 },
-                { fontSize: 12.5, lineHeight: 1.42, paraMargin:  8, imgMaxPct: 0.28, padding: 20 },
-                { fontSize: 12.0, lineHeight: 1.38, paraMargin:  7, imgMaxPct: 0.26, padding: 18 },
-                { fontSize: 11.5, lineHeight: 1.35, paraMargin:  6, imgMaxPct: 0.24, padding: 16 },
-                { fontSize: 11.0, lineHeight: 1.32, paraMargin:  5, imgMaxPct: 0.22, padding: 15 },
-                { fontSize: 10.0, lineHeight: 1.28, paraMargin:  4, imgMaxPct: 0.20, padding: 12 },
-                { fontSize:  9.0, lineHeight: 1.25, paraMargin:  3, imgMaxPct: 0.16, padding: 10 }
+                // fontSize, lineHeight, paraMargin, imgMaxPct, padding
+                { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
+                { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
+                { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
+                { fontSize: 13.5, lineHeight: 1.28, paraMargin: 6,  imgMaxPct: 0.46, padding: 20 },
+                { fontSize: 13.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.43, padding: 18 },
+                { fontSize: 12.5, lineHeight: 1.22, paraMargin: 5,  imgMaxPct: 0.40, padding: 16 },
+                { fontSize: 12.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.38, padding: 14 },
+                { fontSize: 11.5, lineHeight: 1.18, paraMargin: 4,  imgMaxPct: 0.36, padding: 12 },
+                { fontSize: 11.0, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.34, padding: 10 },
+                { fontSize: 10.5, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.32, padding: 10 },
+                { fontSize: 10.0, lineHeight: 1.12, paraMargin: 2,  imgMaxPct: 0.30, padding: 8 },
+                { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
             ];
 
+            // waitReady utility with timeout
             async function waitReady() {
-                await document.fonts.ready;
-                await Promise.all(Array.from(document.images).map(img =>
-                    img.complete ? Promise.resolve() :
-                    new Promise(r => { img.onload = r; img.onerror = r; })
-                ));
+                const WAIT_TIMEOUT = 8000;
+                try {
+                    await Promise.race([
+                        document.fonts.ready,
+                        new Promise(r => setTimeout(r, WAIT_TIMEOUT))
+                    ]);
+                } catch(e) {}
+
+                const imgPromises = Array.from(document.images).map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return Promise.race([
+                        new Promise(r => {
+                            img.addEventListener('load',  r, { once: true });
+                            img.addEventListener('error', r, { once: true });
+                        }),
+                        new Promise(r => setTimeout(r, WAIT_TIMEOUT))
+                    ]);
+                });
+                await Promise.all(imgPromises);
             }
 
-            // Image layout rebuilding variables
             const urls = data.image_urls || [];
             const captions = data.image_captions || [];
             const imgCount = urls.length;
             
-            let imgContainer = container.querySelector('.image-grid, .featured-image-container, .extra-image-wrapper');
-            let borderStyle = '1px solid #ddd';
-            let paddingStyle = '4px';
-            
-            if (!imgContainer && imgCount > 0) {
-                // Find first non-logo image parent
-                const nonLogoImg = Array.from(container.querySelectorAll('img')).find(img => 
-                    !img.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
-                );
-                if (nonLogoImg) {
-                    let parent = nonLogoImg.parentElement;
-                    if (parent && parent.parentElement && parent.parentElement !== container.querySelector('.col-2') && parent.parentElement !== container.querySelector('.newspaper-body') && parent.parentElement.tagName !== 'BODY') {
-                        imgContainer = parent.parentElement;
-                    } else if (parent) {
-                        imgContainer = parent;
-                    }
-                }
-            }
-
-            if (imgContainer && imgCount > 0) {
-                const firstWrapper = imgContainer.querySelector('div');
-                if (firstWrapper) {
-                    const comp = window.getComputedStyle(firstWrapper);
-                    const bWidth = comp.borderTopWidth || '1px';
-                    const bStyle = comp.borderTopStyle || 'solid';
-                    const bColor = comp.borderTopColor || '#ddd';
-                    borderStyle = `${bWidth} ${bStyle} ${bColor}`;
-                    paddingStyle = comp.padding || paddingStyle;
-                }
-            }
-
-            // Sizing / Aspect Ratio variables (declared in DOMContentLoaded scope)
             let aspectRatios = [];
             let orientations = [];
-            let chosenLayoutName = 'Layout 1-Column';
 
+            // getImageDimensions utility
             async function getImageDimensions(url) {
                 const existingImg = Array.from(document.images).find(img => img.src === url || img.getAttribute('src') === url);
                 if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
                     return { width: existingImg.naturalWidth, height: existingImg.naturalHeight };
                 }
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-                    };
-                    img.onerror = () => {
-                        resolve({ width: 0, height: 0 });
-                    };
-                    img.src = url;
-                });
+                return Promise.race([
+                    new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload  = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                        img.onerror = () => resolve({ width: 800, height: 600 });
+                        img.src = url;
+                    }),
+                    new Promise(resolve => setTimeout(() => {
+                        resolve({ width: 800, height: 600 });
+                    }, 8000))
+                ]);
             }
 
-            // Image layout generation helpers
-            function getLayout1(imgHeightPx) {
-                return `
-                  <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%;">
-                      <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                      ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
-                  </div>
-                `;
+            // Ensure we have a compositor-canvas element
+            let canvas = document.getElementById('compositor-canvas');
+            if (!canvas) {
+                canvas = document.createElement('div');
+                canvas.id = 'compositor-canvas';
+                container.appendChild(canvas);
             }
-
-            // Flex 1-1 layout for 2 images
-            function getLayout2(imgHeightPx) {
-                return `
-                  <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
-                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
-                          <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                          ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
-                      </div>
-                      <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
-                          <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
-                          ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
-                      </div>
-                  </div>
-                `;
-            }
+            canvas.style.position = 'relative';
+            canvas.style.width = '100%';
+            canvas.style.boxSizing = 'border-box';
 
             function applyConfig(conf) {
-                const containerW = container.offsetWidth || 1060;
-                const imgHeightPx = Math.round(conf.imgMaxPct * containerW);
-
-                // Container padding
-                container.style.padding = conf.padding + 'px';
+                // Clear the compositor canvas
+                canvas.innerHTML = '';
                 
-                // Adjust inner-border padding if it exists
-                const innerBorder = container.querySelector('.inner-border');
-                if (innerBorder) {
-                    innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
-                }
-
-                // Clean up any previously inserted 3rd image
-                const existingThird = container.querySelector('.nc-third-image-wrapper');
-                if (existingThird) {
-                    existingThird.remove();
-                }
-
-                // Article text columns — strictly enforced
-                const selectedCols = parseInt(data.layout_columns) || 3;
-                const articleEl = container.querySelector('.article-content, .article-body');
-                if (articleEl) {
-                    articleEl.style.fontSize      = conf.fontSize + 'px';
-                    articleEl.style.lineHeight    = conf.lineHeight;
-                    articleEl.style.columnCount   = selectedCols;
-                    articleEl.style.columns       = selectedCols;
-                    articleEl.style.webkitColumns = selectedCols;
+                // Get canvas width
+                const W_canvas = canvas.offsetWidth || 1060;
+                
+                // Calculate columns
+                const N = parseInt(data.layout_columns) || 3;
+                const G = 24; // Column gap in pixels
+                const W_col = (W_canvas - (N - 1) * G) / N;
+                
+                // Get canvas boundaries relative to target maximum page height
+                const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
+                const H_canvas = TARGET_MAX_HEIGHT - canvasTop - 60; // 60px padding/footer margin
+                
+                // Calculate image dimensions and create absolute obstacles
+                const obstacles = [];
+                const imgHeightPx = Math.round(conf.imgMaxPct * W_canvas);
+                
+                if (urls.length > 0) {
+                    // Hero Image: max width 55% of page width, max height 30% of page height
+                    const aspect0 = aspectRatios[0] || 1.2;
+                    let w0 = W_canvas * 0.55;
+                    let h0 = w0 / aspect0;
+                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
+                    if (w0 > W_canvas * 0.55) {
+                        w0 = W_canvas * 0.55;
+                        h0 = w0 / aspect0;
+                    }
+                    // Reduce Hero image height by 20% (and adjust width to maintain aspect ratio)
+                    h0 = h0 * 0.8;
+                    w0 = h0 * aspect0;
+                    obstacles.push({
+                        url: urls[0],
+                        caption: captions[0] || '',
+                        x: Math.round(W_canvas - w0), // Align top-right
+                        y: 0,
+                        w: Math.round(w0),
+                        h: Math.round(h0)
+                    });
+                    
+                    if (urls.length > 1) {
+                        // Secondary Image: max width 30% of page width
+                        const aspect1 = aspectRatios[1] || 1.0;
+                        let w1 = W_canvas * 0.30;
+                        let h1 = w1 / aspect1;
+                        h1 = Math.min(h1, imgHeightPx * 0.75);
+                        let y1 = h0 + 60; // Spacing below Hero
+                        obstacles.push({
+                            url: urls[1],
+                            caption: captions[1] || '',
+                            x: 0, // Middle-left
+                            y: Math.round(y1),
+                            w: Math.round(w1),
+                            h: Math.round(h1)
+                        });
+                        
+                        if (urls.length > 2) {
+                            // Portrait Image: max width 25% of page width, size unchanged
+                            const aspect2 = aspectRatios[2] || 0.8;
+                            let w2 = W_canvas * 0.25;
+                            let h2 = w2 / aspect2;
+                            h2 = Math.min(h2, imgHeightPx * 0.65);
+                            let y2 = y1 + h1 + 60;
+                            obstacles.push({
+                                url: urls[2],
+                                caption: captions[2] || '',
+                                x: Math.round(W_canvas - w2), // Bottom-right
+                                y: Math.round(y2),
+                                w: Math.round(w2),
+                                h: Math.round(h2)
+                            });
+                        }
+                    }
                 }
                 
-                container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph').forEach(p => {
-                    p.style.fontSize     = conf.fontSize + 'px';
-                    p.style.lineHeight   = conf.lineHeight;
-                    p.style.marginBottom = conf.paraMargin + 'px';
-                    p.style.marginTop    = '0';
+                // Render absolute images onto canvas
+                obstacles.forEach(obs => {
+                    const imgEl = document.createElement('div');
+                    imgEl.className = 'nc-absolute-image';
+                    imgEl.style.position = 'absolute';
+                    imgEl.style.left = `${obs.x}px`;
+                    imgEl.style.top = `${obs.y}px`;
+                    imgEl.style.width = `${obs.w}px`;
+                    imgEl.style.height = `${obs.h}px`;
+                    imgEl.style.boxSizing = 'border-box';
+                    imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
+                    imgEl.style.padding = '4px';
+                    imgEl.style.background = '#fff';
+                    imgEl.style.zIndex = '5';
+                    
+                    const imgH = obs.h - (obs.caption ? 24 : 8);
+                    imgEl.innerHTML = `
+                        <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                        ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 14px; line-height: 14px;">${obs.caption}</div>` : ''}
+                    `;
+                    canvas.appendChild(imgEl);
                 });
-
-                // Dropcap scaling: should scale proportionally with font size
-                let dcStyle = document.getElementById('nc-dropcap-style');
-                if (!dcStyle) {
-                    dcStyle = document.createElement('style');
-                    dcStyle.id = 'nc-dropcap-style';
-                    document.head.appendChild(dcStyle);
-                }
-                const dropcapFS = Math.round(conf.fontSize * 3.6);
-                const dropcapLH = Math.round(conf.fontSize * 2.8);
-                dcStyle.innerHTML = `
-                    .paragraph.has-dropcap::first-letter,
-                    .article-body p:first-of-type::first-letter {
-                        font-size: ${dropcapFS}px !important;
-                        line-height: ${dropcapLH}px !important;
-                    }
-                `;
-
-                // Headline auto-shrink
-                const headline = container.querySelector('.headline');
-                if (headline) {
-                    let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
-                    headline.style.fontSize = hlSize + 'px';
-                    headline.style.lineHeight = '1.1';
-                    let count = 0;
-                    while (hlSize > 20 && count < 20) {
-                        const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
-                        const lines = Math.round(headline.offsetHeight / lh);
-                        if (lines <= 2) {
-                            break;
-                        }
-                        hlSize -= 2;
-                        headline.style.fontSize = hlSize + 'px';
-                        count++;
-                    }
-                }
-
-                // Subheadline auto-shrink
-                const subheadline = container.querySelector('.subheadline, .subtitle');
-                if (subheadline) {
-                    let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
-                    subheadline.style.fontSize = subSize + 'px';
-                    subheadline.style.lineHeight = '1.3';
-                    let count = 0;
-                    while (subSize > 12 && count < 10) {
-                        const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
-                        const lines = Math.round(subheadline.offsetHeight / lh);
-                        if (lines <= 2) {
-                            break;
-                        }
-                        subSize -= 1.5;
-                        subheadline.style.fontSize = subSize + 'px';
-                        count++;
-                    }
-                }
-
-                // Spacing adjustments
-                const header = container.querySelector('header, .header-section');
-                if (header) {
-                    header.style.marginBottom = Math.round(conf.paraMargin * 1.2) + 'px';
-                }
-                const meta = container.querySelector('.metadata-bar, .meta-section');
-                if (meta) {
-                    meta.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
-                    meta.style.marginTop = Math.round(conf.paraMargin * 0.8) + 'px';
-                }
-                const headlineSec = container.querySelector('.headline-section');
-                if (headlineSec) {
-                    headlineSec.style.margin = Math.round(conf.paraMargin * 1.2) + 'px 0 ' + Math.round(conf.paraMargin * 0.8) + 'px 0';
-                }
-                const subheadlineSec = container.querySelector('.subheadline-section');
-                if (subheadlineSec) {
-                    subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
-                }
-
-                // Rebuild image container with layout mode and image height
-                if (imgContainer && imgCount > 0) {
-                    if (imgCount === 3) {
-                        chosenLayoutName = 'Layout 2-Column Top + 1-Column In-Text';
-                        imgContainer.innerHTML = getLayout2(imgHeightPx);
-
-                        const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
-                        if (paragraphs.length > 0) {
-                            const insertIndex = Math.min(2, Math.max(1, Math.floor(paragraphs.length / 2)));
-                            const targetPara = paragraphs[Math.min(insertIndex, paragraphs.length - 1)];
+                
+                // Define inflated obstacles to carve out margins around text regions (12px cushion)
+                const inflatedObstacles = obstacles.map(obs => {
+                    return {
+                        x: obs.x - 12,
+                        y: obs.y - 12,
+                        w: obs.w + 24,
+                        h: obs.h + 24
+                    };
+                });
+                
+                // Generate rectangular text regions in each column using vertical interval-splitting
+                const colDivs = [];
+                const regions = [];
+                
+                for (let c = 0; c < N; c++) {
+                    const L_c = c * (W_col + G);
+                    const R_c = L_c + W_col;
+                    
+                    // Start with a single full-height interval
+                    let intervals = [{ yStart: 0, yEnd: H_canvas, xOffset: 0, w: W_col }];
+                    
+                    // Split intervals sequentially by intersecting inflated obstacles
+                    inflatedObstacles.forEach(obs => {
+                        const xOverlapStart = Math.max(L_c, obs.x);
+                        const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
+                        if (xOverlapStart >= xOverlapEnd) return; // No horizontal overlap
+                        
+                        const yOverlapStart = Math.max(0, obs.y);
+                        const yOverlapEnd = Math.min(H_canvas, obs.y + obs.h);
+                        if (yOverlapStart >= yOverlapEnd) return;
+                        
+                        const nextIntervals = [];
+                        intervals.forEach(int => {
+                            const yIntersectStart = Math.max(int.yStart, yOverlapStart);
+                            const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
                             
-                            const thirdImgWrapper = document.createElement('div');
-                            thirdImgWrapper.className = 'nc-third-image-wrapper';
-                            thirdImgWrapper.style.margin = '15px 0';
-                            thirdImgWrapper.style.textAlign = 'center';
-                            thirdImgWrapper.style.border = borderStyle;
-                            thirdImgWrapper.style.padding = paddingStyle;
-                            thirdImgWrapper.style.boxSizing = 'border-box';
-                            thirdImgWrapper.style.width = '100%';
-                            thirdImgWrapper.style.breakInside = 'avoid';
-                            thirdImgWrapper.style.webkitColumnBreakInside = 'avoid';
-                            thirdImgWrapper.innerHTML = `
-                                <img src="${urls[2]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
-                                ${captions[2] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[2]}</div>` : ''}
-                            `;
-                            targetPara.after(thirdImgWrapper);
+                            if (yIntersectStart >= yIntersectEnd) {
+                                // No vertical intersection with this interval, keep it
+                                nextIntervals.push(int);
+                                return;
+                            }
+                            
+                            // 1. Above split
+                            if (yIntersectStart > int.yStart) {
+                                nextIntervals.push({
+                                    yStart: int.yStart,
+                                    yEnd: yIntersectStart,
+                                    xOffset: int.xOffset,
+                                    w: int.w
+                                });
+                            }
+                            
+                            // 2. Intersecting split (side channel text regions next to image)
+                            const obsLeftRel = obs.x - L_c;
+                            const obsRightRel = (obs.x + obs.w) - L_c;
+                            
+                            if (obsLeftRel <= 0) {
+                                // Image covers the left, text channel on the right
+                                const wRem = W_col - obsRightRel;
+                                if (wRem >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: obsRightRel,
+                                        w: wRem
+                                    });
+                                }
+                            } else if (obsRightRel >= W_col) {
+                                // Image covers the right, text channel on the left
+                                const wRem = obsLeftRel;
+                                if (wRem >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: 0,
+                                        w: wRem
+                                    });
+                                }
+                            } else {
+                                // Image is centered/in-between
+                                const wLeft = obsLeftRel;
+                                const wRight = W_col - obsRightRel;
+                                if (wLeft >= wRight && wLeft >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: 0,
+                                        w: wLeft
+                                    });
+                                } else if (wRight >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: obsRightRel,
+                                        w: wRight
+                                    });
+                                }
+                            }
+                            
+                            // 3. Below split
+                            if (int.yEnd > yIntersectEnd) {
+                                nextIntervals.push({
+                                    yStart: yIntersectEnd,
+                                    yEnd: int.yEnd,
+                                    xOffset: int.xOffset,
+                                    w: int.w
+                                });
+                            }
+                        });
+                        intervals = nextIntervals;
+                    });
+                    
+                    // Create column absolute container
+                    const colDiv = document.createElement('div');
+                    colDiv.className = `nc-column col-${c}`;
+                    colDiv.style.position = 'absolute';
+                    colDiv.style.left = `${L_c}px`;
+                    colDiv.style.top = '0px';
+                    colDiv.style.width = `${W_col}px`;
+                    colDiv.style.boxSizing = 'border-box';
+                    canvas.appendChild(colDiv);
+                    colDivs.push(colDiv);
+                    
+                    // Render regions as absolute boxes inside column
+                    intervals.forEach(int => {
+                        const h = int.yEnd - int.yStart;
+                        if (h < 24 || int.w < 80) return; // filter out tiny/useless slices
+                        
+                        const rBox = document.createElement('div');
+                        rBox.className = 'nc-text-region-box';
+                        rBox.style.position = 'absolute';
+                        rBox.style.left = `${int.xOffset}px`;
+                        rBox.style.top = `${int.yStart}px`;
+                        rBox.style.width = `${int.w}px`;
+                        rBox.style.height = `${h}px`;
+                        rBox.style.boxSizing = 'border-box';
+                        rBox.style.overflow = 'hidden';
+                        
+                        colDiv.appendChild(rBox);
+                        
+                        regions.push({
+                            colIndex: c,
+                            div: colDiv,
+                            rBox: rBox,
+                            height: h
+                        });
+                    });
+                }
+                
+                // Flow text through regions sequentially
+                const paragraphs = [...data.sections];
+                if (paragraphs.length > 0 && data.dateline) {
+                    const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
+                    paragraphs[0] = prefix + paragraphs[0];
+                }
+                
+                let pIdx = 0;
+                let currentRegionIdx = 0;
+                let activeRegion = regions[currentRegionIdx];
+                let fits = true;
+                
+                while (activeRegion) {
+                    if (pIdx >= paragraphs.length) {
+                        break;
+                    }
+                    
+                    let text = paragraphs[pIdx];
+                    
+                    const p = document.createElement('p');
+                    p.innerText = text;
+                    p.style.fontSize = `${conf.fontSize}px`;
+                    p.style.lineHeight = conf.lineHeight;
+                    p.style.marginBottom = `${conf.paraMargin}px`;
+                    p.style.marginTop = '0';
+                    p.style.textAlign = 'justify';
+                    p.style.wordBreak = 'break-word';
+                    p.style.overflowWrap = 'break-word';
+                    p.style.hyphens = 'auto';
+                    
+                    activeRegion.rBox.appendChild(p);
+                    
+                    if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                        activeRegion.rBox.removeChild(p);
+                        
+                        const words = text.split(/\s+/);
+                        const testP = document.createElement('p');
+                        testP.style.fontSize = `${conf.fontSize}px`;
+                        testP.style.lineHeight = conf.lineHeight;
+                        testP.style.marginBottom = `${conf.paraMargin}px`;
+                        testP.style.marginTop = '0';
+                        testP.style.textAlign = 'justify';
+                        testP.style.wordBreak = 'break-word';
+                        testP.style.overflowWrap = 'break-word';
+                        testP.style.hyphens = 'auto';
+                        activeRegion.rBox.appendChild(testP);
+                        
+                        let wIdx = 0;
+                        for (; wIdx < words.length; wIdx++) {
+                            testP.innerText = words.slice(0, wIdx + 1).join(' ');
+                            if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                                break;
+                            }
                         }
-                    } else if (imgCount === 2) {
-                        chosenLayoutName = 'Layout 2-Column';
-                        imgContainer.innerHTML = getLayout2(imgHeightPx);
-                    } else if (imgCount === 1) {
-                        chosenLayoutName = 'Layout 1-Column';
-                        imgContainer.innerHTML = getLayout1(imgHeightPx);
+                        activeRegion.rBox.removeChild(testP);
+                        
+                        if (wIdx > 0) {
+                            const fitP = document.createElement('p');
+                            fitP.innerText = words.slice(0, wIdx).join(' ');
+                            fitP.style.fontSize = `${conf.fontSize}px`;
+                            fitP.style.lineHeight = conf.lineHeight;
+                            fitP.style.marginBottom = `${conf.paraMargin}px`;
+                            fitP.style.marginTop = '0';
+                            fitP.style.textAlign = 'justify';
+                            fitP.style.wordBreak = 'break-word';
+                            fitP.style.overflowWrap = 'break-word';
+                            fitP.style.hyphens = 'auto';
+                            activeRegion.rBox.appendChild(fitP);
+                        }
+                        
+                        const remainingText = words.slice(wIdx).join(' ');
+                        if (remainingText.trim().length > 0) {
+                            paragraphs.splice(pIdx, 1, remainingText);
+                        } else {
+                            pIdx++;
+                        }
+                        
+                        currentRegionIdx++;
+                        activeRegion = regions[currentRegionIdx];
+                        
+                        if (!activeRegion) {
+                            if (pIdx < paragraphs.length) {
+                                fits = false;
+                            }
+                            break;
+                        }
+                    } else {
+                        pIdx++;
                     }
                 }
-
-                console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' imgH=' + imgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
-                return imgHeightPx;
+                
+                if (fits) {
+                    canvas.style.height = `${H_canvas}px`;
+                }
+                
+                window.__IMAGE_LAYOUT_LOGS__ = {
+                    image_count: imgCount,
+                    image_orientations: orientations.join(', '),
+                    selected_layout: 'Region-Based Newspaper Page Compositor',
+                    final_dimensions: obstacles.map(obs => `${obs.w}x${obs.h}px`).join(', ')
+                };
+                
+                return fits;
             }
 
             async function executeLayout() {
-                // Initialize aspect ratios and orientations
+                console.log('LAYOUT START');
                 const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
                 aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
                 orientations = dims.map(d => {
@@ -442,46 +582,78 @@
 
                 await waitReady();
 
-                // Unlock container — must be auto-height (single page = natural height)
                 container.style.height    = 'auto';
                 container.style.minHeight = 'unset';
                 container.style.overflow  = 'visible';
 
                 let chosenConf = configs[0];
-                let chosenImgH = 0;
-                const TARGET_MAX_HEIGHT = 1500;
                 let fits = false;
 
                 for (let i = 0; i < configs.length; i++) {
-                    const imgH = applyConfig(configs[i]);
-                    chosenConf = configs[i];
-                    chosenImgH = imgH;
+                    const conf = configs[i];
+                    container.style.padding = conf.padding + 'px';
+                    
+                    const innerBorder = container.querySelector('.inner-border');
+                    if (innerBorder) {
+                        innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
+                    }
 
-                    // Wait two animation frames for layout to settle
+                    const headline = container.querySelector('.headline');
+                    if (headline) {
+                        let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
+                        headline.style.fontSize = hlSize + 'px';
+                        headline.style.lineHeight = '1.1';
+                        let count = 0;
+                        while (hlSize > 20 && count < 20) {
+                            const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
+                            const lines = Math.round(headline.offsetHeight / lh);
+                            if (lines <= 2) {
+                                break;
+                            }
+                            hlSize -= 2;
+                            headline.style.fontSize = hlSize + 'px';
+                            count++;
+                        }
+                    }
+
+                    const subheadline = container.querySelector('.subheadline, .subtitle');
+                    if (subheadline) {
+                        let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
+                        subheadline.style.fontSize = subSize + 'px';
+                        subheadline.style.lineHeight = '1.3';
+                        let count = 0;
+                        while (subSize > 12 && count < 10) {
+                            const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
+                            const lines = Math.round(subheadline.offsetHeight / lh);
+                            if (lines <= 2) {
+                                break;
+                            }
+                            subSize -= 1.5;
+                            subheadline.style.fontSize = subSize + 'px';
+                            count++;
+                        }
+                    }
+
+                    let dcStyle = document.getElementById('nc-dropcap-style');
+                    if (!dcStyle) {
+                        dcStyle = document.createElement('style');
+                        dcStyle.id = 'nc-dropcap-style';
+                        document.head.appendChild(dcStyle);
+                    }
+                    dcStyle.innerHTML = '';
+
+                    fits = applyConfig(conf);
+                    chosenConf = conf;
+
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-                    // Check if the container fits within target page height
-                    if (container.scrollHeight <= TARGET_MAX_HEIGHT) {
-                        fits = true;
+                    if (fits && container.scrollHeight <= TARGET_MAX_HEIGHT) {
                         break;
                     }
                 }
 
-                // Wait final render cycle
                 await waitReady();
 
-                const finalW   = container.offsetWidth;
-                const finalH   = container.scrollHeight;
-                const finalFS  = chosenConf.fontSize;
-                const finalSec = (data.sections || []).length;
-                const finalCh  = (data.sections || []).reduce((s,p) => s + p.length, 0);
-
-                console.log('[LAYOUT] DONE — chars:', finalCh, 'sections:', finalSec, '(ALL PRESERVED)');
-                console.log('[LAYOUT] Font size used:', finalFS + 'px');
-                console.log('[LAYOUT] Image height used:', chosenImgH + 'px');
-                console.log('[LAYOUT] Final clipping dimensions:', finalW + 'x' + finalH + 'px');
-
-                // Print-ready global styles (removes all watermarks, page breaks, margins, etc.)
                 let st = document.getElementById('nc-layout-style');
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
                 st.innerHTML = `
@@ -494,29 +666,29 @@
                         .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
                         * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
                     }
-                    .article-content p, .article-body p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }
                 `;
 
-                // Log image dimensions and layout selection
-                const finalDims = urls.map(url => {
-                    const img = Array.from(document.querySelectorAll('img')).find(i => 
-                        i.src === url && !i.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
-                    );
-                    return img ? `${img.offsetWidth}x${img.offsetHeight}px` : 'unknown';
-                }).join(', ');
-
-                window.__IMAGE_LAYOUT_LOGS__ = {
-                    image_count: imgCount,
-                    image_orientations: orientations.join(', '),
-                    selected_layout: chosenLayoutName,
-                    final_dimensions: finalDims
-                };
-
-                // Signal Playwright that layout is complete
+                console.log('LAYOUT COMPLETE');
                 window.__LAYOUT_DONE__ = true;
             }
 
-            executeLayout();
+            setTimeout(function() {
+                if (!window.__LAYOUT_DONE__) {
+                    console.log('FORCED LAYOUT COMPLETE: 10s failsafe triggered — setting __LAYOUT_DONE__');
+                    window.__LAYOUT_DONE__ = true;
+                }
+            }, 10000);
+
+            (async () => {
+                try {
+                    await executeLayout();
+                } catch(err) {
+                    console.error('[LAYOUT FATAL ERROR]', err && err.message ? err.message : String(err));
+                    if (!window.__LAYOUT_DONE__) {
+                        window.__LAYOUT_DONE__ = true;
+                    }
+                }
+            })();
         });
         </script>
         </body>
