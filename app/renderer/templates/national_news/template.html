@@ -9,42 +9,48 @@
 </head>
 <body>
     <div class="newspaper-container">
-        <!-- HEADER BLOCK: header-section + meta-section = 140px -->
-        <div class="header-block" style="height: 140px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
-            <header class="header-section" style="margin: 0; padding: 0; border: none; height: 95px; display: flex; justify-content: center; align-items: center;">
-                <div class="logo-container" style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; width: 100%;">
-                    {% set current_logo = logo_id if logo_id else template_id %}
-                    {% if current_logo == 'bharath_reporter' %}
-                        {% include 'bharath_reporter/logo.svg' %}
-                    {% elif current_logo == 'rti_express' %}
-                        {% include 'rti_express/logo.svg' %}
-                    {% elif current_logo == 'national_news' %}
-                        {% include 'national_news/logo.svg' %}
+        <!-- ZONE 1: Logo Zone (Height: 90px) -->
+        <div class="logo-zone" style="height: 90px; display: flex; justify-content: center; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; padding: 0; overflow: hidden; width: 100%;">
+            <div class="logo-container" style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
+                {% set current_logo = logo_id if logo_id else template_id %}
+                {% if current_logo == 'bharath_reporter' %}
+                    {% include 'bharath_reporter/logo.svg' %}
+                {% elif current_logo == 'rti_express' %}
+                    {% include 'rti_express/logo.svg' %}
+                {% elif current_logo == 'national_news' %}
+                    {% include 'national_news/logo.svg' %}
+                {% else %}
+                    {% if logo_url %}
+                        <img src="{{ logo_url }}" alt="Logo" style="max-height: 75px; width: auto; object-fit: contain; margin: 0 auto; display: block;">
                     {% else %}
-                        {% if logo_url %}
-                            <img src="{{ logo_url }}" alt="Logo" style="max-height: 80px; width: auto; object-fit: contain; margin: 0 auto; display: block;">
-                        {% else %}
-                            <h1 style="font-size: 60px; margin: 0;">{{ publication_name }}</h1>
-                        {% endif %}
+                        <h1 style="font-size: 50px; margin: 0; text-transform: uppercase;">{{ publication_name }}</h1>
                     {% endif %}
-                </div>
-            </header>
-            <div class="meta-section" style="height: 35px; margin: 0; padding: 0; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 13px;">
-                <div class="meta-item"><span>{{ publication_name }} - {{ publication_date }}</span></div>
-                <div class="meta-item"><span>Wanted Reporters: 7668886666</span></div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- HEADLINE BLOCK: headline-section + subheadline-section + byline = 120px -->
-        <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;">
-            <div class="headline-section" style="margin: 0; padding: 0 0 0 15px; border-left: 5px solid var(--accent-color); text-align: left;">
-                <h1 class="headline" style="font-size: 40px; margin: 0 0 5px 0; line-height: 1.1; text-align: left;">{{ headline }}</h1>
+        <!-- ZONE 2: Metadata Zone (Height: 30px) -->
+        <div class="metadata-zone" style="height: 30px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; padding: 0 10px; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px;">
+            <div class="meta-item-left" style="display: flex; align-items: center;">
+                <span>{{ publication_name }} • {{ publication_date }}</span>
             </div>
-            <div class="subheadline-section" style="margin: 0; padding: 0 0 0 20px; text-align: left;">
-                <h2 class="subheadline" style="font-size: 18px; margin: 0 0 5px 0; text-align: left; font-style: italic;">{{ subheadline }}</h2>
+            <div class="meta-item-right" style="display: flex; align-items: center;">
+                <span>WANTED REPORTERS: 7668886666</span>
             </div>
+        </div>
+
+        <!-- ZONE 3: Headline Zone (Height: Auto, Min-height: 120px) -->
+        <div class="headline-zone" style="min-height: 120px; height: auto; padding: 20px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border-color, #111111); margin-bottom: 15px; width: 100%;">
+            <div class="headline-section" style="margin: 0; padding: 0 0 0 15px; border-left: 5px solid var(--accent-color, #a30000); text-align: left; box-sizing: border-box;">
+                <h1 class="headline" style="font-size: 40px; margin: 0; line-height: 1.1; text-align: left; width: 100%; box-sizing: border-box;">{{ headline }}</h1>
+            </div>
+            {% if subheadline %}
+            <div class="subheadline-section" style="margin: 8px 0 0 20px; text-align: left;">
+                <h2 class="subheadline" style="font-size: 18px; margin: 0; text-align: left; font-style: italic; color: #444;">{{ subheadline }}</h2>
+            </div>
+            {% endif %}
             {% if byline %}
-            <div class="byline-section" style="text-align: left; font-size: 13px; margin: 0 0 0 20px;">By {{ byline }}</div>
+            <div class="byline-section" style="text-align: left; font-size: 13px; margin: 8px 0 0 20px; font-weight: bold; color: var(--accent-color, #a30000);">By {{ byline }}</div>
             {% endif %}
         </div>
 
