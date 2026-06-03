@@ -305,7 +305,9 @@ class RenderService:
         print(f"[LAYOUT] Original article length: {original_char_count} chars across {len(sections)} sections")
         sys.stdout.flush()
 
-        data_script = f'<script type="application/json" id="newspaper-data">\\n{json_str}\\n</script>'
+        data_script = f"""<script type="application/json" id="newspaper-data">
+{json_str}
+</script>"""
 
         script_block = """
         <script>
@@ -674,8 +676,8 @@ class RenderService:
                         masterBlock.style.display = 'block';
                         masterBlock.style.overflow = 'hidden';
 
-                        const heroWidthPct      = selectedCols === 1 ? 50 : (selectedCols === 2 ? 48 : 45);
-                        const secondaryWidthPct = selectedCols === 1 ? 38 : (selectedCols === 2 ? 36 : 33);
+                        const heroWidthPct      = 65; 
+                        const secondaryWidthPct = 35; 
 
                         // HERO IMAGE — float left at top
                         const heroWrapper = document.createElement('div');
@@ -693,10 +695,10 @@ class RenderService:
                         // Walk through paragraphs, injecting secondary/extra images at calculated positions
                         let secondaryInjected = false;
                         const totalParas = paragraphs.length;
-                        const secondaryTriggerIdx = Math.max(1, Math.floor(totalParas * 0.6));
+                        const secondaryTriggerIdx = Math.max(1, Math.floor(totalParas * 0.4));
 
                         paragraphs.forEach((p, idx) => {
-                            // SECONDARY IMAGE — inject at ~60% of text, float right (creates diagonal)
+                            // SECONDARY IMAGE — inject at ~40% of text, float right (creates diagonal)
                             if (imgCount >= 2 && !secondaryInjected && idx === secondaryTriggerIdx) {
                                 const secWrapper = document.createElement('div');
                                 secWrapper.className = 'nc-secondary-img-wrapper';
@@ -720,9 +722,14 @@ class RenderService:
                                     if (idx === triggerPara && ei < urls.length) {
                                         const extraWrapper = document.createElement('div');
                                         extraWrapper.className = 'nc-extra-img-wrapper';
-                                        extraWrapper.style.float = (ei % 2 === 0) ? 'right' : 'left';
+                                        
+                                        // Image 3 (ei=2) -> float left
+                                        // Image 4 (ei=3) -> float right
+                                        const isLeft = (ei % 2 === 0);
+                                        extraWrapper.style.float = isLeft ? 'left' : 'right';
+                                        extraWrapper.style.clear = isLeft ? 'left' : 'right';
                                         extraWrapper.style.width = secondaryWidthPct + '%';
-                                        extraWrapper.style.margin = (ei % 2 === 0) ? '0 0 12px 18px' : '0 18px 12px 0';
+                                        extraWrapper.style.margin = isLeft ? '0 18px 12px 0' : '0 0 12px 18px';
                                         extraWrapper.style.boxSizing = 'border-box';
                                         extraWrapper.innerHTML = `
                                             <img src="${urls[ei]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.65)}px; object-fit: contain; display: block;" />
