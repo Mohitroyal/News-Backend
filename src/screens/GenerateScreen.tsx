@@ -358,8 +358,8 @@ export const GenerateScreen = () => {
 
       {/* ── Sticky bottom: progress bar + generate button ─────────────────── */}
       <div 
-        className="fixed left-0 w-full px-6 pt-4 pb-2 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-900 dark:via-gray-900 to-transparent z-10 transition-colors duration-300"
-        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
+        className="fixed left-0 w-full px-6 pt-4 pb-2 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-900 dark:via-gray-900 to-transparent z-40 transition-colors duration-300"
+        style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}
       >
 
         {/* Live progress bar shown during generation */}

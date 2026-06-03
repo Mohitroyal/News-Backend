@@ -30,14 +30,14 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       </header>
 
       {/* Main Content Area (Scrollable) */}
-      <main className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
+      <main className="flex-1 overflow-y-auto">
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 fixed bottom-0 w-full pb-safe flex justify-around items-center h-20 h-nav-safe z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] transition-colors duration-300">
+      <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 fixed bottom-0 w-full pb-safe flex justify-around items-center h-[80px] z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] transition-colors duration-300">
         <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-400'}`}>
           <Home className={`w-6 h-6 ${isActive('/') ? 'fill-blue-100 dark:fill-blue-900/50' : ''}`} />
           <span className="text-[10px] font-medium">Home</span>
@@ -48,7 +48,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
         </Link>
         
         {/* FAB Style Center Button */}
-        <Link to="/generate" className="relative -top-5 flex flex-col items-center justify-center w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full text-white shadow-lg shadow-blue-500/40 active:scale-95 transition-transform">
+        <Link to="/generate" className="relative -top-5 flex flex-col items-center justify-center w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full text-white shadow-lg shadow-blue-500/40 active:scale-95 transition-transform z-50">
           <Plus className="w-8 h-8" />
         </Link>
 
