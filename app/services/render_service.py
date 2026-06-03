@@ -292,27 +292,20 @@ class RenderService:
             "image_urls": data.get("image_urls", []),
             "image_captions": data.get("image_captions", [])
         }
-        json_str = json.dumps(serializable_data, ensure_ascii=False)
-
-        # ── CRITICAL FIX: Escape </script> and <!-- in JSON ───────────────────
-        # json.dumps does NOT escape </script>. If any article text, headline,
-        # caption, or image URL contains the literal string </script>, the HTML
-        # parser will prematurely close the <script> tag. The rest of the JSON
-        # becomes raw HTML, and the orphaned }); at the end is what Chrome
-        # reports as: "Unexpected token ')'"
-        # Fix: replace the slash so the browser never sees a literal </script>.
-        json_str = (
-            json_str
-            .replace('</script>', '<\/script>')   # breaks the HTML parser
-            .replace('</SCRIPT>', '<\/SCRIPT>')   # case-insensitive safety
-            .replace('<!--',      '<\!--')         # prevent HTML comment injection
-        )
+        # ── BULLETPROOF JSON INJECTION ───────────────────────────────────────
+        # Using <script type="application/json"> isolates the JSON payload
+        # from the JavaScript engine. This prevents literal Unicode line
+        # separators (U+2028) or unescaped quotes from breaking JS syntax.
+        json_str = json.dumps(serializable_data)
+        json_str = json_str.replace("</", "<\\/") # Safely escape HTML closing tags
 
         # Log original article stats
         sections = data.get("sections", [])
         original_char_count = sum(len(s) for s in sections)
         print(f"[LAYOUT] Original article length: {original_char_count} chars across {len(sections)} sections")
         sys.stdout.flush()
+
+        data_script = f'<script type="application/json" id="newspaper-data">\\n{json_str}\\n</script>'
 
         script_block = """
         <script>
@@ -332,10 +325,22 @@ class RenderService:
             }
             return false;
         };
-        window.NEWSPAPER_DATA = {json_data};
+        
         document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const dataEl = document.getElementById('newspaper-data');
+                if (dataEl) {
+                    window.NEWSPAPER_DATA = JSON.parse(dataEl.textContent);
+                }
+            } catch (e) {
+                console.error('[LAYOUT] JSON Parse Error:', e);
+            }
             const data = window.NEWSPAPER_DATA;
-            if (!data) return;
+            if (!data) {
+                console.error('[LAYOUT] No data found.');
+                window.__LAYOUT_DONE__ = true;
+                return;
+            }
 
             const container = document.querySelector('.newspaper-container');
             if (!container) return;
@@ -974,12 +979,24 @@ class RenderService:
             })();
         });
         </script>
-        """.replace("{json_data}", json_str)
+        """
+        
+        # Combine the data block and the logic block
+        script_block = data_script + "\n" + script_block
 
         if "</body>" in html:
             html = html.replace("</body>", f"{script_block}</body>")
         else:
             html += script_block
+
+        # ── SAVE DEBUG HTML ──────────────────────────────────────────────────
+        try:
+            debug_path = os.path.join(os.path.dirname(__file__), "debug_last_render.html")
+            with open(debug_path, "w", encoding="utf-8") as f:
+                f.write(html)
+        except Exception as e:
+            print(f"[DEBUG] Could not save debug HTML: {e}")
+            sys.stdout.flush()
 
         return html
 
