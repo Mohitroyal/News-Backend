@@ -12,7 +12,7 @@
         <!-- HEADER BLOCK: header-section + meta-section = 140px -->
         <div class="header-block" style="height: 140px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
             <header class="header-section" style="margin: 0; padding: 0; border: none; height: 95px; display: flex; justify-content: center; align-items: center;">
-                <div class="logo-container" style="text-align: center; margin: 0; padding: 0; display: block; width: 100%;">
+                <div class="logo-container" style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; width: 100%;">
                     {% set current_logo = logo_id if logo_id else template_id %}
                     {% if current_logo == 'bharath_reporter' %}
                         {% include 'bharath_reporter/logo.svg' %}
@@ -29,22 +29,22 @@
                     {% endif %}
                 </div>
             </header>
-            <div class="meta-section" style="height: 35px; margin: 0; padding: 2px 0; box-sizing: border-box; display: flex; justify-content: space-between; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 13px;">
+            <div class="meta-section" style="height: 35px; margin: 0; padding: 0; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 13px;">
                 <div class="meta-item"><span>{{ publication_name }} - {{ publication_date }}</span></div>
                 <div class="meta-item"><span>Wanted Reporters: 7668886666</span></div>
             </div>
         </div>
 
         <!-- HEADLINE BLOCK: headline-section + subheadline-section + byline = 120px -->
-        <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
-            <div class="headline-section" style="margin: 0; padding: 0;">
-                <h1 class="headline" style="font-size: 40px; margin: 0 0 5px 0; line-height: 1.1; text-align: center;">{{ headline }}</h1>
+        <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;">
+            <div class="headline-section" style="margin: 0; padding: 0 0 0 15px; border-left: 5px solid var(--accent-color); text-align: left;">
+                <h1 class="headline" style="font-size: 40px; margin: 0 0 5px 0; line-height: 1.1; text-align: left;">{{ headline }}</h1>
             </div>
-            <div class="subheadline-section" style="margin: 0; padding: 0;">
-                <h2 class="subheadline" style="font-size: 18px; margin: 0 0 5px 0; text-align: center; font-style: italic;">{{ subheadline }}</h2>
+            <div class="subheadline-section" style="margin: 0; padding: 0 0 0 20px; text-align: left;">
+                <h2 class="subheadline" style="font-size: 18px; margin: 0 0 5px 0; text-align: left; font-style: italic;">{{ subheadline }}</h2>
             </div>
             {% if byline %}
-            <div class="byline-section" style="text-align: center; font-size: 13px; margin: 0;">By {{ byline }}</div>
+            <div class="byline-section" style="text-align: left; font-size: 13px; margin: 0 0 0 20px;">By {{ byline }}</div>
             {% endif %}
         </div>
 

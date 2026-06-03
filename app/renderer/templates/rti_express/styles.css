@@ -67,10 +67,13 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     align-items: center;
 }
 
-.logo-container svg {
-    width: 100%;
-    height: auto;
+.logo-container svg,
+.logo-container img {
+    max-height: 80px;
+    width: auto;
+    max-width: 100%;
     display: block;
+    margin: 0 auto;
 }
 
 /* NEWSPAPER META SECTION */
@@ -187,17 +190,6 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     text-indent: 0;
 }
 
-/* Modern clean Drop Cap */
-.paragraph.has-dropcap::first-letter {
-    float: left;
-    font-family: 'Merriweather', 'Lora', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
-    font-size: 58px;
-    line-height: 46px;
-    padding-top: 3px;
-    padding-right: 8px;
-    font-weight: 900;
-    color: var(--accent-color);
-}
 
 .byline-section {
     font-size: 12px;

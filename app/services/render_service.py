@@ -717,10 +717,6 @@ class RenderService:
                     p.style.overflowWrap = 'break-word';
                     p.style.hyphens = 'auto';
                     
-                    if (activeRegion.colIndex === 0 && activeRegion.rBox.querySelectorAll('p').length === 0) {
-                        p.className = 'has-dropcap';
-                    }
-                    
                     activeRegion.rBox.appendChild(p);
                     
                     if (activeRegion.rBox.scrollHeight > activeRegion.height) {
@@ -736,9 +732,6 @@ class RenderService:
                         testP.style.wordBreak = 'break-word';
                         testP.style.overflowWrap = 'break-word';
                         testP.style.hyphens = 'auto';
-                        if (activeRegion.colIndex === 0 && activeRegion.rBox.querySelectorAll('p').length === 0) {
-                            testP.className = 'has-dropcap';
-                        }
                         activeRegion.rBox.appendChild(testP);
                         
                         let wIdx = 0;
@@ -761,9 +754,6 @@ class RenderService:
                             fitP.style.wordBreak = 'break-word';
                             fitP.style.overflowWrap = 'break-word';
                             fitP.style.hyphens = 'auto';
-                            if (activeRegion.colIndex === 0 && activeRegion.rBox.querySelectorAll('p').length === 0) {
-                                fitP.className = 'has-dropcap';
-                            }
                             activeRegion.rBox.appendChild(fitP);
                         }
                         
@@ -877,20 +867,7 @@ class RenderService:
                         dcStyle.id = 'nc-dropcap-style';
                         document.head.appendChild(dcStyle);
                     }
-                    const dropcapFS = Math.round(conf.fontSize * 3.6);
-                    const dropcapLH = Math.round(conf.fontSize * 2.8);
-                    dcStyle.innerHTML = `
-                        .paragraph.has-dropcap::first-letter,
-                        .has-dropcap::first-letter {
-                            font-size: ${dropcapFS}px !important;
-                            line-height: ${dropcapLH}px !important;
-                            font-family: 'Playfair Display', serif;
-                            float: left;
-                            font-weight: bold;
-                            color: var(--primary-color);
-                            padding-right: 8px;
-                        }
-                    `;
+                    dcStyle.innerHTML = '';
 
                     fits = applyConfig(conf);
                     chosenConf = conf;
