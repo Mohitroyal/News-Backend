@@ -2,57 +2,58 @@
 <html lang="{{ language }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ headline }}</title>
+    <title>Intersection</title>
     <style>
         {% include 'rti_express/styles.css' %}
     </style>
 </head>
 <body>
     <div class="newspaper-container">
-        <!-- HEADER SECTION -->
-        <header class="header-section">
-            <div class="logo-container" style="text-align: center;">
-                {% set current_logo = logo_id if logo_id else template_id %}
-                {% if current_logo == 'bharath_reporter' %}
-                    {% include 'bharath_reporter/logo.svg' %}
-                {% elif current_logo == 'rti_express' %}
-                    {% include 'rti_express/logo.svg' %}
-                {% elif current_logo == 'national_news' %}
-                    {% include 'national_news/logo.svg' %}
-                {% else %}
-                    {% if logo_url %}
-                        <img src="{{ logo_url }}" alt="Logo" style="max-height: 120px; width: auto; object-fit: contain; margin: 0 auto; display: block;">
+        <!-- HEADER BLOCK: header-section + meta-section = 140px -->
+        <div class="header-block" style="height: 140px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
+            <header class="header-section" style="margin: 0; padding: 0; border: none; height: 95px; display: flex; justify-content: center; align-items: center;">
+                <div class="logo-container" style="text-align: center; margin: 0; padding: 0; display: block; width: 100%;">
+                    {% set current_logo = logo_id if logo_id else template_id %}
+                    {% if current_logo == 'bharath_reporter' %}
+                        {% include 'bharath_reporter/logo.svg' %}
+                    {% elif current_logo == 'rti_express' %}
+                        {% include 'rti_express/logo.svg' %}
+                    {% elif current_logo == 'national_news' %}
+                        {% include 'national_news/logo.svg' %}
                     {% else %}
-                        <h1 style="font-size: 80px; margin: 0;">{{ publication_name }}</h1>
+                        {% if logo_url %}
+                            <img src="{{ logo_url }}" alt="Logo" style="max-height: 80px; width: auto; object-fit: contain; margin: 0 auto; display: block;">
+                        {% else %}
+                            <h1 style="font-size: 60px; margin: 0;">{{ publication_name }}</h1>
+                        {% endif %}
                     {% endif %}
-                {% endif %}
+                </div>
+            </header>
+            <div class="meta-section" style="height: 35px; margin: 0; padding: 2px 0; box-sizing: border-box; display: flex; justify-content: space-between; border-top: 1px solid #000; border-bottom: 1px solid #000; font-size: 13px;">
+                <div class="meta-item"><span>{{ publication_name }} - {{ publication_date }}</span></div>
+                <div class="meta-item"><span>Wanted Reporters: 7668886666</span></div>
             </div>
-        </header>
-
-        <!-- NEWSPAPER META SECTION -->
-        <div class="meta-section" style="justify-content: center; flex-direction: column; gap: 4px;">
-            <div class="meta-item"><span>{{ publication_name }} - {{ publication_date }}</span></div>
-            <div class="meta-item"><span>Wanted Reporters: 7668886666</span></div>
         </div>
 
-        <div class="newspaper-body">
-            <!-- HEADLINE SECTION -->
-            <div class="headline-section">
-                <h1 class="headline">{{ headline }}</h1>
+        <!-- HEADLINE BLOCK: headline-section + subheadline-section + byline = 120px -->
+        <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
+            <div class="headline-section" style="margin: 0; padding: 0;">
+                <h1 class="headline" style="font-size: 40px; margin: 0 0 5px 0; line-height: 1.1; text-align: center;">{{ headline }}</h1>
             </div>
-
-            <!-- SUBHEADLINE SECTION -->
-            <div class="subheadline-section">
-                <h2 class="subheadline">{{ subheadline }}</h2>
+            <div class="subheadline-section" style="margin: 0; padding: 0;">
+                <h2 class="subheadline" style="font-size: 18px; margin: 0 0 5px 0; text-align: center; font-style: italic;">{{ subheadline }}</h2>
             </div>
-
-            <div id="compositor-canvas"></div>
+            {% if byline %}
+            <div class="byline-section" style="text-align: center; font-size: 13px; margin: 0;">By {{ byline }}</div>
+            {% endif %}
         </div>
+
+        <div id="compositor-canvas"></div>
 
         <!-- FOOTER SECTION -->
         <footer class="footer-section">
-            <div>PAGE 1 • RTI EXPRESS EDITORIAL</div>
-            <div>© {{ publication_date[-4:] if publication_date else '2026' }} RTI MEDIA NETWORK</div>
+            <div>PAGE 1 • RTI EXPRESS</div>
+            <div>© {{ publication_date[-4:] if publication_date else '2026' }} MEDIA GROUP</div>
         </footer>
     </div>
 </body>

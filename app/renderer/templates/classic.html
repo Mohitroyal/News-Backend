@@ -11,7 +11,7 @@
             font-family: 'Old Standard TT', serif;
             margin: 0;
             padding: 40px;
-            width: 1120px; /* Standard broadsheet ratio */
+            width: 1120px;
         }
 
         .newspaper-container {
@@ -21,20 +21,14 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.05);
         }
 
-        header {
-            text-align: center;
-            border-bottom: 4px double #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-        }
-
         .masthead {
             font-family: 'Playfair Display', serif;
-            font-size: 80px;
+            font-size: 60px;
             font-weight: 900;
             text-transform: uppercase;
             margin: 0;
-            letter-spacing: -2px;
+            letter-spacing: -1px;
+            text-align: center;
         }
 
         .meta-info {
@@ -42,34 +36,25 @@
             justify-content: space-between;
             border-top: 1px solid #333;
             border-bottom: 1px solid #333;
-            padding: 5px 0;
+            padding: 3px 0;
             font-size: 14px;
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
         .headline {
             font-family: 'Playfair Display', serif;
-            font-size: 48px;
+            font-size: 40px;
             line-height: 1.1;
-            margin: 20px 0 10px 0;
+            margin: 0;
             text-align: left;
         }
 
         .subheadline {
-            font-size: 20px;
+            font-size: 17px;
             font-style: italic;
             color: #555;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        .columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            text-align: justify;
+            margin: 0;
         }
 
         .paragraph {
@@ -78,42 +63,34 @@
             font-size: 17px;
         }
 
-        .paragraph:first-of-type::first-letter {
-            float: left;
-            font-size: 60px;
-            line-height: 1;
-            padding-right: 8px;
-            font-weight: bold;
-        }
-
         .byline {
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 20px;
+            margin: 0;
             font-size: 13px;
-        }
-
-        .dateline {
-            font-weight: bold;
-            margin-right: 10px;
         }
     </style>
 </head>
 <body>
     <div class="newspaper-container">
-        <header>
-            <h1 class="masthead">THE DAILY CHRONICLE</h1>
-            <div class="meta-info">
-                <span>VOL. CLXII... No. 56,234</span>
-                <span>{{ dateline }}</span>
-                <span>PRICE TWO CENTS</span>
-            </div>
-        </header>
+        <!-- Fixed Header Area: 140px -->
+        <div class="header-block" style="height: 140px; overflow: hidden; border-bottom: 4px double #333; margin-bottom: 10px; box-sizing: border-box;">
+            <header style="margin: 0; padding: 0; border: none;">
+                <h1 class="masthead">THE DAILY CHRONICLE</h1>
+                <div class="meta-info" style="margin-top: 5px;">
+                    <span>VOL. CLXII... No. 56,234</span>
+                    <span>{{ dateline }}</span>
+                    <span>PRICE TWO CENTS</span>
+                </div>
+            </header>
+        </div>
 
-        <h2 class="headline">{{ headline }}</h2>
-        <p class="subheadline">{{ subheadline }}</p>
-
-        <div class="byline">By {{ byline }}</div>
+        <!-- Fixed Headline Area: 120px -->
+        <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
+            <h2 class="headline" style="margin: 0 0 5px 0; font-size: 40px; line-height: 1.1;">{{ headline }}</h2>
+            <p class="subheadline" style="margin: 0 0 5px 0; font-size: 16px;">{{ subheadline }}</p>
+            <div class="byline" style="margin: 0;">By {{ byline }}</div>
+        </div>
 
         <div id="compositor-canvas"></div>
     </div>

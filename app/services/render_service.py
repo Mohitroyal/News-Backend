@@ -421,11 +421,11 @@ class RenderService:
             if (!canvas) {
                 canvas = document.createElement('div');
                 canvas.id = 'compositor-canvas';
-                canvas.style.position = 'relative';
-                canvas.style.width = '100%';
-                canvas.style.boxSizing = 'border-box';
                 container.appendChild(canvas);
             }
+            canvas.style.position = 'relative';
+            canvas.style.width = '100%';
+            canvas.style.boxSizing = 'border-box';
 
             function applyConfig(conf) {
                 // Clear the compositor canvas
@@ -453,15 +453,17 @@ class RenderService:
                     let w0 = W_canvas * 0.55;
                     let h0 = w0 / aspect0;
                     h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
-                    w0 = h0 * aspect0;
                     if (w0 > W_canvas * 0.55) {
                         w0 = W_canvas * 0.55;
                         h0 = w0 / aspect0;
                     }
+                    // Reduce Hero image height by 20% (and adjust width to maintain aspect ratio)
+                    h0 = h0 * 0.8;
+                    w0 = h0 * aspect0;
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
-                        x: 0,
+                        x: Math.round(W_canvas - w0), // Align top-right
                         y: 0,
                         w: Math.round(w0),
                         h: Math.round(h0)
@@ -477,14 +479,14 @@ class RenderService:
                         obstacles.push({
                             url: urls[1],
                             caption: captions[1] || '',
-                            x: Math.round(W_canvas - w1),
+                            x: 0, // Middle-left
                             y: Math.round(y1),
                             w: Math.round(w1),
                             h: Math.round(h1)
                         });
                         
                         if (urls.length > 2) {
-                            // Portrait Image: max width 25% of page width
+                            // Portrait Image: max width 25% of page width, size unchanged
                             const aspect2 = aspectRatios[2] || 0.8;
                             let w2 = W_canvas * 0.25;
                             let h2 = w2 / aspect2;
@@ -493,7 +495,7 @@ class RenderService:
                             obstacles.push({
                                 url: urls[2],
                                 caption: captions[2] || '',
-                                x: 0,
+                                x: Math.round(W_canvas - w2), // Bottom-right
                                 y: Math.round(y2),
                                 w: Math.round(w2),
                                 h: Math.round(h2)

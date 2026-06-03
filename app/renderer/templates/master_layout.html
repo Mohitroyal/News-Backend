@@ -595,38 +595,39 @@
 </head>
 <body class="{{ template_id }}">
     <div class="newspaper-container">
-        <div class="inner-border">
+        <div class="inner-border" style="border: 2px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; flex: 1; box-sizing: border-box;">
             
-            <!-- Fixed Header Section (Masthead) -->
-            <div class="masthead">
-                {% if logo_url %}
-                    <img src="{{ logo_url }}" class="logo-img" alt="{{ publication_name }}" onerror="this.style.display='none'; document.getElementById('fallback-masthead').style.display='block';">
-                    <h1 id="fallback-masthead" class="fallback-masthead" style="display: none;">{{ publication_name }}</h1>
-                {% else %}
-                    <h1 class="fallback-masthead">{{ publication_name }}</h1>
-                {% endif %}
+            <!-- Fixed Header Section: 140px -->
+            <div class="header-block" style="height: 140px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
+                <div class="masthead" style="margin: 0; padding-bottom: 5px; border-bottom: none; text-align: center;">
+                    {% if logo_url %}
+                        <img src="{{ logo_url }}" class="logo-img" alt="{{ publication_name }}" onerror="this.style.display='none'; document.getElementById('fallback-masthead').style.display='block';" style="max-height: 90px; margin: 0 auto; display: block;">
+                        <h1 id="fallback-masthead" class="fallback-masthead" style="display: none; font-size: 60px; margin: 0;">{{ publication_name }}</h1>
+                    {% else %}
+                        <h1 class="fallback-masthead" style="font-size: 60px; margin: 0;">{{ publication_name }}</h1>
+                    {% endif %}
+                </div>
+                <div class="metadata-bar" style="margin: 0; padding: 3px 0; border-top: 1px solid var(--border-color); border-bottom: 2px solid var(--border-color); height: 35px; box-sizing: border-box; display: flex; justify-content: space-between; font-size: 13px;">
+                    <div>Vol. {{ volume | default("CXIV") }} No. {{ edition | default("27") }}</div>
+                    <div>{{ publication_date }}</div>
+                    <div>{{ location | default("Global Edition") }}</div>
+                    <div>Printed in {{ language_name | default("English") }}</div>
+                </div>
             </div>
 
-            <!-- Newspaper Info Bar -->
-            <div class="metadata-bar">
-                <div>Vol. {{ volume | default("CXIV") }} No. {{ edition | default("27") }}</div>
-                <div>{{ publication_date }}</div>
-                <div>{{ location | default("Global Edition") }}</div>
-                <div>Printed in {{ language_name | default("English") }}</div>
-            </div>
-
-            <!-- Main Headline & Subtitle -->
-            <h2 class="headline">{{ headline }}</h2>
-            <h3 class="subtitle">{{ subheadline }}</h3>
-            
-            <div class="article-meta">
-                {% if byline %}By <span>{{ byline }}</span> | {% endif %}{{ dateline }}
+            <!-- Fixed Headline Section: 120px -->
+            <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box; text-align: center;">
+                <h2 class="headline" style="font-size: 40px; margin: 0 0 5px 0; line-height: 1.1;">{{ headline }}</h2>
+                <h3 class="subtitle" style="font-size: 18px; margin: 0 0 5px 0; font-style: italic;">{{ subheadline }}</h3>
+                <div class="article-meta" style="margin: 0; font-size: 13px;">
+                    {% if byline %}By <span>{{ byline }}</span> | {% endif %}{{ dateline }}
+                </div>
             </div>
 
             <div id="compositor-canvas"></div>
 
             <!-- Footer -->
-            <div class="footer" style="white-space: normal; word-wrap: break-word; text-align: center;">
+            <div class="footer" style="white-space: normal; word-wrap: break-word; text-align: center; border-top: 2px solid var(--border-color); margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between; font-family: 'Playfair Display', sans-serif; font-size: 12px; font-weight: bold; color: #666;">
                 <div>Page 1</div>
                 <div>{{ publication_name }}</div>
             </div>
