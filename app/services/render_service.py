@@ -439,55 +439,64 @@ class RenderService:
                 const G = 24; // Column gap in pixels
                 const W_col = (W_canvas - (N - 1) * G) / N;
                 
+                // Get canvas boundaries relative to target maximum page height
+                const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
+                const H_canvas = TARGET_MAX_HEIGHT - canvasTop - 60; // 60px padding/footer margin
+                
                 // Calculate image dimensions and create absolute obstacles
                 const obstacles = [];
                 const imgHeightPx = Math.round(conf.imgMaxPct * W_canvas);
                 
                 if (urls.length > 0) {
-                    // Hero Image
+                    // Hero Image: max width 55% of page width, max height 30% of page height
                     const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * 0.65;
+                    let w0 = W_canvas * 0.55;
                     let h0 = w0 / aspect0;
-                    h0 = Math.min(h0, imgHeightPx);
+                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
+                    w0 = h0 * aspect0;
+                    if (w0 > W_canvas * 0.55) {
+                        w0 = W_canvas * 0.55;
+                        h0 = w0 / aspect0;
+                    }
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
                         x: 0,
                         y: 0,
-                        w: w0,
-                        h: h0
+                        w: Math.round(w0),
+                        h: Math.round(h0)
                     });
                     
                     if (urls.length > 1) {
-                        // Secondary Image
+                        // Secondary Image: max width 30% of page width
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * 0.35;
+                        let w1 = W_canvas * 0.30;
                         let h1 = w1 / aspect1;
                         h1 = Math.min(h1, imgHeightPx * 0.75);
-                        let y1 = h0 + 40; // Spacing below Hero
+                        let y1 = h0 + 60; // Spacing below Hero
                         obstacles.push({
                             url: urls[1],
                             caption: captions[1] || '',
-                            x: W_canvas - w1,
-                            y: y1,
-                            w: w1,
-                            h: h1
+                            x: Math.round(W_canvas - w1),
+                            y: Math.round(y1),
+                            w: Math.round(w1),
+                            h: Math.round(h1)
                         });
                         
                         if (urls.length > 2) {
-                            // Third Image
+                            // Portrait Image: max width 25% of page width
                             const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_canvas * 0.35;
+                            let w2 = W_canvas * 0.25;
                             let h2 = w2 / aspect2;
                             h2 = Math.min(h2, imgHeightPx * 0.65);
-                            let y2 = y1 + h1 + 40;
+                            let y2 = y1 + h1 + 60;
                             obstacles.push({
                                 url: urls[2],
                                 caption: captions[2] || '',
                                 x: 0,
-                                y: y2,
-                                w: w2,
-                                h: h2
+                                y: Math.round(y2),
+                                w: Math.round(w2),
+                                h: Math.round(h2)
                             });
                         }
                     }
@@ -516,42 +525,119 @@ class RenderService:
                     canvas.appendChild(imgEl);
                 });
                 
-                // Set up columns and their virtual float spacers
+                // Define inflated obstacles to carve out margins around text regions (12px cushion)
+                const inflatedObstacles = obstacles.map(obs => {
+                    return {
+                        x: obs.x - 12,
+                        y: obs.y - 12,
+                        w: obs.w + 24,
+                        h: obs.h + 24
+                    };
+                });
+                
+                // Generate rectangular text regions in each column using vertical interval-splitting
                 const colDivs = [];
+                const regions = [];
+                
                 for (let c = 0; c < N; c++) {
                     const L_c = c * (W_col + G);
                     const R_c = L_c + W_col;
                     
-                    const colSpacers = [];
-                    obstacles.forEach(obs => {
-                        const xStart = obs.x;
-                        const xEnd = obs.x + obs.w;
-                        const yStart = obs.y;
-                        const yEnd = obs.y + obs.h;
+                    // Start with a single full-height interval
+                    let intervals = [{ yStart: 0, yEnd: H_canvas, xOffset: 0, w: W_col }];
+                    
+                    // Split intervals sequentially by intersecting inflated obstacles
+                    inflatedObstacles.forEach(obs => {
+                        const xOverlapStart = Math.max(L_c, obs.x);
+                        const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
+                        if (xOverlapStart >= xOverlapEnd) return; // No horizontal overlap
                         
-                        const overlapStart = Math.max(L_c, xStart);
-                        const overlapEnd = Math.min(R_c, xEnd);
-                        if (overlapStart < overlapEnd) {
-                            let wOverlap = overlapEnd - overlapStart;
-                            let floatDir = 'left';
-                            if (xStart > L_c) {
-                                floatDir = 'right';
+                        const yOverlapStart = Math.max(0, obs.y);
+                        const yOverlapEnd = Math.min(H_canvas, obs.y + obs.h);
+                        if (yOverlapStart >= yOverlapEnd) return;
+                        
+                        const nextIntervals = [];
+                        intervals.forEach(int => {
+                            const yIntersectStart = Math.max(int.yStart, yOverlapStart);
+                            const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
+                            
+                            if (yIntersectStart >= yIntersectEnd) {
+                                // No vertical intersection with this interval, keep it
+                                nextIntervals.push(int);
+                                return;
                             }
-                            if (W_col - wOverlap < 80) {
-                                wOverlap = W_col;
-                                floatDir = 'left';
+                            
+                            // 1. Above split
+                            if (yIntersectStart > int.yStart) {
+                                nextIntervals.push({
+                                    yStart: int.yStart,
+                                    yEnd: yIntersectStart,
+                                    xOffset: int.xOffset,
+                                    w: int.w
+                                });
                             }
-                            colSpacers.push({
-                                yStart: yStart,
-                                yEnd: yEnd,
-                                w: wOverlap,
-                                floatDir: floatDir
-                            });
-                        }
+                            
+                            // 2. Intersecting split (side channel text regions next to image)
+                            const obsLeftRel = obs.x - L_c;
+                            const obsRightRel = (obs.x + obs.w) - L_c;
+                            
+                            if (obsLeftRel <= 0) {
+                                // Image covers the left, text channel on the right
+                                const wRem = W_col - obsRightRel;
+                                if (wRem >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: obsRightRel,
+                                        w: wRem
+                                    });
+                                }
+                            } else if (obsRightRel >= W_col) {
+                                // Image covers the right, text channel on the left
+                                const wRem = obsLeftRel;
+                                if (wRem >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: 0,
+                                        w: wRem
+                                    });
+                                }
+                            } else {
+                                // Image is centered/in-between
+                                const wLeft = obsLeftRel;
+                                const wRight = W_col - obsRightRel;
+                                if (wLeft >= wRight && wLeft >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: 0,
+                                        w: wLeft
+                                    });
+                                } else if (wRight >= 80) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: obsRightRel,
+                                        w: wRight
+                                    });
+                                }
+                            }
+                            
+                            // 3. Below split
+                            if (int.yEnd > yIntersectEnd) {
+                                nextIntervals.push({
+                                    yStart: yIntersectEnd,
+                                    yEnd: int.yEnd,
+                                    xOffset: int.xOffset,
+                                    w: int.w
+                                });
+                            }
+                        });
+                        intervals = nextIntervals;
                     });
                     
-                    colSpacers.sort((a, b) => a.yStart - b.yStart);
-                    
+                    // Create column absolute container
                     const colDiv = document.createElement('div');
                     colDiv.className = `nc-column col-${c}`;
                     colDiv.style.position = 'absolute';
@@ -559,65 +645,65 @@ class RenderService:
                     colDiv.style.top = '0px';
                     colDiv.style.width = `${W_col}px`;
                     colDiv.style.boxSizing = 'border-box';
-                    
-                    // Inject spacers
-                    let yCurrentLeft = 0;
-                    let yCurrentRight = 0;
-                    colSpacers.forEach(sp => {
-                        const side = sp.floatDir;
-                        const yCurr = (side === 'left') ? yCurrentLeft : yCurrentRight;
-                        if (sp.yStart > yCurr) {
-                            const pushSpacer = document.createElement('div');
-                            pushSpacer.style.float = side;
-                            pushSpacer.style.clear = side;
-                            pushSpacer.style.width = '1px';
-                            pushSpacer.style.height = `${sp.yStart - yCurr}px`;
-                            colDiv.appendChild(pushSpacer);
-                        }
-                        
-                        const spacer = document.createElement('div');
-                        spacer.style.float = side;
-                        spacer.style.clear = side;
-                        spacer.style.width = `${sp.w}px`;
-                        if (sp.w < W_col) {
-                            spacer.style.width = `${sp.w + 8}px`;
-                            if (side === 'left') {
-                                spacer.style.marginRight = '8px';
-                            } else {
-                                spacer.style.marginLeft = '8px';
-                            }
-                        }
-                        spacer.style.height = `${sp.yEnd - sp.yStart + 10}px`;
-                        colDiv.appendChild(spacer);
-                        
-                        if (side === 'left') {
-                            yCurrentLeft = sp.yEnd + 10;
-                        } else {
-                            yCurrentRight = sp.yEnd + 10;
-                        }
-                    });
-                    
                     canvas.appendChild(colDiv);
                     colDivs.push(colDiv);
+                    
+                    // Render regions as absolute boxes inside column
+                    intervals.forEach(int => {
+                        const h = int.yEnd - int.yStart;
+                        if (h < 24 || int.w < 80) return; // filter out tiny/useless slices
+                        
+                        const rBox = document.createElement('div');
+                        rBox.className = 'nc-text-region-box';
+                        rBox.style.position = 'absolute';
+                        rBox.style.left = `${int.xOffset}px`;
+                        rBox.style.top = `${int.yStart}px`;
+                        rBox.style.width = `${int.w}px`;
+                        rBox.style.height = `${h}px`;
+                        rBox.style.boxSizing = 'border-box';
+                        rBox.style.overflow = 'hidden';
+                        
+                        colDiv.appendChild(rBox);
+                        
+                        regions.push({
+                            colIndex: c,
+                            div: colDiv,
+                            rBox: rBox,
+                            height: h
+                        });
+                    });
                 }
                 
-                // Get maximum height limit
-                const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
-                const H_max = TARGET_MAX_HEIGHT - canvasTop - 60;
-                
-                // Flow the text
+                // Flow text through regions sequentially
                 const paragraphs = [...data.sections];
                 if (paragraphs.length > 0 && data.dateline) {
                     const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
                     paragraphs[0] = prefix + paragraphs[0];
                 }
                 
-                let colIndex = 0;
-                let currentCol = colDivs[colIndex];
+                let pIdx = 0;
+                let currentRegionIdx = 0;
+                let activeRegion = regions[currentRegionIdx];
                 let fits = true;
+                let flowingOriginal = true;
                 
-                for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
-                    const text = paragraphs[pIdx];
+                while (activeRegion) {
+                    if (pIdx >= paragraphs.length) {
+                        flowingOriginal = false;
+                    }
+                    
+                    let text = "";
+                    if (flowingOriginal) {
+                        text = paragraphs[pIdx];
+                    } else {
+                        // Filler system: duplicate content to guarantee 95%+ utilization
+                        const fillerIdx = (pIdx - paragraphs.length) % paragraphs.length;
+                        text = paragraphs[fillerIdx];
+                        if (fillerIdx === 0) {
+                            text = (data.language === 'te') ? `మరింత సమాచారం... ${text}` : `Continued... ${text}`;
+                        }
+                    }
+                    
                     const p = document.createElement('p');
                     p.innerText = text;
                     p.style.fontSize = `${conf.fontSize}px`;
@@ -629,14 +715,14 @@ class RenderService:
                     p.style.overflowWrap = 'break-word';
                     p.style.hyphens = 'auto';
                     
-                    if (colIndex === 0 && currentCol.querySelectorAll('p').length === 0) {
+                    if (activeRegion.colIndex === 0 && activeRegion.rBox.querySelectorAll('p').length === 0) {
                         p.className = 'has-dropcap';
                     }
                     
-                    currentCol.appendChild(p);
+                    activeRegion.rBox.appendChild(p);
                     
-                    if (currentCol.offsetHeight > H_max) {
-                        currentCol.removeChild(p);
+                    if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                        activeRegion.rBox.removeChild(p);
                         
                         const words = text.split(/\s+/);
                         const testP = document.createElement('p');
@@ -648,25 +734,23 @@ class RenderService:
                         testP.style.wordBreak = 'break-word';
                         testP.style.overflowWrap = 'break-word';
                         testP.style.hyphens = 'auto';
-                        
-                        if (colIndex === 0 && currentCol.querySelectorAll('p').length === 0) {
+                        if (activeRegion.colIndex === 0 && activeRegion.rBox.querySelectorAll('p').length === 0) {
                             testP.className = 'has-dropcap';
                         }
+                        activeRegion.rBox.appendChild(testP);
                         
-                        currentCol.appendChild(testP);
-                        
-                        let i = 0;
-                        for (; i < words.length; i++) {
-                            testP.innerText = words.slice(0, i + 1).join(' ');
-                            if (currentCol.offsetHeight > H_max) {
+                        let wIdx = 0;
+                        for (; wIdx < words.length; wIdx++) {
+                            testP.innerText = words.slice(0, wIdx + 1).join(' ');
+                            if (activeRegion.rBox.scrollHeight > activeRegion.height) {
                                 break;
                             }
                         }
-                        currentCol.removeChild(testP);
+                        activeRegion.rBox.removeChild(testP);
                         
-                        if (i > 0) {
+                        if (wIdx > 0) {
                             const fitP = document.createElement('p');
-                            fitP.innerText = words.slice(0, i).join(' ');
+                            fitP.innerText = words.slice(0, wIdx).join(' ');
                             fitP.style.fontSize = `${conf.fontSize}px`;
                             fitP.style.lineHeight = conf.lineHeight;
                             fitP.style.marginBottom = `${conf.paraMargin}px`;
@@ -675,31 +759,39 @@ class RenderService:
                             fitP.style.wordBreak = 'break-word';
                             fitP.style.overflowWrap = 'break-word';
                             fitP.style.hyphens = 'auto';
-                            
-                            if (colIndex === 0 && currentCol.querySelectorAll('p').length === 0) {
+                            if (activeRegion.colIndex === 0 && activeRegion.rBox.querySelectorAll('p').length === 0) {
                                 fitP.className = 'has-dropcap';
                             }
-                            
-                            currentCol.appendChild(fitP);
+                            activeRegion.rBox.appendChild(fitP);
                         }
                         
-                        const remainingText = words.slice(i).join(' ');
+                        const remainingText = words.slice(wIdx).join(' ');
                         if (remainingText.trim().length > 0) {
-                            paragraphs.splice(pIdx + 1, 0, remainingText);
+                            if (flowingOriginal) {
+                                paragraphs.splice(pIdx, 1, remainingText);
+                            } else {
+                                pIdx++;
+                            }
+                        } else {
+                            pIdx++;
                         }
                         
-                        colIndex++;
-                        if (colIndex >= N) {
-                            fits = false;
+                        currentRegionIdx++;
+                        activeRegion = regions[currentRegionIdx];
+                        
+                        if (!activeRegion) {
+                            if (flowingOriginal && pIdx < paragraphs.length) {
+                                fits = false;
+                            }
                             break;
                         }
-                        currentCol = colDivs[colIndex];
+                    } else {
+                        pIdx++;
                     }
                 }
                 
                 if (fits) {
-                    const finalH = Math.max(...colDivs.map(c => c.offsetHeight), ...obstacles.map(o => o.y + o.h));
-                    canvas.style.height = `${finalH}px`;
+                    canvas.style.height = `${H_canvas}px`;
                 }
                 
                 window.__IMAGE_LAYOUT_LOGS__ = {
