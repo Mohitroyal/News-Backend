@@ -838,6 +838,7 @@ class RenderService:
                         exportFallbackContainer.appendChild(wrapper);
                     }
                 }
+                }
 
                 console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' baseImgH=' + imgHeightPx + ' layoutImgH=' + layoutImgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
                 return layoutImgHeightPx;
