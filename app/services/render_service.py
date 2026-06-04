@@ -710,21 +710,13 @@ class RenderService:
                 let currentRegionIdx = 0;
                 let activeRegion = regions[currentRegionIdx];
                 let fits = true;
-                let flowingOriginal = true;
-                let fillerRemainder = "";
                 
                 while (activeRegion) {
                     if (pIdx >= paragraphs.length) {
-                        flowingOriginal = false;
+                        break;
                     }
                     
-                    let text = "";
-                    if (flowingOriginal) {
-                        text = paragraphs[pIdx];
-                    } else {
-                        // Filler system: duplicate content to guarantee 95%+ utilization
-                        text = fillerRemainder || originalParagraphs[(pIdx - originalParagraphs.length) % originalParagraphs.length];
-                    }
+                    let text = paragraphs[pIdx];
                     
                     const p = document.createElement('p');
                     p.innerText = text;
@@ -779,15 +771,8 @@ class RenderService:
                         
                         const remainingText = words.slice(wIdx).join(' ');
                         if (remainingText.trim().length > 0) {
-                            if (flowingOriginal) {
-                                paragraphs.splice(pIdx, 1, remainingText);
-                            } else {
-                                fillerRemainder = remainingText;
-                            }
+                            paragraphs.splice(pIdx, 1, remainingText);
                         } else {
-                            if (!flowingOriginal) {
-                                fillerRemainder = "";
-                            }
                             pIdx++;
                         }
                         
@@ -795,7 +780,7 @@ class RenderService:
                         activeRegion = regions[currentRegionIdx];
                         
                         if (!activeRegion) {
-                            if (flowingOriginal && pIdx < paragraphs.length) {
+                            if (pIdx < paragraphs.length) {
                                 fits = false;
                             }
                             break;
@@ -806,7 +791,16 @@ class RenderService:
                 }
                 
                 if (fits) {
-                    canvas.style.height = `${H_canvas}px`;
+                    let maxY = 0;
+                    for (const r of regions) {
+                        const contentBottom = r.y + r.rBox.scrollHeight;
+                        if (contentBottom > maxY) maxY = contentBottom;
+                    }
+                    for (const img of obstacles) {
+                        const imgBottom = img.y + img.h;
+                        if (imgBottom > maxY) maxY = imgBottom;
+                    }
+                    canvas.style.height = `${Math.max(maxY + 40, 150)}px`;
                 }
                 
                 window.__IMAGE_LAYOUT_LOGS__ = {
