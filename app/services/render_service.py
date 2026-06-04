@@ -696,6 +696,7 @@ class RenderService:
                 
                 // Flow text through regions sequentially
                 const paragraphs = [...data.sections];
+                const originalParagraphs = [...data.sections];
                 if (paragraphs.length > 0 && data.dateline) {
                     const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
                     paragraphs[0] = prefix + paragraphs[0];
@@ -706,6 +707,7 @@ class RenderService:
                 let activeRegion = regions[currentRegionIdx];
                 let fits = true;
                 let flowingOriginal = true;
+                let fillerRemainder = "";
                 
                 while (activeRegion) {
                     if (pIdx >= paragraphs.length) {
@@ -717,8 +719,7 @@ class RenderService:
                         text = paragraphs[pIdx];
                     } else {
                         // Filler system: duplicate content to guarantee 95%+ utilization
-                        const fillerIdx = (pIdx - paragraphs.length) % paragraphs.length;
-                        text = paragraphs[fillerIdx];
+                        text = fillerRemainder || originalParagraphs[(pIdx - originalParagraphs.length) % originalParagraphs.length];
                     }
                     
                     const p = document.createElement('p');
@@ -777,9 +778,12 @@ class RenderService:
                             if (flowingOriginal) {
                                 paragraphs.splice(pIdx, 1, remainingText);
                             } else {
-                                pIdx++;
+                                fillerRemainder = remainingText;
                             }
                         } else {
+                            if (!flowingOriginal) {
+                                fillerRemainder = "";
+                            }
                             pIdx++;
                         }
                         
