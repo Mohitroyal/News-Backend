@@ -29,14 +29,10 @@
             </div>
         </div>
 
-        <!-- ZONE 2: Metadata Zone (Height: 30px) -->
-        <div class="metadata-zone" style="height: 30px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; padding: 0 10px; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px;">
-            <div class="meta-item-left" style="display: flex; align-items: center;">
-                <span>{{ publication_name }} • {{ publication_date }}</span>
-            </div>
-            <div class="meta-item-right" style="display: flex; align-items: center;">
-                <span>WANTED REPORTERS: 7668886666</span>
-            </div>
+        <!-- ZONE 2: Metadata Zone -->
+        <div class="metadata-zone" style="width: 100%; height: auto; padding: 5px 0; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;">
+            <span>{{ publication_name }} - {{ publication_date }}</span>
+            <span>WANTED REPORTERS: 7668886666</span>
         </div>
 
         <!-- ZONE 3: Headline Zone (Height: Auto, Min-height: 120px) -->
