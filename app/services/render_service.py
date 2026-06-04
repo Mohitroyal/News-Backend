@@ -604,7 +604,7 @@ class RenderService:
                             if (obsLeftRel <= 0) {
                                 // Image covers the left, text channel on the right
                                 const wRem = W_col - obsRightRel;
-                                if (wRem >= 80) {
+                                if (wRem >= 40) {
                                     nextIntervals.push({
                                         yStart: yIntersectStart,
                                         yEnd: yIntersectEnd,
@@ -615,7 +615,7 @@ class RenderService:
                             } else if (obsRightRel >= W_col) {
                                 // Image covers the right, text channel on the left
                                 const wRem = obsLeftRel;
-                                if (wRem >= 80) {
+                                if (wRem >= 40) {
                                     nextIntervals.push({
                                         yStart: yIntersectStart,
                                         yEnd: yIntersectEnd,
@@ -627,14 +627,14 @@ class RenderService:
                                 // Image is centered/in-between
                                 const wLeft = obsLeftRel;
                                 const wRight = W_col - obsRightRel;
-                                if (wLeft >= wRight && wLeft >= 80) {
+                                if (wLeft >= wRight && wLeft >= 40) {
                                     nextIntervals.push({
                                         yStart: yIntersectStart,
                                         yEnd: yIntersectEnd,
                                         xOffset: 0,
                                         w: wLeft
                                     });
-                                } else if (wRight >= 80) {
+                                } else if (wRight >= 40) {
                                     nextIntervals.push({
                                         yStart: yIntersectStart,
                                         yEnd: yIntersectEnd,
@@ -671,7 +671,7 @@ class RenderService:
                     // Render regions as absolute boxes inside column
                     intervals.forEach(int => {
                         const h = int.yEnd - int.yStart;
-                        if (h < 24 || int.w < 80) return; // filter out tiny/useless slices
+                        if (h < 24 || int.w < 40) return; // filter out tiny/useless slices
                         
                         const rBox = document.createElement('div');
                         rBox.className = 'nc-text-region-box';
