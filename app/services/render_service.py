@@ -345,8 +345,8 @@ class RenderService:
         
         document.addEventListener("DOMContentLoaded", async () => {
             // Global layout constants visible to all nested functions
-            // Dynamic base height depending on content, caps at 1500
-            let TARGET_MAX_HEIGHT = 1500;
+            // Global layout constants visible to all nested functions
+            const TARGET_MAX_HEIGHT = 1500;
 
             try {
                 const dataEl = document.getElementById('newspaper-data');
@@ -367,8 +367,7 @@ class RenderService:
             if (!container) return;
 
             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
-            TARGET_MAX_HEIGHT = Math.min(1500, Math.max(500, totalChars * 0.6)); // Image sizes depend on content
-            
+
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
             // Compression configurations: from spacious to compact
@@ -466,7 +465,7 @@ class RenderService:
                 
                 // Calculate image dimensions and create absolute obstacles
                 const obstacles = [];
-                const imgHeightPx = Math.min(Math.round(conf.imgMaxPct * W_canvas), TARGET_MAX_HEIGHT * 0.4);
+                const imgHeightPx = Math.min(Math.round(conf.imgMaxPct * W_canvas), Math.max(150, totalChars * 0.4));
                 
                 if (urls.length > 0) {
                     // Hero Image: max width 55% of page width, max height 30% of page height
