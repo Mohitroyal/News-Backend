@@ -695,8 +695,12 @@ class RenderService:
                 }
                 
                 // Flow text through regions sequentially
-                const paragraphs = [...data.sections];
-                const originalParagraphs = [...data.sections];
+                let rawSections = [];
+                for (const sec of data.sections) {
+                    rawSections.push(...sec.split(/\n+/).filter(p => p.trim() !== ''));
+                }
+                const paragraphs = [...rawSections];
+                const originalParagraphs = [...rawSections];
                 if (paragraphs.length > 0 && data.dateline) {
                     const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
                     paragraphs[0] = prefix + paragraphs[0];
