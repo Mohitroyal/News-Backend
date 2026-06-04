@@ -184,7 +184,7 @@ class RenderService:
         # ── Per-language primary font for logging ─────────────────────────────
         _lang_font_map = {
             "en": ("Playfair Display / Merriweather", "Latin + full Unicode"),
-            "te": ("Noto Serif Telugu + Noto Sans Telugu", "Telugu Unicode block U+0C00–U+0C7F"),
+            "te": ("Gautami Bold + Gautami", "Telugu Unicode block U+0C00-U+0C7F"),
             "hi": ("Noto Serif Devanagari + Noto Sans Devanagari", "Devanagari U+0900–U+097F"),
             "mr": ("Noto Serif Devanagari + Noto Sans Devanagari", "Devanagari U+0900–U+097F"),
             "kn": ("Noto Serif Kannada + Noto Sans Kannada", "Kannada U+0C80–U+0CFF"),
@@ -242,7 +242,7 @@ class RenderService:
         elif lang_code == "ml":
             indic_font_override = "'Noto Serif Malayalam', 'Noto Sans Malayalam'"
         elif lang_code == "te":
-            indic_font_override = "'Noto Serif Telugu', 'Noto Sans Telugu'"
+            indic_font_override = "'Gautami Bold', 'Gautami', 'Noto Serif Telugu', 'Noto Sans Telugu'"
         elif lang_code == "ta":
             indic_font_override = "'Noto Serif Tamil', 'Noto Sans Tamil'"
         elif lang_code == "bn":
