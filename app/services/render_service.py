@@ -532,17 +532,24 @@ class RenderService:
                     imgEl.style.left = `${obs.x}px`;
                     imgEl.style.top = `${obs.y}px`;
                     imgEl.style.width = `${obs.w}px`;
-                    imgEl.style.height = `${obs.h}px`;
+                    imgEl.style.height = 'auto'; // Adjust border dynamically to content height
                     imgEl.style.boxSizing = 'border-box';
                     imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
                     imgEl.style.padding = '4px';
                     imgEl.style.background = '#fff';
                     imgEl.style.zIndex = '5';
                     
-                    const imgH = obs.h - (obs.caption ? 24 : 8);
+                    let captionHeight = 0;
+                    if (obs.caption) {
+                        const charsPerLine = Math.max(1, Math.floor(obs.w / 6.5));
+                        const lines = Math.ceil(obs.caption.length / charsPerLine);
+                        captionHeight = lines * 15;
+                    }
+                    const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
+                    
                     imgEl.innerHTML = `
                         <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
-                        ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 14px; line-height: 14px;">${obs.caption}</div>` : ''}
+                        ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
                     `;
                     canvas.appendChild(imgEl);
                 });
@@ -838,48 +845,8 @@ class RenderService:
 
                 for (let i = 0; i < configs.length; i++) {
                     const conf = configs[i];
-                    container.style.padding = conf.padding + 'px';
-                    
-                    const innerBorder = container.querySelector('.inner-border');
-                    if (innerBorder) {
-                        innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
-                    }
-
-                    const headline = container.querySelector('.headline');
-                    if (headline) {
-                        let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
-                        headline.style.fontSize = hlSize + 'px';
-                        headline.style.lineHeight = '1.1';
-                        let count = 0;
-                        while (hlSize > 20 && count < 20) {
-                            const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
-                            const lines = Math.round(headline.offsetHeight / lh);
-                            if (lines <= 2) {
-                                break;
-                            }
-                            hlSize -= 2;
-                            headline.style.fontSize = hlSize + 'px';
-                            count++;
-                        }
-                    }
-
-                    const subheadline = container.querySelector('.subheadline, .subtitle');
-                    if (subheadline) {
-                        let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
-                        subheadline.style.fontSize = subSize + 'px';
-                        subheadline.style.lineHeight = '1.3';
-                        let count = 0;
-                        while (subSize > 12 && count < 10) {
-                            const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
-                            const lines = Math.round(subheadline.offsetHeight / lh);
-                            if (lines <= 2) {
-                                break;
-                            }
-                            subSize -= 1.5;
-                            subheadline.style.fontSize = subSize + 'px';
-                            count++;
-                        }
-                    }
+                    // Removed overrides for padding, headline, and subheadline
+                    // to respect the templates' built-in styles ("formats and paddings")
 
                     let dcStyle = document.getElementById('nc-dropcap-style');
                     if (!dcStyle) {
