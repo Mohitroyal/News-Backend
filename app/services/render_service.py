@@ -802,7 +802,11 @@ class RenderService:
                 
                 let maxY = 0;
                 for (const r of regions) {
-                    const contentBottom = r.y + r.rBox.scrollHeight;
+                    let contentH = 0;
+                    if (r.rBox.lastElementChild) {
+                        contentH = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight;
+                    }
+                    const contentBottom = r.y + contentH;
                     if (contentBottom > maxY) maxY = contentBottom;
                 }
                 for (const img of obstacles) {
