@@ -485,7 +485,7 @@ class RenderService:
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
-                        x: Math.round(W_canvas - w0), // Align top-right
+                        x: urls.length === 1 ? Math.round((W_canvas - w0) / 2) : Math.round(W_canvas - w0), // Align center if 1 image, else top-right
                         y: 0,
                         w: Math.round(w0),
                         h: Math.round(h0)
