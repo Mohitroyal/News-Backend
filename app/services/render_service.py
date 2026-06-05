@@ -565,245 +565,249 @@ class RenderService:
                         h: obs.h + 24
                     };
                 });
-                
-                // Generate rectangular text regions in each column using vertical interval-splitting
-                const colDivs = [];
-                const regions = [];
-                
-                for (let c = 0; c < N; c++) {
-                    const L_c = c * (W_col + G);
-                    const R_c = L_c + W_col;
+
+                // Function to test layout with a specific canvas height
+                function testFlow(testH) {
+                    canvas.querySelectorAll('.nc-column').forEach(el => el.remove());
                     
-                    // Start with a single full-height interval
-                    let intervals = [{ yStart: 0, yEnd: H_canvas, xOffset: 0, w: W_col }];
+                    const colDivs = [];
+                    const regions = [];
                     
-                    // Split intervals sequentially by intersecting inflated obstacles
-                    inflatedObstacles.forEach(obs => {
-                        const xOverlapStart = Math.max(L_c, obs.x);
-                        const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
-                        if (xOverlapStart >= xOverlapEnd) return; // No horizontal overlap
+                    for (let c = 0; c < N; c++) {
+                        const L_c = c * (W_col + G);
+                        const R_c = L_c + W_col;
                         
-                        const yOverlapStart = Math.max(0, obs.y);
-                        const yOverlapEnd = Math.min(H_canvas, obs.y + obs.h);
-                        if (yOverlapStart >= yOverlapEnd) return;
+                        let intervals = [{ yStart: 0, yEnd: testH, xOffset: 0, w: W_col }];
                         
-                        const nextIntervals = [];
+                        inflatedObstacles.forEach(obs => {
+                            const xOverlapStart = Math.max(L_c, obs.x);
+                            const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
+                            if (xOverlapStart >= xOverlapEnd) return;
+                            
+                            const yOverlapStart = Math.max(0, obs.y);
+                            const yOverlapEnd = Math.min(testH, obs.y + obs.h);
+                            if (yOverlapStart >= yOverlapEnd) return;
+                            
+                            const nextIntervals = [];
+                            intervals.forEach(int => {
+                                const yIntersectStart = Math.max(int.yStart, yOverlapStart);
+                                const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
+                                
+                                if (yIntersectStart >= yIntersectEnd) {
+                                    nextIntervals.push(int);
+                                    return;
+                                }
+                                
+                                if (int.yStart < yIntersectStart) {
+                                    nextIntervals.push({
+                                        yStart: int.yStart,
+                                        yEnd: yIntersectStart,
+                                        xOffset: int.xOffset,
+                                        w: int.w
+                                    });
+                                }
+                                
+                                const obsLeftRel = obs.x - L_c;
+                                const obsRightRel = obs.x + obs.w - L_c;
+                                
+                                if (obsLeftRel <= 0) {
+                                    if (obsRightRel >= W_col) {
+                                        // Covers width
+                                    } else {
+                                        const wRem = W_col - obsRightRel;
+                                        if (wRem >= 40) {
+                                            nextIntervals.push({
+                                                yStart: yIntersectStart,
+                                                yEnd: yIntersectEnd,
+                                                xOffset: obsRightRel,
+                                                w: wRem
+                                            });
+                                        }
+                                    }
+                                } else if (obsRightRel >= W_col) {
+                                    const wRem = obsLeftRel;
+                                    if (wRem >= 40) {
+                                        nextIntervals.push({
+                                            yStart: yIntersectStart,
+                                            yEnd: yIntersectEnd,
+                                            xOffset: 0,
+                                            w: wRem
+                                        });
+                                    }
+                                }
+                                
+                                if (int.yEnd > yIntersectEnd) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectEnd,
+                                        yEnd: int.yEnd,
+                                        xOffset: int.xOffset,
+                                        w: int.w
+                                    });
+                                }
+                            });
+                            intervals = nextIntervals;
+                        });
+                        
+                        const colDiv = document.createElement('div');
+                        colDiv.className = `nc-column col-${c}`;
+                        colDiv.style.position = 'absolute';
+                        colDiv.style.left = `${L_c}px`;
+                        colDiv.style.top = '0px';
+                        colDiv.style.width = `${W_col}px`;
+                        colDiv.style.boxSizing = 'border-box';
+                        canvas.appendChild(colDiv);
+                        colDivs.push(colDiv);
+                        
                         intervals.forEach(int => {
-                            const yIntersectStart = Math.max(int.yStart, yOverlapStart);
-                            const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
+                            const h = int.yEnd - int.yStart;
+                            if (h < 24 || int.w < 40) return;
                             
-                            if (yIntersectStart >= yIntersectEnd) {
-                                // No vertical intersection with this interval, keep it
-                                nextIntervals.push(int);
-                                return;
-                            }
+                            const rBox = document.createElement('div');
+                            rBox.className = 'nc-text-region-box';
+                            rBox.style.position = 'absolute';
+                            rBox.style.left = `${int.xOffset}px`;
+                            rBox.style.top = `${int.yStart}px`;
+                            rBox.style.width = `${int.w}px`;
+                            rBox.style.height = `${h}px`;
+                            rBox.style.boxSizing = 'border-box';
+                            rBox.style.overflow = 'hidden';
                             
-                            // 1. Above split
-                            if (yIntersectStart > int.yStart) {
-                                nextIntervals.push({
-                                    yStart: int.yStart,
-                                    yEnd: yIntersectStart,
-                                    xOffset: int.xOffset,
-                                    w: int.w
-                                });
-                            }
+                            colDiv.appendChild(rBox);
                             
-                            // 2. Intersecting split (side channel text regions next to image)
-                            const obsLeftRel = obs.x - L_c;
-                            const obsRightRel = (obs.x + obs.w) - L_c;
-                            
-                            if (obsLeftRel <= 0) {
-                                // Image covers the left, text channel on the right
-                                const wRem = W_col - obsRightRel;
-                                if (wRem >= 40) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: obsRightRel,
-                                        w: wRem
-                                    });
-                                }
-                            } else if (obsRightRel >= W_col) {
-                                // Image covers the right, text channel on the left
-                                const wRem = obsLeftRel;
-                                if (wRem >= 40) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: 0,
-                                        w: wRem
-                                    });
-                                }
-                            } else {
-                                // Image is centered/in-between
-                                const wLeft = obsLeftRel;
-                                const wRight = W_col - obsRightRel;
-                                if (wLeft >= wRight && wLeft >= 40) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: 0,
-                                        w: wLeft
-                                    });
-                                } else if (wRight >= 40) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: obsRightRel,
-                                        w: wRight
-                                    });
-                                }
-                            }
-                            
-                            // 3. Below split
-                            if (int.yEnd > yIntersectEnd) {
-                                nextIntervals.push({
-                                    yStart: yIntersectEnd,
-                                    yEnd: int.yEnd,
-                                    xOffset: int.xOffset,
-                                    w: int.w
-                                });
-                            }
+                            regions.push({
+                                colIndex: c,
+                                div: colDiv,
+                                rBox: rBox,
+                                height: h,
+                                y: int.yStart
+                            });
                         });
-                        intervals = nextIntervals;
-                    });
-                    
-                    // Create column absolute container
-                    const colDiv = document.createElement('div');
-                    colDiv.className = `nc-column col-${c}`;
-                    colDiv.style.position = 'absolute';
-                    colDiv.style.left = `${L_c}px`;
-                    colDiv.style.top = '0px';
-                    colDiv.style.width = `${W_col}px`;
-                    colDiv.style.boxSizing = 'border-box';
-                    canvas.appendChild(colDiv);
-                    colDivs.push(colDiv);
-                    
-                    // Render regions as absolute boxes inside column
-                    intervals.forEach(int => {
-                        const h = int.yEnd - int.yStart;
-                        if (h < 24 || int.w < 40) return; // filter out tiny/useless slices
-                        
-                        const rBox = document.createElement('div');
-                        rBox.className = 'nc-text-region-box';
-                        rBox.style.position = 'absolute';
-                        rBox.style.left = `${int.xOffset}px`;
-                        rBox.style.top = `${int.yStart}px`;
-                        rBox.style.width = `${int.w}px`;
-                        rBox.style.height = `${h}px`;
-                        rBox.style.boxSizing = 'border-box';
-                        rBox.style.overflow = 'hidden';
-                        
-                        colDiv.appendChild(rBox);
-                        
-                        regions.push({
-                            colIndex: c,
-                            div: colDiv,
-                            rBox: rBox,
-                            height: h,
-                            y: int.yStart
-                        });
-                    });
-                }
-                
-                // Flow text through regions sequentially
-                let rawSections = [];
-                for (const sec of data.sections) {
-                    rawSections.push(...sec.split(/\n+/).filter(p => p.trim() !== ''));
-                }
-                const paragraphs = [...rawSections];
-                const originalParagraphs = [...rawSections];
-                if (paragraphs.length > 0 && data.dateline) {
-                    const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
-                    paragraphs[0] = prefix + paragraphs[0];
-                }
-                
-                let pIdx = 0;
-                let currentRegionIdx = 0;
-                let activeRegion = regions[currentRegionIdx];
-                let fits = true;
-                
-                while (activeRegion) {
-                    if (pIdx >= paragraphs.length) {
-                        break;
                     }
                     
-                    let text = paragraphs[pIdx];
+                    let rawSections = [];
+                    for (const sec of data.sections) {
+                        rawSections.push(...sec.split(/\n+/).filter(p => p.trim() !== ''));
+                    }
+                    const paragraphs = [...rawSections];
+                    if (paragraphs.length > 0 && data.dateline) {
+                        const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
+                        paragraphs[0] = prefix + paragraphs[0];
+                    }
                     
-                    const p = document.createElement('p');
-                    p.innerText = text;
-                    p.style.fontSize = `${conf.fontSize}px`;
-                    p.style.lineHeight = conf.lineHeight;
-                    p.style.marginBottom = `${conf.paraMargin}px`;
-                    p.style.marginTop = '0';
-                    p.style.textAlign = 'justify';
-                    p.style.wordBreak = 'break-word';
-                    p.style.overflowWrap = 'break-word';
-                    p.style.hyphens = 'auto';
+                    let pIdx = 0;
+                    let currentRegionIdx = 0;
+                    let activeRegion = regions[currentRegionIdx];
+                    let testFits = true;
                     
-                    activeRegion.rBox.appendChild(p);
-                    
-                    if (activeRegion.rBox.scrollHeight > activeRegion.height) {
-                        activeRegion.rBox.removeChild(p);
+                    while (activeRegion) {
+                        if (pIdx >= paragraphs.length) break;
                         
-                        const words = text.split(/\s+/);
-                        const testP = document.createElement('p');
-                        testP.style.fontSize = `${conf.fontSize}px`;
-                        testP.style.lineHeight = conf.lineHeight;
-                        testP.style.marginBottom = `${conf.paraMargin}px`;
-                        testP.style.marginTop = '0';
-                        testP.style.textAlign = 'justify';
-                        testP.style.wordBreak = 'break-word';
-                        testP.style.overflowWrap = 'break-word';
-                        testP.style.hyphens = 'auto';
-                        activeRegion.rBox.appendChild(testP);
+                        let text = paragraphs[pIdx];
+                        const p = document.createElement('p');
+                        p.innerText = text;
+                        p.style.fontSize = `${conf.fontSize}px`;
+                        p.style.lineHeight = conf.lineHeight;
+                        p.style.marginBottom = `${conf.paraMargin}px`;
+                        p.style.marginTop = '0';
+                        p.style.textAlign = 'justify';
+                        p.style.wordBreak = 'break-word';
+                        p.style.overflowWrap = 'break-word';
+                        p.style.hyphens = 'auto';
                         
-                        let wIdx = 0;
-                        for (; wIdx < words.length; wIdx++) {
-                            testP.innerText = words.slice(0, wIdx + 1).join(' ');
-                            if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                        activeRegion.rBox.appendChild(p);
+                        
+                        if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                            activeRegion.rBox.removeChild(p);
+                            
+                            const words = text.split(/\s+/);
+                            const testP = document.createElement('p');
+                            testP.style.fontSize = `${conf.fontSize}px`;
+                            testP.style.lineHeight = conf.lineHeight;
+                            testP.style.marginBottom = `${conf.paraMargin}px`;
+                            testP.style.marginTop = '0';
+                            testP.style.textAlign = 'justify';
+                            testP.style.wordBreak = 'break-word';
+                            testP.style.overflowWrap = 'break-word';
+                            testP.style.hyphens = 'auto';
+                            activeRegion.rBox.appendChild(testP);
+                            
+                            let wIdx = 0;
+                            for (; wIdx < words.length; wIdx++) {
+                                testP.innerText = words.slice(0, wIdx + 1).join(' ');
+                                if (activeRegion.rBox.scrollHeight > activeRegion.height) break;
+                            }
+                            activeRegion.rBox.removeChild(testP);
+                            
+                            if (wIdx > 0) {
+                                const fitP = document.createElement('p');
+                                fitP.innerText = words.slice(0, wIdx).join(' ');
+                                fitP.style.fontSize = `${conf.fontSize}px`;
+                                fitP.style.lineHeight = conf.lineHeight;
+                                fitP.style.marginBottom = `${conf.paraMargin}px`;
+                                fitP.style.marginTop = '0';
+                                fitP.style.textAlign = 'justify';
+                                fitP.style.wordBreak = 'break-word';
+                                fitP.style.overflowWrap = 'break-word';
+                                fitP.style.hyphens = 'auto';
+                                activeRegion.rBox.appendChild(fitP);
+                            }
+                            
+                            const remainingText = words.slice(wIdx).join(' ');
+                            if (remainingText.trim().length > 0) {
+                                paragraphs.splice(pIdx, 1, remainingText);
+                            } else {
+                                pIdx++;
+                            }
+                            
+                            currentRegionIdx++;
+                            activeRegion = regions[currentRegionIdx];
+                            
+                            if (!activeRegion) {
+                                if (pIdx < paragraphs.length) {
+                                    testFits = false;
+                                }
                                 break;
                             }
-                        }
-                        activeRegion.rBox.removeChild(testP);
-                        
-                        if (wIdx > 0) {
-                            const fitP = document.createElement('p');
-                            fitP.innerText = words.slice(0, wIdx).join(' ');
-                            fitP.style.fontSize = `${conf.fontSize}px`;
-                            fitP.style.lineHeight = conf.lineHeight;
-                            fitP.style.marginBottom = `${conf.paraMargin}px`;
-                            fitP.style.marginTop = '0';
-                            fitP.style.textAlign = 'justify';
-                            fitP.style.wordBreak = 'break-word';
-                            fitP.style.overflowWrap = 'break-word';
-                            fitP.style.hyphens = 'auto';
-                            activeRegion.rBox.appendChild(fitP);
-                        }
-                        
-                        const remainingText = words.slice(wIdx).join(' ');
-                        if (remainingText.trim().length > 0) {
-                            paragraphs.splice(pIdx, 1, remainingText);
                         } else {
                             pIdx++;
                         }
-                        
-                        currentRegionIdx++;
-                        activeRegion = regions[currentRegionIdx];
-                        
-                        if (!activeRegion) {
-                            if (pIdx < paragraphs.length) {
-                                fits = false;
-                            }
-                            break;
+                    }
+                    
+                    return { fits: testFits, regions: regions };
+                }
+
+                const maxH = H_canvas;
+                let res = testFlow(maxH);
+                let fits = res.fits;
+                let finalRegions = res.regions;
+
+                // If it fits perfectly at max height, binary search to balance columns
+                if (fits) {
+                    let minH = 150;
+                    let highH = maxH;
+                    let bestH = maxH;
+                    
+                    for (let step = 0; step < 8; step++) {
+                        let midH = Math.round((minH + highH) / 2);
+                        let midRes = testFlow(midH);
+                        if (midRes.fits) {
+                            bestH = midH;
+                            highH = midH;
+                            finalRegions = midRes.regions;
+                        } else {
+                            minH = midH + 1;
                         }
-                    } else {
-                        pIdx++;
+                    }
+                    
+                    // Re-apply the best valid height if the last midH didn't fit
+                    if (bestH !== Math.round((minH - 1 + highH) / 2)) {
+                        let bestRes = testFlow(bestH);
+                        finalRegions = bestRes.regions;
                     }
                 }
                 
                 let maxY = 0;
-                for (const r of regions) {
+                for (const r of finalRegions) {
                     let contentH = 0;
                     if (r.rBox.lastElementChild) {
                         contentH = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight;
