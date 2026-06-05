@@ -112,8 +112,8 @@ class RenderService:
                 else:
                     current_section = sec
                 
-                # Maintain dense newspaper blocks (min ~180 chars)
-                if len(current_section) > 180:
+                # Maintain dense newspaper blocks (min ~450 chars to ensure ~8 lines)
+                if len(current_section) > 450:
                     merged_sections.append(current_section)
                     current_section = ""
             if current_section:
