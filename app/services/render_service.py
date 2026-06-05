@@ -346,7 +346,7 @@ class RenderService:
         document.addEventListener("DOMContentLoaded", async () => {
             // Global layout constants visible to all nested functions
             // Global layout constants visible to all nested functions
-            const TARGET_MAX_HEIGHT = 1500;
+            const TARGET_MAX_HEIGHT = 3000;
 
             try {
                 const dataEl = document.getElementById('newspaper-data');
