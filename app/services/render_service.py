@@ -691,7 +691,8 @@ class RenderService:
                             colIndex: c,
                             div: colDiv,
                             rBox: rBox,
-                            height: h
+                            height: h,
+                            y: int.yStart
                         });
                     });
                 }
