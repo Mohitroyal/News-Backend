@@ -35,17 +35,15 @@ class GrokService:
         full_lang = language_map.get(language.lower(), language)
         
         prompt = f"""
-        Act as a professional newspaper editor and translator. Rewrite the following content in a high-quality newspaper style.
+        Act as a professional JSON formatter. You must format the following content into a newspaper JSON structure.
         
-        CRITICAL REQUIREMENT 1: You MUST translate the ENTIRE output strictly into the '{full_lang}' language using the native '{full_lang}' script.
-        DO NOT mix languages. DO NOT use English letters (transliteration) or Hindi if '{full_lang}' is requested.
-        The headline, subheadline, sections, dateline, and byline MUST ALL be strictly in native {full_lang}.
+        CRITICAL REQUIREMENT 1: DO NOT REWRITE, MODIFY, OR CHANGE THE ORIGINAL CONTENT. You must keep the full content exactly as provided. Do not change any words, phrases, or sentences.
         
-        CRITICAL REQUIREMENT 2: DO NOT SUMMARIZE, SHORTEN, OR OMIT ANY TEXT. You MUST preserve 100% of the original content. Every single sentence and paragraph from the original article must be translated (if translating) and kept exactly in the "sections" array. Do not truncate, skip, or compress any portion of the source content.
+        CRITICAL REQUIREMENT 2: DO NOT SUMMARIZE OR SHORTEN. You MUST preserve 100% of the original content. Every single sentence and paragraph from the original article must be kept exactly in the "sections" array verbatim.
         
-        CRITICAL REQUIREMENT 3: PARAGRAPH RULES & TEXT DENSITY. Do NOT create a new paragraph after every sentence. You MUST merge related sentences into continuous, dense newspaper paragraphs. Only create paragraph breaks when the topic changes, speaker changes, or major section changes. Your goal is high information density with tightly packed content.
-
-        CRITICAL REQUIREMENT 4: KEEP ALL ORIGINAL SENTENCES INTACT. Do not try to fit the content into specific word limits or shorten it because of layout. The layout will adapt dynamically, so you must include all text without omitting any facts, sentences, or paragraphs.
+        CRITICAL REQUIREMENT 3: If the original content is in a different language than '{full_lang}', ONLY translate it. If it is already in '{full_lang}', DO NOT change it at all.
+        
+        CRITICAL REQUIREMENT 4: Keep the paragraphs exactly as they are provided in the source text. Do not merge or split paragraphs unnecessarily. Just return the full content unmodified.
         
         CRITICAL REQUIREMENT 5: Extract the reporter/author name from the content if provided. DO NOT INVENT AUTHORS. If no author is found, set "byline" to "" (empty string).
         
