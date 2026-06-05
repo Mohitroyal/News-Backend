@@ -800,18 +800,16 @@ class RenderService:
                     }
                 }
                 
-                if (fits) {
-                    let maxY = 0;
-                    for (const r of regions) {
-                        const contentBottom = r.y + r.rBox.scrollHeight;
-                        if (contentBottom > maxY) maxY = contentBottom;
-                    }
-                    for (const img of obstacles) {
-                        const imgBottom = img.y + img.h;
-                        if (imgBottom > maxY) maxY = imgBottom;
-                    }
-                    canvas.style.height = `${Math.max(maxY + 40, 150)}px`;
+                let maxY = 0;
+                for (const r of regions) {
+                    const contentBottom = r.y + r.rBox.scrollHeight;
+                    if (contentBottom > maxY) maxY = contentBottom;
                 }
+                for (const img of obstacles) {
+                    const imgBottom = img.y + img.h;
+                    if (imgBottom > maxY) maxY = imgBottom;
+                }
+                canvas.style.height = `${Math.max(maxY + 40, 150)}px`;
                 
                 window.__IMAGE_LAYOUT_LOGS__ = {
                     image_count: imgCount,
