@@ -100,12 +100,14 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 /* HEADLINE SECTION */
 .headline-section {
     margin: 22px 0 14px 0;
-    text-align: center;
+    text-align: left;
+    border-left: 5px solid var(--accent-color);
+    padding-left: 15px;
 }
 
 .headline {
     font-family: 'Merriweather', 'Noto Serif Telugu', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', 'Noto Serif Devanagari', 'Noto Sans Devanagari', 'Noto Serif Kannada', 'Noto Sans Kannada', 'Noto Serif Malayalam', 'Noto Sans Malayalam', 'Noto Serif Tamil', 'Noto Sans Tamil', 'Noto Serif Bengali', 'Noto Sans Bengali', 'Noto Serif Gujarati', 'Noto Sans Gujarati', 'Noto Serif Gurmukhi', 'Noto Sans Gurmukhi', 'Noto Serif Oriya', 'Noto Sans Oriya', serif;
-    font-size: 64px;
+    font-size: 52px;
     font-weight: 900;
     line-height: 1.15;
     color: var(--text-color);
