@@ -469,7 +469,7 @@ class RenderService:
                 
                 // Calculate image dimensions and create absolute obstacles
                 const obstacles = [];
-                const imgHeightPx = Math.min(Math.round(conf.imgMaxPct * W_canvas), Math.max(150, totalChars * 0.4));
+                const imgHeightPx = Math.round(conf.imgMaxPct * W_canvas);
                 
                 if (urls.length > 0) {
                     // Hero Image: max width 55% of page width, max height 30% of page height
@@ -481,9 +481,7 @@ class RenderService:
                         w0 = W_canvas * 0.55;
                         h0 = w0 / aspect0;
                     }
-                    // Reduce Hero image height by 20% (and adjust width to maintain aspect ratio)
-                    h0 = h0 * 0.8;
-                    w0 = h0 * aspect0;
+                    // Hero image uses its natural computed aspect and width
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
