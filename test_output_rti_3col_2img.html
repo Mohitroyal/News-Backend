@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="te">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Intersection</title>
@@ -106,7 +106,9 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 /* HEADLINE SECTION */
 .headline-section {
     margin: 22px 0 14px 0;
-    text-align: center;
+    text-align: left;
+    border-left: 5px solid var(--accent-color);
+    padding-left: 15px;
 }
 
 .headline {
@@ -224,14 +226,6 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 }
     </style>
 
-            <style id="indic-font-enforcer">
-                /* Force Indic font first, fallback to Latin */
-                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .dateline, .image-caption {
-                    font-family: 'Gautami Bold', 'Gautami', 'Noto Serif Telugu', 'Noto Sans Telugu', 'Playfair Display', 'Merriweather', serif !important;
-                }
-            </style>
-            
-
         <style id="headline-style-override">
             .headline {
                 color: #D60000 !important;
@@ -256,24 +250,28 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
             </div>
         </div>
 
-        <!-- ZONE 2: Metadata Zone -->
-        <div class="metadata-zone" style="width: 100%; height: auto; padding: 5px 0; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;">
-            <span>RTI EXPRESS - TUESDAY, JUNE 2, 2026</span>
-            <span>WANTED REPORTERS: 7668886666</span>
+        <!-- ZONE 2: Metadata Zone (Height: 30px) -->
+        <div class="metadata-zone" style="height: 30px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; padding: 0 10px; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px;">
+            <div class="meta-item-left" style="display: flex; align-items: center;">
+                <span>RTI Express • Sunday, May 31, 2026</span>
+            </div>
+            <div class="meta-item-right" style="display: flex; align-items: center;">
+                <span>WANTED REPORTERS: 7668886666</span>
+            </div>
         </div>
 
         <!-- ZONE 3: Headline Zone (Height: Auto, Min-height: 120px) -->
-        <div class="headline-zone" style="min-height: 120px; height: auto; padding: 20px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border-color, #111111); margin-bottom: 15px; width: 100%; text-align: center;">
-            <div class="headline-section" style="margin: 0; padding: 0; text-align: center; box-sizing: border-box;">
-                <h1 class="headline" style="font-size: 55px; margin: 0; line-height: 1.15; text-align: center; width: 100%; box-sizing: border-box;">TEST: Telugu - 2 Images</h1>
+        <div class="headline-zone" style="min-height: 120px; height: auto; padding: 20px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border-color, #111111); margin-bottom: 15px; width: 100%;">
+            <div class="headline-section" style="margin: 0; padding: 0 0 0 15px; border-left: 5px solid var(--accent-color, #a30000); text-align: left; box-sizing: border-box;">
+                <h1 class="headline" style="font-size: 40px; margin: 0; line-height: 1.1; text-align: left; width: 100%; box-sizing: border-box;">BREAKING NEWS: 3 Columns and 2 Images Test Case</h1>
             </div>
             
-            <div class="subheadline-section" style="margin: 12px 0 0 0; text-align: center;">
-                <h2 class="subheadline" style="font-size: 20px; margin: 0; text-align: center; font-style: italic; color: #444;">Validation of updated stable rendering pipeline</h2>
+            <div class="subheadline-section" style="margin: 8px 0 0 20px; text-align: left;">
+                <h2 class="subheadline" style="font-size: 18px; margin: 0; text-align: left; font-style: italic; color: #444;">Validation of 3 columns and 2 images specifically</h2>
             </div>
             
             
-            <div class="byline-section" style="text-align: center; font-size: 14px; margin: 12px 0 0 0; font-weight: bold; color: var(--accent-color, #a30000);">By By Antigravity QA Agent</div>
+            <div class="byline-section" style="text-align: left; font-size: 13px; margin: 8px 0 0 20px; font-weight: bold; color: var(--accent-color, #a30000);">By By Antigravity QA Agent</div>
             
         </div>
 
@@ -286,7 +284,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
         </footer>
     </div>
 <script type="application/json" id="newspaper-data">
-{"headline": "TEST: Telugu - 2 Images", "subheadline": "Validation of updated stable rendering pipeline", "publication_name": "RTI Express", "publication_date": "Sunday, May 31, 2026", "volume": "CXIV", "edition": "27", "location": "Global Edition", "language_name": "Telugu", "byline": "By Antigravity QA Agent", "dateline": "HYDERABAD", "template_id": "rti_express", "logo_url": "http://localhost:8000/static/logos/rti_express.svg", "primary_color": "#1d70b8", "accent_color": "#1d70b8", "border_color": "#1d70b8", "layout_columns": 3, "sections": ["\u0c07\u0c26\u0c3f \u0c2e\u0c4a\u0c26\u0c1f\u0c3f \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c28\u0c4d\u0c2f\u0c42\u0c38\u0c4d\u200c\u0c15\u0c4d\u0c30\u0c3e\u0c2b\u0c4d\u0c1f\u0c4d \u0c06\u0c30\u0c4d\u0c1f\u0c3f\u0c15\u0c32\u0c4d \u0c32\u0c47\u0c05\u0c35\u0c41\u0c1f\u0c4d \u0c07\u0c02\u0c1c\u0c3f\u0c28\u0c4d \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c1a\u0c15\u0c4d\u0c15\u0c17\u0c3e \u0c05\u0c2e\u0c30\u0c41\u0c38\u0c4d\u0c24\u0c41\u0c02\u0c26\u0c3f. \u0c07\u0c26\u0c3f \u0c30\u0c46\u0c02\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c24\u0c46\u0c32\u0c41\u0c17\u0c41 \u0c2b\u0c3e\u0c02\u0c1f\u0c4d\u0c32\u0c41 \u0c38\u0c30\u0c3f\u0c17\u0c4d\u0c17\u0c3e \u0c32\u0c4b\u0c21\u0c4d \u0c05\u0c35\u0c41\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2f\u0c4b \u0c32\u0c47\u0c26\u0c4b \u0c2e\u0c47\u0c2e\u0c41 \u0c2a\u0c30\u0c40\u0c15\u0c4d\u0c37\u0c3f\u0c02\u0c1a\u0c3e\u0c32\u0c28\u0c41\u0c15\u0c41\u0c02\u0c1f\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c42\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c2a\u0c4d\u0c30\u0c1a\u0c41\u0c30\u0c23 \u0c28\u0c3e\u0c23\u0c4d\u0c2f\u0c24 \u0c2e\u0c30\u0c3f\u0c2f\u0c41 \u0c38\u0c4d\u0c2a\u0c37\u0c4d\u0c1f\u0c24\u0c28\u0c41 \u0c28\u0c3f\u0c30\u0c4d\u0c27\u0c3e\u0c30\u0c3f\u0c02\u0c1a\u0c21\u0c3e\u0c28\u0c3f\u0c15\u0c3f \u0c2e\u0c47\u0c2e\u0c41 \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c2e\u0c41\u0c26\u0c4d\u0c30\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c4a\u0c26\u0c1f\u0c3f \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c28\u0c4d\u0c2f\u0c42\u0c38\u0c4d\u200c\u0c15\u0c4d\u0c30\u0c3e\u0c2b\u0c4d\u0c1f\u0c4d \u0c06\u0c30\u0c4d\u0c1f\u0c3f\u0c15\u0c32\u0c4d \u0c32\u0c47\u0c05\u0c35\u0c41\u0c1f\u0c4d \u0c07\u0c02\u0c1c\u0c3f\u0c28\u0c4d \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c1a\u0c15\u0c4d\u0c15\u0c17\u0c3e \u0c05\u0c2e\u0c30\u0c41\u0c38\u0c4d\u0c24\u0c41\u0c02\u0c26\u0c3f. \u0c07\u0c26\u0c3f \u0c30\u0c46\u0c02\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c24\u0c46\u0c32\u0c41\u0c17\u0c41 \u0c2b\u0c3e\u0c02\u0c1f\u0c4d\u0c32\u0c41 \u0c38\u0c30\u0c3f\u0c17\u0c4d\u0c17\u0c3e \u0c32\u0c4b\u0c21\u0c4d \u0c05\u0c35\u0c41\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2f\u0c4b \u0c32\u0c47\u0c26\u0c4b \u0c2e\u0c47\u0c2e\u0c41 \u0c2a\u0c30\u0c40\u0c15\u0c4d\u0c37\u0c3f\u0c02\u0c1a\u0c3e\u0c32\u0c28\u0c41\u0c15\u0c41\u0c02\u0c1f\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41.", "\u0c07\u0c26\u0c3f \u0c2e\u0c42\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c2a\u0c4d\u0c30\u0c1a\u0c41\u0c30\u0c23 \u0c28\u0c3e\u0c23\u0c4d\u0c2f\u0c24 \u0c2e\u0c30\u0c3f\u0c2f\u0c41 \u0c38\u0c4d\u0c2a\u0c37\u0c4d\u0c1f\u0c24\u0c28\u0c41 \u0c28\u0c3f\u0c30\u0c4d\u0c27\u0c3e\u0c30\u0c3f\u0c02\u0c1a\u0c21\u0c3e\u0c28\u0c3f\u0c15\u0c3f \u0c2e\u0c47\u0c2e\u0c41 \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c2e\u0c41\u0c26\u0c4d\u0c30\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c4a\u0c26\u0c1f\u0c3f \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c28\u0c4d\u0c2f\u0c42\u0c38\u0c4d\u200c\u0c15\u0c4d\u0c30\u0c3e\u0c2b\u0c4d\u0c1f\u0c4d \u0c06\u0c30\u0c4d\u0c1f\u0c3f\u0c15\u0c32\u0c4d \u0c32\u0c47\u0c05\u0c35\u0c41\u0c1f\u0c4d \u0c07\u0c02\u0c1c\u0c3f\u0c28\u0c4d \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c1a\u0c15\u0c4d\u0c15\u0c17\u0c3e \u0c05\u0c2e\u0c30\u0c41\u0c38\u0c4d\u0c24\u0c41\u0c02\u0c26\u0c3f. \u0c07\u0c26\u0c3f \u0c30\u0c46\u0c02\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c24\u0c46\u0c32\u0c41\u0c17\u0c41 \u0c2b\u0c3e\u0c02\u0c1f\u0c4d\u0c32\u0c41 \u0c38\u0c30\u0c3f\u0c17\u0c4d\u0c17\u0c3e \u0c32\u0c4b\u0c21\u0c4d \u0c05\u0c35\u0c41\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2f\u0c4b \u0c32\u0c47\u0c26\u0c4b \u0c2e\u0c47\u0c2e\u0c41 \u0c2a\u0c30\u0c40\u0c15\u0c4d\u0c37\u0c3f\u0c02\u0c1a\u0c3e\u0c32\u0c28\u0c41\u0c15\u0c41\u0c02\u0c1f\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c42\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c2a\u0c4d\u0c30\u0c1a\u0c41\u0c30\u0c23 \u0c28\u0c3e\u0c23\u0c4d\u0c2f\u0c24 \u0c2e\u0c30\u0c3f\u0c2f\u0c41 \u0c38\u0c4d\u0c2a\u0c37\u0c4d\u0c1f\u0c24\u0c28\u0c41 \u0c28\u0c3f\u0c30\u0c4d\u0c27\u0c3e\u0c30\u0c3f\u0c02\u0c1a\u0c21\u0c3e\u0c28\u0c3f\u0c15\u0c3f \u0c2e\u0c47\u0c2e\u0c41 \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c2e\u0c41\u0c26\u0c4d\u0c30\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c4a\u0c26\u0c1f\u0c3f \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c28\u0c4d\u0c2f\u0c42\u0c38\u0c4d\u200c\u0c15\u0c4d\u0c30\u0c3e\u0c2b\u0c4d\u0c1f\u0c4d \u0c06\u0c30\u0c4d\u0c1f\u0c3f\u0c15\u0c32\u0c4d \u0c32\u0c47\u0c05\u0c35\u0c41\u0c1f\u0c4d \u0c07\u0c02\u0c1c\u0c3f\u0c28\u0c4d \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c1a\u0c15\u0c4d\u0c15\u0c17\u0c3e \u0c05\u0c2e\u0c30\u0c41\u0c38\u0c4d\u0c24\u0c41\u0c02\u0c26\u0c3f.", "\u0c07\u0c26\u0c3f \u0c30\u0c46\u0c02\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c24\u0c46\u0c32\u0c41\u0c17\u0c41 \u0c2b\u0c3e\u0c02\u0c1f\u0c4d\u0c32\u0c41 \u0c38\u0c30\u0c3f\u0c17\u0c4d\u0c17\u0c3e \u0c32\u0c4b\u0c21\u0c4d \u0c05\u0c35\u0c41\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2f\u0c4b \u0c32\u0c47\u0c26\u0c4b \u0c2e\u0c47\u0c2e\u0c41 \u0c2a\u0c30\u0c40\u0c15\u0c4d\u0c37\u0c3f\u0c02\u0c1a\u0c3e\u0c32\u0c28\u0c41\u0c15\u0c41\u0c02\u0c1f\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c42\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c2a\u0c4d\u0c30\u0c1a\u0c41\u0c30\u0c23 \u0c28\u0c3e\u0c23\u0c4d\u0c2f\u0c24 \u0c2e\u0c30\u0c3f\u0c2f\u0c41 \u0c38\u0c4d\u0c2a\u0c37\u0c4d\u0c1f\u0c24\u0c28\u0c41 \u0c28\u0c3f\u0c30\u0c4d\u0c27\u0c3e\u0c30\u0c3f\u0c02\u0c1a\u0c21\u0c3e\u0c28\u0c3f\u0c15\u0c3f \u0c2e\u0c47\u0c2e\u0c41 \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c2e\u0c41\u0c26\u0c4d\u0c30\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c4a\u0c26\u0c1f\u0c3f \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c28\u0c4d\u0c2f\u0c42\u0c38\u0c4d\u200c\u0c15\u0c4d\u0c30\u0c3e\u0c2b\u0c4d\u0c1f\u0c4d \u0c06\u0c30\u0c4d\u0c1f\u0c3f\u0c15\u0c32\u0c4d \u0c32\u0c47\u0c05\u0c35\u0c41\u0c1f\u0c4d \u0c07\u0c02\u0c1c\u0c3f\u0c28\u0c4d \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c1a\u0c15\u0c4d\u0c15\u0c17\u0c3e \u0c05\u0c2e\u0c30\u0c41\u0c38\u0c4d\u0c24\u0c41\u0c02\u0c26\u0c3f. \u0c07\u0c26\u0c3f \u0c30\u0c46\u0c02\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c24\u0c46\u0c32\u0c41\u0c17\u0c41 \u0c2b\u0c3e\u0c02\u0c1f\u0c4d\u0c32\u0c41 \u0c38\u0c30\u0c3f\u0c17\u0c4d\u0c17\u0c3e \u0c32\u0c4b\u0c21\u0c4d \u0c05\u0c35\u0c41\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2f\u0c4b \u0c32\u0c47\u0c26\u0c4b \u0c2e\u0c47\u0c2e\u0c41 \u0c2a\u0c30\u0c40\u0c15\u0c4d\u0c37\u0c3f\u0c02\u0c1a\u0c3e\u0c32\u0c28\u0c41\u0c15\u0c41\u0c02\u0c1f\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41. \u0c07\u0c26\u0c3f \u0c2e\u0c42\u0c21\u0c35 \u0c2a\u0c47\u0c30\u0c3e\u0c17\u0c4d\u0c30\u0c3e\u0c2b\u0c4d. \u0c2a\u0c4d\u0c30\u0c1a\u0c41\u0c30\u0c23 \u0c28\u0c3e\u0c23\u0c4d\u0c2f\u0c24 \u0c2e\u0c30\u0c3f\u0c2f\u0c41 \u0c38\u0c4d\u0c2a\u0c37\u0c4d\u0c1f\u0c24\u0c28\u0c41 \u0c28\u0c3f\u0c30\u0c4d\u0c27\u0c3e\u0c30\u0c3f\u0c02\u0c1a\u0c21\u0c3e\u0c28\u0c3f\u0c15\u0c3f \u0c2e\u0c47\u0c2e\u0c41 \u0c08 \u0c38\u0c2e\u0c3e\u0c1a\u0c3e\u0c30\u0c3e\u0c28\u0c4d\u0c28\u0c3f \u0c2e\u0c41\u0c26\u0c4d\u0c30\u0c3f\u0c38\u0c4d\u0c24\u0c41\u0c28\u0c4d\u0c28\u0c3e\u0c2e\u0c41."], "image_urls": ["https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80"], "image_captions": []}
+{"headline": "BREAKING NEWS: 3 Columns and 2 Images Test Case", "subheadline": "Validation of 3 columns and 2 images specifically", "publication_name": "RTI Express", "publication_date": "Sunday, May 31, 2026", "volume": "CXIV", "edition": "27", "location": "Global Edition", "language_name": "English", "byline": "By Antigravity QA Agent", "dateline": "HYDERABAD", "template_id": "rti_express", "logo_url": "http://localhost:8000/static/logos/rti_express.svg", "primary_color": "#1d70b8", "accent_color": "#1d70b8", "border_color": "#1d70b8", "layout_columns": 3, "sections": ["This is the first paragraph of our breaking news. We are trying to make sure that the image embedding and layout flow behaves correctly under all column counts. This is the second paragraph. It contains details about the experiment. When we have 3 columns and 2 images, there was an infinite loop reported. Let's see what happens. This is the third paragraph. We want to verify that the generation fails fast or succeeds, without hanging until the global timeout. Let's see how the layout engine behaves."], "image_urls": ["https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80"], "image_captions": []}
 </script>
 
         <script>
@@ -306,8 +304,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
         
         document.addEventListener("DOMContentLoaded", async () => {
             // Global layout constants visible to all nested functions
-            // Global layout constants visible to all nested functions
-            const TARGET_MAX_HEIGHT = 3000;
+            const TARGET_MAX_HEIGHT = 1500;
 
             try {
                 const dataEl = document.getElementById('newspaper-data');
@@ -328,16 +325,11 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
             if (!container) return;
 
             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
-
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
             // Compression configurations: from spacious to compact
             const configs = [
                 // fontSize, lineHeight, paraMargin, imgMaxPct, padding
-                { fontSize: 24.0, lineHeight: 1.45, paraMargin: 16, imgMaxPct: 0.65, padding: 40 },
-                { fontSize: 22.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
-                { fontSize: 20.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
-                { fontSize: 18.0, lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 },
                 { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
                 { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
                 { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
@@ -426,117 +418,75 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                 
                 // Get canvas boundaries relative to target maximum page height
                 const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
-                const H_canvas = TARGET_MAX_HEIGHT - canvasTop - 60; // 60px padding/footer margin
+                const H_max = TARGET_MAX_HEIGHT - canvasTop - 60; // 60px padding/footer margin
                 
-                // Calculate image dimensions and create absolute obstacles
-                const obstacles = [];
+                // Sizing: image width must be set exactly to the column width W_col.
+                // Height is computed based on aspect ratio, constrained by conf.imgMaxPct.
                 const imgHeightPx = Math.round(conf.imgMaxPct * W_canvas);
                 
-                if (urls.length > 0) {
-                    // Hero Image: max width 55% of page width, max height 30% of page height
+                let h0 = 0, h1 = 0, h2 = 0;
+                if (imgCount >= 1) {
                     const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * 0.55;
-                    let h0 = w0 / aspect0;
-                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
-                    if (w0 > W_canvas * 0.55) {
-                        w0 = W_canvas * 0.55;
-                        h0 = w0 / aspect0;
-                    }
-                    // Hero image uses its natural computed aspect and width
-                    obstacles.push({
-                        url: urls[0],
-                        caption: captions[0] || '',
-                        x: urls.length === 1 ? Math.round((W_canvas - w0) / 2) : Math.round(W_canvas - w0), // Align center if 1 image, else top-right
-                        y: 0,
-                        w: Math.round(w0),
-                        h: Math.round(h0)
-                    });
-                    
-                    if (urls.length > 1) {
-                        // Secondary Image: max width 30% of page width
-                        const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * 0.30;
-                        let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * 0.75);
-                        let y1 = h0 + 60; // Spacing below Hero
-                        obstacles.push({
-                            url: urls[1],
-                            caption: captions[1] || '',
-                            x: 0, // Middle-left
-                            y: Math.round(y1),
-                            w: Math.round(w1),
-                            h: Math.round(h1)
-                        });
-                        
-                        if (urls.length > 2) {
-                            // Portrait Image: max width 25% of page width, size unchanged
-                            const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_canvas * 0.25;
-                            let h2 = w2 / aspect2;
-                            h2 = Math.min(h2, imgHeightPx * 0.65);
-                            let y2 = y1 + h1 + 60;
-                            obstacles.push({
-                                url: urls[2],
-                                caption: captions[2] || '',
-                                x: Math.round(W_canvas - w2), // Bottom-right
-                                y: Math.round(y2),
-                                w: Math.round(w2),
-                                h: Math.round(h2)
-                            });
-                        }
-                    }
+                    h0 = Math.round(W_col / aspect0);
+                    h0 = Math.min(h0, Math.round(TARGET_MAX_HEIGHT * 0.3), imgHeightPx);
+                }
+                if (imgCount >= 2) {
+                    const aspect1 = aspectRatios[1] || 1.0;
+                    h1 = Math.round(W_col / aspect1);
+                    h1 = Math.min(h1, Math.round(TARGET_MAX_HEIGHT * 0.25), Math.round(imgHeightPx * 0.75));
+                }
+                if (imgCount >= 3) {
+                    const aspect2 = aspectRatios[2] || 0.8;
+                    h2 = Math.round(W_col / aspect2);
+                    h2 = Math.min(h2, Math.round(TARGET_MAX_HEIGHT * 0.25), Math.round(imgHeightPx * 0.65));
                 }
                 
-                // Render absolute images onto canvas
-                obstacles.forEach(obs => {
+                // Calculate minimum required column height
+                let H_min = 100;
+                if (N === 1) {
+                    if (imgCount === 1) {
+                        H_min = Math.max(H_min, h0 + 50);
+                    } else if (imgCount === 2) {
+                        H_min = Math.max(H_min, h0 + h1 + 100);
+                    } else if (imgCount >= 3) {
+                        H_min = Math.max(H_min, h0 + h1 + h2 + 150);
+                    }
+                } else {
+                    if (imgCount === 1) {
+                        H_min = Math.max(H_min, h0 + 50);
+                    } else if (imgCount === 2) {
+                        H_min = Math.max(H_min, h0 + 50, h1 + 50);
+                    } else if (imgCount >= 3) {
+                        H_min = Math.max(H_min, h0 + h2 + 120, h1 + 50);
+                    }
+                }
+                H_min = Math.min(H_min, H_max);
+                
+                function appendColImage(colEl, url, caption, topPos, imgH_total) {
                     const imgEl = document.createElement('div');
                     imgEl.className = 'nc-absolute-image';
                     imgEl.style.position = 'absolute';
-                    imgEl.style.left = `${obs.x}px`;
-                    imgEl.style.top = `${obs.y}px`;
-                    imgEl.style.width = `${obs.w}px`;
-                    imgEl.style.height = 'auto'; // Adjust border dynamically to content height
+                    imgEl.style.left = '0px';
+                    imgEl.style.top = `${topPos}px`;
+                    imgEl.style.width = `${W_col}px`;
+                    imgEl.style.height = `${imgH_total}px`;
                     imgEl.style.boxSizing = 'border-box';
                     imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
                     imgEl.style.padding = '4px';
                     imgEl.style.background = '#fff';
                     imgEl.style.zIndex = '5';
                     
-                    let captionHeight = 0;
-                    if (obs.caption) {
-                        const charsPerLine = Math.max(1, Math.floor(obs.w / 6.5));
-                        const lines = Math.ceil(obs.caption.length / charsPerLine);
-                        captionHeight = lines * 15;
-                    }
-                    const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
-                    
+                    const imgH = imgH_total - (caption ? 24 : 8);
                     imgEl.innerHTML = `
-                        <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
-                        ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
+                        <img src="${url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                        ${caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 14px; line-height: 14px;">${caption}</div>` : ''}
                     `;
-                    canvas.appendChild(imgEl);
-                });
+                    colEl.appendChild(imgEl);
+                }
                 
-                // Define inflated obstacles to carve out margins around text regions (12px cushion)
-                const inflatedObstacles = obstacles.map(obs => {
-                    if (urls.length === 1) {
-                        return {
-                            x: 0,
-                            y: obs.y - 12,
-                            w: W_canvas,
-                            h: obs.h + 24
-                        };
-                    }
-                    return {
-                        x: obs.x - 12,
-                        y: obs.y - 12,
-                        w: obs.w + 24,
-                        h: obs.h + 24
-                    };
-                });
-
-                // Function to test layout with a specific canvas height
-                function testFlow(testH) {
+                // Helper to layout text in columns of height H and return if it fits
+                function tryLayoutHeight(H) {
+                    // Remove any previous columns from the canvas
                     canvas.querySelectorAll('.nc-column').forEach(el => el.remove());
                     
                     const colDivs = [];
@@ -544,92 +494,69 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                     
                     for (let c = 0; c < N; c++) {
                         const L_c = c * (W_col + G);
-                        const R_c = L_c + W_col;
                         
-                        let intervals = [{ yStart: 0, yEnd: testH, xOffset: 0, w: W_col }];
-                        
-                        inflatedObstacles.forEach(obs => {
-                            const xOverlapStart = Math.max(L_c, obs.x);
-                            const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
-                            if (xOverlapStart >= xOverlapEnd) return;
-                            
-                            const yOverlapStart = Math.max(0, obs.y);
-                            const yOverlapEnd = Math.min(testH, obs.y + obs.h);
-                            if (yOverlapStart >= yOverlapEnd) return;
-                            
-                            const nextIntervals = [];
-                            intervals.forEach(int => {
-                                const yIntersectStart = Math.max(int.yStart, yOverlapStart);
-                                const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
-                                
-                                if (yIntersectStart >= yIntersectEnd) {
-                                    nextIntervals.push(int);
-                                    return;
-                                }
-                                
-                                if (int.yStart < yIntersectStart) {
-                                    nextIntervals.push({
-                                        yStart: int.yStart,
-                                        yEnd: yIntersectStart,
-                                        xOffset: int.xOffset,
-                                        w: int.w
-                                    });
-                                }
-                                
-                                const obsLeftRel = obs.x - L_c;
-                                const obsRightRel = obs.x + obs.w - L_c;
-                                
-                                if (obsLeftRel <= 0) {
-                                    if (obsRightRel >= W_col) {
-                                        // Covers width
-                                    } else {
-                                        const wRem = W_col - obsRightRel;
-                                        if (wRem >= 40) {
-                                            nextIntervals.push({
-                                                yStart: yIntersectStart,
-                                                yEnd: yIntersectEnd,
-                                                xOffset: obsRightRel,
-                                                w: wRem
-                                            });
-                                        }
-                                    }
-                                } else if (obsRightRel >= W_col) {
-                                    const wRem = obsLeftRel;
-                                    if (wRem >= 40) {
-                                        nextIntervals.push({
-                                            yStart: yIntersectStart,
-                                            yEnd: yIntersectEnd,
-                                            xOffset: 0,
-                                            w: wRem
-                                        });
-                                    }
-                                }
-                                
-                                if (int.yEnd > yIntersectEnd) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectEnd,
-                                        yEnd: int.yEnd,
-                                        xOffset: int.xOffset,
-                                        w: int.w
-                                    });
-                                }
-                            });
-                            intervals = nextIntervals;
-                        });
-                        
+                        // Create column absolute container
                         const colDiv = document.createElement('div');
                         colDiv.className = `nc-column col-${c}`;
                         colDiv.style.position = 'absolute';
                         colDiv.style.left = `${L_c}px`;
                         colDiv.style.top = '0px';
                         colDiv.style.width = `${W_col}px`;
+                        colDiv.style.height = `${H}px`;
                         colDiv.style.boxSizing = 'border-box';
                         canvas.appendChild(colDiv);
                         colDivs.push(colDiv);
                         
+                        // Determine text intervals & append column-embedded images
+                        let intervals = [];
+                        
+                        if (c === 0) { // Leftmost column
+                            if (N === 1) {
+                                // 1-column layout
+                                if (imgCount === 1) {
+                                    appendColImage(colDiv, urls[0], captions[0] || '', 0, h0);
+                                    intervals.push({ yStart: h0 + 15, yEnd: H, xOffset: 0, w: W_col });
+                                } else if (imgCount === 2) {
+                                    appendColImage(colDiv, urls[0], captions[0] || '', 0, h0);
+                                    appendColImage(colDiv, urls[1], captions[1] || '', H - h1, h1);
+                                    intervals.push({ yStart: h0 + 15, yEnd: H - h1 - 15, xOffset: 0, w: W_col });
+                                } else if (imgCount >= 3) {
+                                    appendColImage(colDiv, urls[0], captions[0] || '', 0, h0);
+                                    appendColImage(colDiv, urls[2], captions[2] || '', H - h2, h2);
+                                    appendColImage(colDiv, urls[1], captions[1] || '', H - h2 - h1 - 15, h1);
+                                    intervals.push({ yStart: h0 + 15, yEnd: H - h2 - h1 - 30, xOffset: 0, w: W_col });
+                                } else {
+                                    intervals.push({ yStart: 0, yEnd: H, xOffset: 0, w: W_col });
+                                }
+                            } else {
+                                // N >= 2 columns: Column 0 gets Image 1 (Secondary) if imgCount >= 2
+                                if (imgCount >= 2) {
+                                    appendColImage(colDiv, urls[1], captions[1] || '', H - h1, h1);
+                                    intervals.push({ yStart: 0, yEnd: H - h1 - 15, xOffset: 0, w: W_col });
+                                } else {
+                                    intervals.push({ yStart: 0, yEnd: H, xOffset: 0, w: W_col });
+                                }
+                            }
+                        } else if (c === N - 1) { // Rightmost column (only reached if N >= 2)
+                            if (imgCount >= 1) {
+                                appendColImage(colDiv, urls[0], captions[0] || '', 0, h0);
+                                if (imgCount >= 3) {
+                                    appendColImage(colDiv, urls[2], captions[2] || '', H - h2, h2);
+                                    intervals.push({ yStart: h0 + 15, yEnd: H - h2 - 15, xOffset: 0, w: W_col });
+                                } else {
+                                    intervals.push({ yStart: h0 + 15, yEnd: H, xOffset: 0, w: W_col });
+                                }
+                            } else {
+                                intervals.push({ yStart: 0, yEnd: H, xOffset: 0, w: W_col });
+                            }
+                        } else { // Middle columns (only reached if N >= 3 and 0 < c < N - 1)
+                            intervals.push({ yStart: 0, yEnd: H, xOffset: 0, w: W_col });
+                        }
+                        
+                        // Render regions as absolute boxes inside column
                         intervals.forEach(int => {
                             const h = int.yEnd - int.yStart;
-                            if (h < 24 || int.w < 40) return;
+                            if (h < 24 || int.w < 80) return; // filter out tiny/useless slices
                             
                             const rBox = document.createElement('div');
                             rBox.className = 'nc-text-region-box';
@@ -647,17 +574,13 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                                 colIndex: c,
                                 div: colDiv,
                                 rBox: rBox,
-                                height: h,
-                                y: int.yStart
+                                height: h
                             });
                         });
                     }
                     
-                    let rawSections = [];
-                    for (const sec of data.sections) {
-                        rawSections.push(...sec.split(/\n+/).filter(p => p.trim() !== ''));
-                    }
-                    const paragraphs = [...rawSections];
+                    // Flow text through regions sequentially
+                    const paragraphs = [...data.sections];
                     if (paragraphs.length > 0 && data.dateline) {
                         const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
                         paragraphs[0] = prefix + paragraphs[0];
@@ -666,12 +589,15 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                     let pIdx = 0;
                     let currentRegionIdx = 0;
                     let activeRegion = regions[currentRegionIdx];
-                    let testFits = true;
+                    let fits = true;
                     
                     while (activeRegion) {
-                        if (pIdx >= paragraphs.length) break;
+                        if (pIdx >= paragraphs.length) {
+                            break;
+                        }
                         
                         let text = paragraphs[pIdx];
+                        
                         const p = document.createElement('p');
                         p.innerText = text;
                         p.style.fontSize = `${conf.fontSize}px`;
@@ -703,7 +629,9 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                             let wIdx = 0;
                             for (; wIdx < words.length; wIdx++) {
                                 testP.innerText = words.slice(0, wIdx + 1).join(' ');
-                                if (activeRegion.rBox.scrollHeight > activeRegion.height) break;
+                                if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                                    break;
+                                }
                             }
                             activeRegion.rBox.removeChild(testP);
                             
@@ -733,7 +661,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                             
                             if (!activeRegion) {
                                 if (pIdx < paragraphs.length) {
-                                    testFits = false;
+                                    fits = false;
                                 }
                                 break;
                             }
@@ -742,59 +670,39 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                         }
                     }
                     
-                    return { fits: testFits, regions: regions };
-                }
-
-                const maxH = H_canvas;
-                let res = testFlow(maxH);
-                let fits = res.fits;
-                let finalRegions = res.regions;
-
-                // If it fits perfectly at max height, binary search to balance columns
-                if (fits) {
-                    let minH = 150;
-                    let highH = maxH;
-                    let bestH = maxH;
-                    
-                    for (let step = 0; step < 8; step++) {
-                        let midH = Math.round((minH + highH) / 2);
-                        let midRes = testFlow(midH);
-                        if (midRes.fits) {
-                            bestH = midH;
-                            highH = midH;
-                            finalRegions = midRes.regions;
-                        } else {
-                            minH = midH + 1;
-                        }
+                    if (pIdx < paragraphs.length) {
+                        fits = false;
                     }
-                    
-                    // Re-apply the best valid height if the last midH didn't fit
-                    if (bestH !== Math.round((minH - 1 + highH) / 2)) {
-                        let bestRes = testFlow(bestH);
-                        finalRegions = bestRes.regions;
-                    }
+                    return fits;
                 }
                 
-                let maxY = 0;
-                for (const r of finalRegions) {
-                    let contentH = 0;
-                    if (r.rBox.lastElementChild) {
-                        contentH = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight;
+                // Verify if the content fits in the columns at the maximum allowed page height first
+                let fits = tryLayoutHeight(H_max);
+                let bestH = H_max;
+                
+                if (fits) {
+                    // Binary search for the minimum height H between H_min and H_max that successfully fits the text
+                    let low = H_min;
+                    let high = H_max;
+                    while (low <= high) {
+                        let mid = Math.floor((low + high) / 2);
+                        if (tryLayoutHeight(mid)) {
+                            bestH = mid;
+                            high = mid - 1; // Try to search for a shorter height
+                        } else {
+                            low = mid + 1; // Search for a larger height
+                        }
                     }
-                    const contentBottom = r.y + contentH;
-                    if (contentBottom > maxY) maxY = contentBottom;
+                    // Layout one final time at the best balanced height
+                    tryLayoutHeight(bestH);
+                    canvas.style.height = `${bestH}px`;
                 }
-                for (const img of obstacles) {
-                    const imgBottom = img.y + img.h;
-                    if (imgBottom > maxY) maxY = imgBottom;
-                }
-                canvas.style.height = `${Math.max(maxY + 40, 150)}px`;
                 
                 window.__IMAGE_LAYOUT_LOGS__ = {
                     image_count: imgCount,
                     image_orientations: orientations.join(', '),
                     selected_layout: 'Region-Based Newspaper Page Compositor',
-                    final_dimensions: obstacles.map(obs => `${obs.w}x${obs.h}px`).join(', ')
+                    final_dimensions: [h0, h1, h2].filter((_, i) => i < imgCount).map(h => `${Math.round(W_col)}x${Math.round(h)}px`).join(', ')
                 };
                 
                 return fits;
@@ -822,8 +730,48 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 
                 for (let i = 0; i < configs.length; i++) {
                     const conf = configs[i];
-                    // Removed overrides for padding, headline, and subheadline
-                    // to respect the templates' built-in styles ("formats and paddings")
+                    container.style.padding = conf.padding + 'px';
+                    
+                    const innerBorder = container.querySelector('.inner-border');
+                    if (innerBorder) {
+                        innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
+                    }
+
+                    const headline = container.querySelector('.headline');
+                    if (headline) {
+                        let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
+                        headline.style.fontSize = hlSize + 'px';
+                        headline.style.lineHeight = '1.1';
+                        let count = 0;
+                        while (hlSize > 20 && count < 20) {
+                            const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
+                            const lines = Math.round(headline.offsetHeight / lh);
+                            if (lines <= 2) {
+                                break;
+                            }
+                            hlSize -= 2;
+                            headline.style.fontSize = hlSize + 'px';
+                            count++;
+                        }
+                    }
+
+                    const subheadline = container.querySelector('.subheadline, .subtitle');
+                    if (subheadline) {
+                        let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
+                        subheadline.style.fontSize = subSize + 'px';
+                        subheadline.style.lineHeight = '1.3';
+                        let count = 0;
+                        while (subSize > 12 && count < 10) {
+                            const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
+                            const lines = Math.round(subheadline.offsetHeight / lh);
+                            if (lines <= 2) {
+                                break;
+                            }
+                            subSize -= 1.5;
+                            subheadline.style.fontSize = subSize + 'px';
+                            count++;
+                        }
+                    }
 
                     let dcStyle = document.getElementById('nc-dropcap-style');
                     if (!dcStyle) {

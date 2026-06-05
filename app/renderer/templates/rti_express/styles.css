@@ -100,7 +100,9 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 /* HEADLINE SECTION */
 .headline-section {
     margin: 22px 0 14px 0;
-    text-align: center;
+    text-align: left;
+    border-left: 5px solid var(--accent-color);
+    padding-left: 15px;
 }
 
 .headline {

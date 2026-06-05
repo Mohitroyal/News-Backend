@@ -346,7 +346,7 @@ class RenderService:
         document.addEventListener("DOMContentLoaded", async () => {
             // Global layout constants visible to all nested functions
             // Global layout constants visible to all nested functions
-            const TARGET_MAX_HEIGHT = 3000;
+            const TARGET_MAX_HEIGHT = 1500;
 
             try {
                 const dataEl = document.getElementById('newspaper-data');
@@ -558,14 +558,6 @@ class RenderService:
                 
                 // Define inflated obstacles to carve out margins around text regions (12px cushion)
                 const inflatedObstacles = obstacles.map(obs => {
-                    if (urls.length === 1) {
-                        return {
-                            x: 0,
-                            y: obs.y - 12,
-                            w: W_canvas,
-                            h: obs.h + 24
-                        };
-                    }
                     return {
                         x: obs.x - 12,
                         y: obs.y - 12,

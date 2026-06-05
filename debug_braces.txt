@@ -1,0 +1,671 @@
+  1 |  0 | 
+  2 |  0 |         // ── window.onerror: Report JS errors with exact file/line/column ────
+  3 |  0 |         // This fires on ANY syntax or runtime error, forwarded by Playwright's
+  4 |  0 |         // page.on('pageerror') to Render logs so failures are never silent.
+  5 |  1 |         window.onerror = function(msg, src, line, col, err) {
+  6 |  1 |             console.error(
+  7 |  1 |                 'JS ERROR:', msg,
+  8 |  1 |                 'FILE:', src,
+  9 |  1 |                 'LINE:', line,
+ 10 |  1 |                 'COLUMN:', col
+ 11 |  1 |             );
+ 12 |  1 |             // Ensure Playwright never hangs even on uncaught errors
+ 13 |  2 |             if (!window.__LAYOUT_DONE__) {
+ 14 |  2 |                 window.__LAYOUT_DONE__ = true;
+ 15 |  1 |             }
+ 16 |  1 |             return false;
+ 17 |  0 |         };
+ 18 |  0 |         
+ 19 |  1 |         document.addEventListener("DOMContentLoaded", async () => {
+ 20 |  2 |             try {
+ 21 |  2 |                 const dataEl = document.getElementById('newspaper-data');
+ 22 |  3 |                 if (dataEl) {
+ 23 |  3 |                     window.NEWSPAPER_DATA = JSON.parse(dataEl.textContent);
+ 24 |  2 |                 }
+ 25 |  2 |             } catch (e) {
+ 26 |  2 |                 console.error('[LAYOUT] JSON Parse Error:', e);
+ 27 |  1 |             }
+ 28 |  1 |             const data = window.NEWSPAPER_DATA;
+ 29 |  2 |             if (!data) {
+ 30 |  2 |                 console.error('[LAYOUT] No data found.');
+ 31 |  2 |                 window.__LAYOUT_DONE__ = true;
+ 32 |  2 |                 return;
+ 33 |  1 |             }
+ 34 |  1 | 
+ 35 |  1 |             const container = document.querySelector('.newspaper-container');
+ 36 |  1 |             if (!container) return;
+ 37 |  1 | 
+ 38 |  1 |             // ── SINGLE-PAGE COMPRESSION ENGINE ──────────────────────────────
+ 39 |  1 |             // NEVER creates Page 2 or Page 3.
+ 40 |  1 |             // Compresses font, image height, and spacing until everything fits.
+ 41 |  1 |             // ALL article content is always preserved.
+ 42 |  1 | 
+ 43 |  1 |             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
+ 44 |  1 |             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
+ 45 |  1 | 
+ 46 |  1 |             // Compression ladder: spacious -> compact. Content NEVER removed.
+ 47 |  1 |             const configs = [
+ 48 |  1 |                 // fontSize, lineHeight, paraMargin, imgMaxPct, containerPadding
+ 49 |  1 |                 { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
+ 50 |  1 |                 { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
+ 51 |  1 |                 { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
+ 52 |  1 |                 { fontSize: 13.5, lineHeight: 1.28, paraMargin: 6,  imgMaxPct: 0.46, padding: 20 },
+ 53 |  1 |                 { fontSize: 13.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.43, padding: 18 },
+ 54 |  1 |                 { fontSize: 12.5, lineHeight: 1.22, paraMargin: 5,  imgMaxPct: 0.40, padding: 16 },
+ 55 |  1 |                 { fontSize: 12.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.38, padding: 14 },
+ 56 |  1 |                 { fontSize: 11.5, lineHeight: 1.18, paraMargin: 4,  imgMaxPct: 0.36, padding: 12 },
+ 57 |  1 |                 { fontSize: 11.0, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.34, padding: 10 },
+ 58 |  1 |                 { fontSize: 10.5, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.32, padding: 10 },
+ 59 |  1 |                 { fontSize: 10.0, lineHeight: 1.12, paraMargin: 2,  imgMaxPct: 0.30, padding: 8 },
+ 60 |  1 |                 { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
+ 61 |  1 |             ];
+ 62 |  1 | 
+ 63 |  1 |             // ── FIX 1: waitReady with hard 8-second timeout ─────────────────
+ 64 |  1 |             // The old version hung forever when dynamically injected <img> tags
+ 65 |  1 |             // (hero, secondary, extras) had no onload/onerror listeners because
+ 66 |  1 |             // they were created after page load. document.images is a live
+ 67 |  1 |             // NodeList — new images are included, but their load events may
+ 68 |  1 |             // never fire on Render (slow CDN, Chromium --disable-dev-shm-usage).
+ 69 |  2 |             async function waitReady() {
+ 70 |  2 |                 console.log('IMAGES LOADED: waiting for fonts + images...');
+ 71 |  2 |                 const WAIT_TIMEOUT = 8000; // 8 s max — never hang
+ 72 |  3 |                 try {
+ 73 |  3 |                     await Promise.race([
+ 74 |  3 |                         document.fonts.ready,
+ 75 |  3 |                         new Promise(r => setTimeout(r, WAIT_TIMEOUT))
+ 76 |  3 |                     ]);
+ 77 |  2 |                 } catch(e) { /* fonts timeout — continue */ }
+ 78 |  2 | 
+ 79 |  3 |                 const imgPromises = Array.from(document.images).map(img => {
+ 80 |  3 |                     if (img.complete) return Promise.resolve();
+ 81 |  3 |                     return Promise.race([
+ 82 |  4 |                         new Promise(r => {
+ 83 |  4 |                             img.addEventListener('load',  r, { once: true });
+ 84 |  4 |                             img.addEventListener('error', r, { once: true });
+ 85 |  3 |                         }),
+ 86 |  3 |                         new Promise(r => setTimeout(r, WAIT_TIMEOUT)) // per-image timeout
+ 87 |  3 |                     ]);
+ 88 |  2 |                 });
+ 89 |  2 |                 await Promise.all(imgPromises);
+ 90 |  2 |                 console.log('IMAGES LOADED: all images settled (or timed out).');
+ 91 |  1 |             }
+ 92 |  1 | 
+ 93 |  1 |             // Image layout rebuilding variables
+ 94 |  1 |             const urls = data.image_urls || [];
+ 95 |  1 |             const captions = data.image_captions || [];
+ 96 |  1 |             const imgCount = urls.length;
+ 97 |  1 |             
+ 98 |  1 |             let imgContainer = container.querySelector('.image-grid, .featured-image-container, .extra-image-wrapper');
+ 99 |  1 |             let borderStyle = '1px solid #ddd';
+100 |  1 |             let paddingStyle = '4px';
+101 |  1 |             
+102 |  2 |             if (!imgContainer && imgCount > 0) {
+103 |  2 |                 // Find first non-logo image parent
+104 |  2 |                 const nonLogoImg = Array.from(container.querySelectorAll('img')).find(img => 
+105 |  2 |                     !img.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+106 |  2 |                 );
+107 |  3 |                 if (nonLogoImg) {
+108 |  3 |                     let parent = nonLogoImg.parentElement;
+109 |  4 |                     if (parent && parent.parentElement && parent.parentElement !== container.querySelector('.col-2') && parent.parentElement !== container.querySelector('.newspaper-body') && parent.parentElement.tagName !== 'BODY') {
+110 |  4 |                         imgContainer = parent.parentElement;
+111 |  4 |                     } else if (parent) {
+112 |  4 |                         imgContainer = parent;
+113 |  3 |                     }
+114 |  2 |                 }
+115 |  1 |             }
+116 |  1 | 
+117 |  2 |             if (imgContainer && imgCount > 0) {
+118 |  2 |                 const firstWrapper = imgContainer.querySelector('div');
+119 |  3 |                 if (firstWrapper) {
+120 |  3 |                     const comp = window.getComputedStyle(firstWrapper);
+121 |  3 |                     const bWidth = comp.borderTopWidth || '1px';
+122 |  3 |                     const bStyle = comp.borderTopStyle || 'solid';
+123 |  3 |                     const bColor = comp.borderTopColor || '#ddd';
+124 |  3 |                     borderStyle = `${bWidth} ${bStyle} ${bColor}`;
+125 |  3 |                     paddingStyle = comp.padding || paddingStyle;
+126 |  2 |                 }
+127 |  1 |             }
+128 |  1 | 
+129 |  1 |             // Sizing / Aspect Ratio variables (declared in DOMContentLoaded scope)
+130 |  1 |             let aspectRatios = [];
+131 |  1 |             let orientations = [];
+132 |  1 |             let chosenLayoutName = 'Layout 1-Column';
+133 |  1 | 
+134 |  1 |             // ── FIX 2: getImageDimensions with 8-second timeout ──────────────
+135 |  1 |             // Old version had no timeout. If a Supabase/Unsplash URL stalled,
+136 |  1 |             // the Promise hung indefinitely, blocking executeLayout() entirely
+137 |  1 |             // before __LAYOUT_DONE__ was ever reached.
+138 |  2 |             async function getImageDimensions(url) {
+139 |  2 |                 const existingImg = Array.from(document.images).find(img => img.src === url || img.getAttribute('src') === url);
+140 |  3 |                 if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
+141 |  3 |                     return { width: existingImg.naturalWidth, height: existingImg.naturalHeight };
+142 |  2 |                 }
+143 |  2 |                 return Promise.race([
+144 |  3 |                     new Promise((resolve) => {
+145 |  3 |                         const img = new Image();
+146 |  3 |                         img.onload  = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+147 |  3 |                         img.onerror = () => resolve({ width: 800, height: 600 }); // fallback dimensions
+148 |  3 |                         img.src = url;
+149 |  2 |                     }),
+150 |  3 |                     new Promise(resolve => setTimeout(() => {
+151 |  3 |                         console.log('IMAGES LOADED: dimension fetch timeout for', url, '— using fallback 800x600');
+152 |  3 |                         resolve({ width: 800, height: 600 }); // fallback — never block
+153 |  2 |                     }, 8000))
+154 |  2 |                 ]);
+155 |  1 |             }
+156 |  1 | 
+157 |  1 |             // Image layout generation helpers
+158 |  2 |             function getLayout1(imgHeightPx) {
+159 |  2 |                 return `
+160 |  2 |                   <div class="nc-image-wrapper" style="overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; width: 100%; margin-bottom: 15px;">
+161 |  2 |                       <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+162 |  2 |                       ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+163 |  2 |                   </div>
+164 |  2 |                 `;
+165 |  1 |             }
+166 |  1 | 
+167 |  2 |             function getLayout2SideBySide(imgHeightPx) {
+168 |  2 |                 return `
+169 |  2 |                   <div class="nc-image-container-2" style="display: flex; gap: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+170 |  2 |                       <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+171 |  2 |                           <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+172 |  2 |                           ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+173 |  2 |                       </div>
+174 |  2 |                       <div class="nc-image-wrapper" style="flex: 1; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: space-between;">
+175 |  2 |                           <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+176 |  2 |                           ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+177 |  2 |                       </div>
+178 |  2 |                   </div>
+179 |  2 |                 `;
+180 |  1 |             }
+181 |  1 | 
+182 |  2 |             function getLayout2VerticalStack(imgHeightPx) {
+183 |  2 |                 return `
+184 |  2 |                   <div class="nc-image-container-vertical" style="display: flex; flex-direction: column; gap: 15px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+185 |  2 |                       <div class="nc-image-wrapper" style="width: 100%; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center;">
+186 |  2 |                           <img src="${urls[0]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${Math.round(imgHeightPx * 0.8)}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+187 |  2 |                           ${captions[0] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[0]}</div>` : ''}
+188 |  2 |                       </div>
+189 |  2 |                       <div class="nc-image-wrapper" style="width: 100%; overflow: hidden; border: ${borderStyle}; padding: ${paddingStyle}; box-sizing: border-box; text-align: center;">
+190 |  2 |                           <img src="${urls[1]}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${Math.round(imgHeightPx * 0.8)}px; object-fit: contain; display: inline-block; margin: 0 auto;" />
+191 |  2 |                           ${captions[1] ? `<div class="image-caption" style="text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px;">${captions[1]}</div>` : ''}
+192 |  2 |                       </div>
+193 |  2 |                   </div>
+194 |  2 |                 `;
+195 |  1 |             }
+196 |  1 | 
+197 |  2 |             function injectFloatedImage(para, url, caption, imgHeightPx, floatDir, widthPct) {
+198 |  2 |                 // Use a span with block display to remain valid HTML inside a <p> tag and prevent text breaks
+199 |  2 |                 const wrapper = document.createElement('span');
+200 |  2 |                 wrapper.className = 'nc-floated-image-wrapper';
+201 |  2 |                 wrapper.style.display = 'block';
+202 |  2 |                 wrapper.style.float = floatDir;
+203 |  2 |                 wrapper.style.width = widthPct + '%';
+204 |  2 |                 wrapper.style.margin = floatDir === 'left' ? '5px 15px 10px 0' : '5px 0 10px 15px';
+205 |  3 |                 if (widthPct >= 100) {
+206 |  3 |                     wrapper.style.margin = '10px 0'; // Prevent horizontal overflow when 100% width
+207 |  2 |                 }
+208 |  2 |                 wrapper.style.boxSizing = 'border-box';
+209 |  2 |                 wrapper.style.textAlign = 'center';
+210 |  2 |                 wrapper.innerHTML = `
+211 |  2 |                     <img src="${url}" class="nc-image" style="max-width: 100%; height: auto; max-height: ${imgHeightPx}px; object-fit: contain; display: block; margin: 0 auto;" />
+212 |  2 |                     ${caption ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 6px; font-style: italic; color: #555; font-size: 12px; line-height: 1.2;">${caption}</span>` : ''}
+213 |  2 |                 `;
+214 |  2 |                 para.insertBefore(wrapper, para.firstChild);
+215 |  1 |             }
+216 |  1 | 
+217 |  2 |             function applyConfig(conf) {
+218 |  2 |                 const containerW = container.offsetWidth || 1060;
+219 |  2 |                 const imgHeightPx = Math.round(conf.imgMaxPct * containerW);
+220 |  2 | 
+221 |  2 |                 // Container padding
+222 |  2 |                 container.style.padding = conf.padding + 'px';
+223 |  2 |                 
+224 |  2 |                 // Adjust inner-border padding if it exists
+225 |  2 |                 const innerBorder = container.querySelector('.inner-border');
+226 |  3 |                 if (innerBorder) {
+227 |  3 |                     innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
+228 |  2 |                 }
+229 |  2 | 
+230 |  2 |                 // Clean up any previously inserted dynamic images
+231 |  2 |                 container.querySelectorAll('.nc-third-image-wrapper, .nc-floated-image-wrapper').forEach(el => el.remove());
+232 |  2 | 
+233 |  2 |                 // Paragraph Size / Text Wrapping optimizations:
+234 |  2 |                 // Reduce column fragmentation when empty areas might remain.
+235 |  2 |                 let selectedCols = parseInt(data.layout_columns) || 3;
+236 |  3 |                 if (totalChars < 900 && selectedCols > 1) {
+237 |  3 |                     selectedCols = Math.max(1, selectedCols - 1); 
+238 |  3 |                 } else if (totalChars < 1600 && selectedCols > 2) {
+239 |  3 |                     selectedCols = 2; // Expand text blocks
+240 |  2 |                 }
+241 |  2 | 
+242 |  2 |                 // Dynamic Layout-Aware Image Scaling
+243 |  2 |                 let layoutImgHeightPx = imgHeightPx;
+244 |  3 |                 if (selectedCols === 3) {
+245 |  3 |                     layoutImgHeightPx = Math.round(imgHeightPx * 0.55); // 55% of single-column size
+246 |  3 |                 } else if (selectedCols === 2) {
+247 |  3 |                     layoutImgHeightPx = Math.round(imgHeightPx * 0.75); // 75% of single-column size
+248 |  2 |                 }
+249 |  2 | 
+250 |  2 |                 // Article text columns — strictly enforced
+251 |  2 |                 const articleEl = container.querySelector('.article-content, .article-body');
+252 |  3 |                 if (articleEl) {
+253 |  3 |                     articleEl.style.fontSize      = conf.fontSize + 'px';
+254 |  3 |                     articleEl.style.lineHeight    = conf.lineHeight;
+255 |  3 |                     articleEl.style.columnCount   = selectedCols;
+256 |  3 |                     articleEl.style.columns       = selectedCols;
+257 |  3 |                     articleEl.style.webkitColumns = selectedCols;
+258 |  2 |                 }
+259 |  2 |                 
+260 |  3 |                 container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph').forEach(p => {
+261 |  3 |                     p.style.fontSize     = conf.fontSize + 'px';
+262 |  3 |                     p.style.lineHeight   = conf.lineHeight;
+263 |  3 |                     p.style.marginBottom = conf.paraMargin + 'px';
+264 |  3 |                     p.style.marginTop    = '0';
+265 |  2 |                 });
+266 |  2 | 
+267 |  2 |                 // Dropcap scaling: should scale proportionally with font size
+268 |  2 |                 let dcStyle = document.getElementById('nc-dropcap-style');
+269 |  3 |                 if (!dcStyle) {
+270 |  3 |                     dcStyle = document.createElement('style');
+271 |  3 |                     dcStyle.id = 'nc-dropcap-style';
+272 |  3 |                     document.head.appendChild(dcStyle);
+273 |  2 |                 }
+274 |  2 |                 const dropcapFS = Math.round(conf.fontSize * 3.6);
+275 |  2 |                 const dropcapLH = Math.round(conf.fontSize * 2.8);
+276 |  2 |                 dcStyle.innerHTML = `
+277 |  2 |                     .paragraph.has-dropcap::first-letter,
+278 |  3 |                     .article-body p:first-of-type::first-letter {
+279 |  3 |                         font-size: ${dropcapFS}px !important;
+280 |  3 |                         line-height: ${dropcapLH}px !important;
+281 |  2 |                     }
+282 |  2 |                 `;
+283 |  2 | 
+284 |  2 |                 // Headline auto-shrink
+285 |  2 |                 const headline = container.querySelector('.headline');
+286 |  3 |                 if (headline) {
+287 |  3 |                     let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
+288 |  3 |                     headline.style.fontSize = hlSize + 'px';
+289 |  3 |                     headline.style.lineHeight = '1.1';
+290 |  3 |                     let count = 0;
+291 |  4 |                     while (hlSize > 20 && count < 20) {
+292 |  4 |                         const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
+293 |  4 |                         const lines = Math.round(headline.offsetHeight / lh);
+294 |  5 |                         if (lines <= 2) {
+295 |  5 |                             break;
+296 |  4 |                         }
+297 |  4 |                         hlSize -= 2;
+298 |  4 |                         headline.style.fontSize = hlSize + 'px';
+299 |  4 |                         count++;
+300 |  3 |                     }
+301 |  2 |                 }
+302 |  2 | 
+303 |  2 |                 // Subheadline auto-shrink
+304 |  2 |                 const subheadline = container.querySelector('.subheadline, .subtitle');
+305 |  3 |                 if (subheadline) {
+306 |  3 |                     let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
+307 |  3 |                     subheadline.style.fontSize = subSize + 'px';
+308 |  3 |                     subheadline.style.lineHeight = '1.3';
+309 |  3 |                     let count = 0;
+310 |  4 |                     while (subSize > 12 && count < 10) {
+311 |  4 |                         const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
+312 |  4 |                         const lines = Math.round(subheadline.offsetHeight / lh);
+313 |  5 |                         if (lines <= 2) {
+314 |  5 |                             break;
+315 |  4 |                         }
+316 |  4 |                         subSize -= 1.5;
+317 |  4 |                         subheadline.style.fontSize = subSize + 'px';
+318 |  4 |                         count++;
+319 |  3 |                     }
+320 |  2 |                 }
+321 |  2 | 
+322 |  2 |                 // Spacing adjustments
+323 |  2 |                 const header = container.querySelector('header, .header-section');
+324 |  3 |                 if (header) {
+325 |  3 |                     header.style.marginBottom = Math.round(conf.paraMargin * 1.2) + 'px';
+326 |  2 |                 }
+327 |  2 |                 const meta = container.querySelector('.metadata-bar, .meta-section');
+328 |  3 |                 if (meta) {
+329 |  3 |                     meta.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+330 |  3 |                     meta.style.marginTop = Math.round(conf.paraMargin * 0.8) + 'px';
+331 |  2 |                 }
+332 |  2 |                 const headlineSec = container.querySelector('.headline-section');
+333 |  3 |                 if (headlineSec) {
+334 |  3 |                     headlineSec.style.margin = Math.round(conf.paraMargin * 1.2) + 'px 0 ' + Math.round(conf.paraMargin * 0.8) + 'px 0';
+335 |  2 |                 }
+336 |  2 |                 const subheadlineSec = container.querySelector('.subheadline-section');
+337 |  3 |                 if (subheadlineSec) {
+338 |  3 |                     subheadlineSec.style.marginBottom = Math.round(conf.paraMargin * 1.5) + 'px';
+339 |  2 |                 }
+340 |  2 | 
+341 |  2 |                 // Inject images using the advanced Reference Layout engine
+342 |  3 |                 if (imgCount > 0) {
+343 |  3 |                     const paragraphs = Array.from(container.querySelectorAll('.paragraph, .article-content p, .article-body p, .extra-paragraph'));
+344 |  3 |                     
+345 |  3 |                     // NEVER use the legacy isolated container at the top
+346 |  4 |                     if (imgContainer) {
+347 |  4 |                         imgContainer.innerHTML = '';
+348 |  4 |                         imgContainer.style.display = 'none';
+349 |  3 |                     }
+350 |  3 | 
+351 |  3 |                     const articleBody = container.querySelector('.article-body, .extra-news-layout, .article-content');
+352 |  4 |                     if (articleBody && paragraphs.length > 0) {
+353 |  4 |                         chosenLayoutName = 'Reference Diagonal Editorial Layout';
+354 |  4 | 
+355 |  4 |                         // ═══════════════════════════════════════════════════════════
+356 |  4 |                         // REFERENCE LAYOUT ENGINE
+357 |  4 |                         // Hero Image: Top-Left (float left, 45-50% width)
+358 |  4 |                         // Secondary Image: Bottom-Right (float right, 33-38% width)
+359 |  4 |                         // Text: Wraps beside and between both images naturally
+360 |  4 |                         // ═══════════════════════════════════════════════════════════
+361 |  4 | 
+362 |  4 |                         const masterBlock = document.createElement('div');
+363 |  4 |                         masterBlock.className = 'nc-editorial-master';
+364 |  4 |                         masterBlock.style.display = 'block';
+365 |  4 |                         masterBlock.style.overflow = 'hidden';
+366 |  4 | 
+367 |  4 |                         const heroWidthPct      = selectedCols === 1 ? 50 : (selectedCols === 2 ? 48 : 45);
+368 |  4 |                         const secondaryWidthPct = selectedCols === 1 ? 38 : (selectedCols === 2 ? 36 : 33);
+369 |  4 | 
+370 |  4 |                         // HERO IMAGE — float left at top
+371 |  4 |                         const heroWrapper = document.createElement('div');
+372 |  4 |                         heroWrapper.className = 'nc-hero-img-wrapper';
+373 |  4 |                         heroWrapper.style.float = 'left';
+374 |  4 |                         heroWrapper.style.width = heroWidthPct + '%';
+375 |  4 |                         heroWrapper.style.margin = '0 18px 12px 0';
+376 |  4 |                         heroWrapper.style.boxSizing = 'border-box';
+377 |  4 |                         heroWrapper.innerHTML = `
+378 |  4 |                             <img src="${urls[0]}" class="nc-image" style="width: 100%; height: auto; max-height: ${layoutImgHeightPx}px; object-fit: contain; display: block;" />
+379 |  4 |                             ${captions[0] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px; line-height: 1.2;">${captions[0]}</span>` : ''}
+380 |  4 |                         `;
+381 |  4 |                         masterBlock.appendChild(heroWrapper);
+382 |  4 | 
+383 |  4 |                         // Walk through paragraphs, injecting secondary/extra images at calculated positions
+384 |  4 |                         let secondaryInjected = false;
+385 |  4 |                         const totalParas = paragraphs.length;
+386 |  4 |                         const secondaryTriggerIdx = Math.max(1, Math.floor(totalParas * 0.6));
+387 |  4 | 
+388 |  5 |                         paragraphs.forEach((p, idx) => {
+389 |  5 |                             // SECONDARY IMAGE — inject at ~60% of text, float right (creates diagonal)
+390 |  6 |                             if (imgCount >= 2 && !secondaryInjected && idx === secondaryTriggerIdx) {
+391 |  6 |                                 const secWrapper = document.createElement('div');
+392 |  6 |                                 secWrapper.className = 'nc-secondary-img-wrapper';
+393 |  6 |                                 secWrapper.style.float = 'right';
+394 |  6 |                                 secWrapper.style.width = secondaryWidthPct + '%';
+395 |  6 |                                 secWrapper.style.margin = '0 0 12px 18px';
+396 |  6 |                                 secWrapper.style.boxSizing = 'border-box';
+397 |  6 |                                 secWrapper.style.clear = 'right';
+398 |  6 |                                 secWrapper.innerHTML = `
+399 |  6 |                                     <img src="${urls[1]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.75)}px; object-fit: contain; display: block;" />
+400 |  6 |                                     ${captions[1] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px;">${captions[1]}</span>` : ''}
+401 |  6 |                                 `;
+402 |  6 |                                 masterBlock.appendChild(secWrapper);
+403 |  6 |                                 secondaryInjected = true;
+404 |  5 |                             }
+405 |  5 | 
+406 |  5 |                             // EXTRA IMAGES (3+) — alternate left/right at even paragraph intervals
+407 |  6 |                             if (imgCount > 2) {
+408 |  7 |                                 for (let ei = 2; ei < imgCount; ei++) {
+409 |  7 |                                     const triggerPara = Math.floor(totalParas * (ei / imgCount));
+410 |  8 |                                     if (idx === triggerPara && ei < urls.length) {
+411 |  8 |                                         const extraWrapper = document.createElement('div');
+412 |  8 |                                         extraWrapper.className = 'nc-extra-img-wrapper';
+413 |  8 |                                         extraWrapper.style.float = (ei % 2 === 0) ? 'right' : 'left';
+414 |  8 |                                         extraWrapper.style.width = secondaryWidthPct + '%';
+415 |  8 |                                         extraWrapper.style.margin = (ei % 2 === 0) ? '0 0 12px 18px' : '0 18px 12px 0';
+416 |  8 |                                         extraWrapper.style.boxSizing = 'border-box';
+417 |  8 |                                         extraWrapper.innerHTML = `
+418 |  8 |                                             <img src="${urls[ei]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.65)}px; object-fit: contain; display: block;" />
+419 |  8 |                                             ${captions[ei] ? `<span class="image-caption" style="display: block; font-size: 11px; color: #555; margin-top: 4px; font-style: italic;">${captions[ei]}</span>` : ''}
+420 |  8 |                                         `;
+421 |  8 |                                         masterBlock.appendChild(extraWrapper);
+422 |  7 |                                     }
+423 |  6 |                                 }
+424 |  5 |                             }
+425 |  5 | 
+426 |  5 |                             masterBlock.appendChild(p);
+427 |  4 |                         });
+428 |  4 | 
+429 |  4 |                         // Clearfix
+430 |  4 |                         const cf = document.createElement('div');
+431 |  4 |                         cf.style.clear = 'both';
+432 |  4 |                         masterBlock.appendChild(cf);
+433 |  4 | 
+434 |  4 |                         // Guarantee secondary image rendered even if not enough paragraphs
+435 |  5 |                         if (imgCount >= 2 && !secondaryInjected) {
+436 |  5 |                             const secWrapper = document.createElement('div');
+437 |  5 |                             secWrapper.className = 'nc-secondary-img-wrapper';
+438 |  5 |                             secWrapper.style.float = 'right';
+439 |  5 |                             secWrapper.style.width = secondaryWidthPct + '%';
+440 |  5 |                             secWrapper.style.margin = '0 0 12px 18px';
+441 |  5 |                             secWrapper.style.boxSizing = 'border-box';
+442 |  5 |                             secWrapper.innerHTML = `
+443 |  5 |                                 <img src="${urls[1]}" class="nc-image" style="width: 100%; height: auto; max-height: ${Math.round(layoutImgHeightPx * 0.75)}px; object-fit: contain; display: block;" />
+444 |  5 |                                 ${captions[1] ? `<span class="image-caption" style="display: block; text-align: left; margin-top: 5px; font-style: italic; color: #555; font-size: 11px;">${captions[1]}</span>` : ''}
+445 |  5 |                             `;
+446 |  5 |                             masterBlock.insertBefore(secWrapper, cf);
+447 |  4 |                         }
+448 |  4 | 
+449 |  4 |                         // CSS columns are incompatible with float-based layout — disable them
+450 |  4 |                         articleBody.style.columnCount = '1';
+451 |  4 |                         articleBody.style.columns     = '1';
+452 |  4 |                         articleBody.style.webkitColumns = '1';
+453 |  4 | 
+454 |  4 |                         // Mount the entire master editorial block before the article body
+455 |  4 |                         articleBody.parentNode.insertBefore(masterBlock, articleBody);
+456 |  4 | 
+457 |  4 |                     } else {
+458 |  4 |                         // CRITICAL FALLBACK: no paragraphs or no articleBody found — always render images
+459 |  4 |                         chosenLayoutName = 'Safe Fallback Image Grid';
+460 |  4 | 
+461 |  4 |                         let fallbackContainer = imgContainer;
+462 |  5 |                         if (!fallbackContainer) {
+463 |  5 |                             fallbackContainer = document.createElement('div');
+464 |  5 |                             fallbackContainer.className = 'nc-generated-fallback-grid';
+465 |  5 |                             const target = container.querySelector('.article-body, .extra-news-layout, .article-content, .newspaper-body, .columns');
+466 |  5 |                             if (target) target.parentNode.insertBefore(fallbackContainer, target);
+467 |  5 |                             else container.appendChild(fallbackContainer);
+468 |  4 |                         }
+469 |  4 |                         fallbackContainer.innerHTML = '';
+470 |  4 |                         fallbackContainer.style.display = 'flex';
+471 |  4 |                         fallbackContainer.style.flexWrap = 'wrap';
+472 |  4 |                         fallbackContainer.style.gap = '15px';
+473 |  4 |                         fallbackContainer.style.marginBottom = '20px';
+474 |  4 | 
+475 |  5 |                         for (let i = 0; i < imgCount; i++) {
+476 |  5 |                             if (i >= urls.length) break;
+477 |  5 |                             const wrapper = document.createElement('div');
+478 |  5 |                             wrapper.className = 'nc-fallback-wrapper';
+479 |  5 |                             wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
+480 |  5 |                             wrapper.style.boxSizing = 'border-box';
+481 |  5 |                             wrapper.innerHTML = `
+482 |  5 |                                 <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
+483 |  5 |                                 ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
+484 |  5 |                             `;
+485 |  5 |                             fallbackContainer.appendChild(wrapper);
+486 |  4 |                         }
+487 |  3 |                     }
+488 |  3 | 
+489 |  3 |                 // FINAL EXPORT CHECK: Verify uploaded_image_count == rendered_image_count
+490 |  3 |                 // NOTE: We check using class name, not src.startsWith('http'), because
+491 |  3 |                 // the new layout engine injects images from the JS `urls` array directly.
+492 |  3 |                 let renderedImages = container.querySelectorAll('img.nc-image').length;
+493 |  4 |                 if (imgCount > 0 && renderedImages < imgCount) {
+494 |  4 | 
+495 |  4 |                     console.log('[LAYOUT] WARNING: Rendered image count mismatch! Expected ' + imgCount + ', found ' + renderedImages + '. Triggering Safe Fallback System.');
+496 |  4 |                     
+497 |  4 |                     // Abort current layout and wipe advanced layout elements
+498 |  4 |                     container.querySelectorAll('.nc-hero-section, .nc-floated-image-wrapper').forEach(el => el.remove());
+499 |  4 |                     
+500 |  4 |                     // Regenerate using safe image layout
+501 |  4 |                     chosenLayoutName = 'Failsafe Mandatory Image Grid';
+502 |  4 |                     
+503 |  4 |                     let exportFallbackContainer = container.querySelector('.featured-image-container, .image-grid, .nc-generated-fallback-grid');
+504 |  5 |                     if (!exportFallbackContainer) {
+505 |  5 |                         exportFallbackContainer = document.createElement('div');
+506 |  5 |                         exportFallbackContainer.className = 'nc-generated-fallback-grid';
+507 |  5 |                         const t = container.querySelector('.article-body, .extra-news-layout, .article-content, .newspaper-body, .columns');
+508 |  5 |                         if (t) t.parentNode.insertBefore(exportFallbackContainer, t);
+509 |  5 |                         else container.appendChild(exportFallbackContainer);
+510 |  4 |                     }
+511 |  4 |                     
+512 |  4 |                     exportFallbackContainer.innerHTML = '';
+513 |  4 |                     exportFallbackContainer.style.display = 'flex';
+514 |  4 |                     exportFallbackContainer.style.flexWrap = 'wrap';
+515 |  4 |                     exportFallbackContainer.style.gap = '15px';
+516 |  4 |                     exportFallbackContainer.style.marginBottom = '20px';
+517 |  4 |                     
+518 |  5 |                     for (let i = 0; i < imgCount; i++) {
+519 |  5 |                         if (i >= urls.length) break;
+520 |  5 |                         const wrapper = document.createElement('div');
+521 |  5 |                         wrapper.className = 'nc-fallback-wrapper';
+522 |  5 |                         wrapper.style.flex = imgCount === 1 ? '1 1 100%' : '1 1 45%';
+523 |  5 |                         wrapper.style.boxSizing = 'border-box';
+524 |  5 |                         wrapper.innerHTML = `
+525 |  5 |                             <img src="${urls[i]}" class="nc-image" style="width: 100%; height: auto; display: block;" />
+526 |  5 |                             ${captions[i] ? `<span style="display: block; font-size: 12px; color: #555; margin-top: 5px;">${captions[i]}</span>` : ''}
+527 |  5 |                         `;
+528 |  5 |                         exportFallbackContainer.appendChild(wrapper);
+529 |  4 |                     }
+530 |  3 |                 }
+531 |  3 | 
+532 |  3 |                 console.log('[LAYOUT] Config: fontSize=' + conf.fontSize + ' cols=' + selectedCols + ' baseImgH=' + imgHeightPx + ' layoutImgH=' + layoutImgHeightPx + ' padding=' + conf.padding + ' layout=' + chosenLayoutName);
+533 |  3 |                 return layoutImgHeightPx;
+534 |  2 |             }
+535 |  2 | 
+536 |  3 |             async function executeLayout() {
+537 |  3 |                 console.log('LAYOUT START');
+538 |  3 |                 // Initialize aspect ratios and orientations
+539 |  3 |                 const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
+540 |  3 |                 aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
+541 |  4 |                 orientations = dims.map(d => {
+542 |  4 |                     if (!d.width || !d.height) return 'Square';
+543 |  4 |                     if (d.height > d.width) return 'Portrait';
+544 |  4 |                     if (d.width > d.height) return 'Landscape';
+545 |  4 |                     return 'Square';
+546 |  3 |                 });
+547 |  3 | 
+548 |  3 |                 await waitReady();
+549 |  3 |                 console.log('COLUMN FLOW COMPLETE: fonts + initial images settled');
+550 |  3 | 
+551 |  3 |                 const articleBodyNode = container.querySelector('.article-body, .extra-news-layout, .article-content');
+552 |  3 |                 const originalArticleHtml = articleBodyNode ? articleBodyNode.innerHTML : '';
+553 |  3 | 
+554 |  3 |                 // Unlock container — must be auto-height (single page = natural height)
+555 |  3 |                 container.style.height    = 'auto';
+556 |  3 |                 container.style.minHeight = 'unset';
+557 |  3 |                 container.style.overflow  = 'visible';
+558 |  3 | 
+559 |  3 |                 let chosenConf = configs[0];
+560 |  3 |                 let chosenImgH = 0;
+561 |  3 |                 const TARGET_MAX_HEIGHT = 1500;
+562 |  3 |                 let fits = false;
+563 |  3 | 
+564 |  4 |                 for (let i = 0; i < configs.length; i++) {
+565 |  5 |                     if (articleBodyNode) {
+566 |  5 |                         articleBodyNode.innerHTML = originalArticleHtml;
+567 |  5 |                         // Clean up ALL dynamic elements inserted by previous layout attempts
+568 |  5 |                         container.querySelectorAll('.nc-hero-section, .nc-editorial-master, .nc-generated-fallback-grid, .nc-floated-image-wrapper').forEach(el => el.remove());
+569 |  5 |                         
+570 |  5 |                         // Clean up fallback container
+571 |  5 |                         const imgC = container.querySelector('.featured-image-container, .image-grid');
+572 |  6 |                         if (imgC) {
+573 |  6 |                             imgC.innerHTML = '';
+574 |  6 |                             imgC.style.display = 'none';
+575 |  5 |                         }
+576 |  4 |                     }
+577 |  4 |                     const conf = configs[i];
+578 |  4 |                     const imgH = applyConfig(configs[i]);
+579 |  4 |                     chosenConf = configs[i];
+580 |  4 |                     chosenImgH = imgH;
+581 |  4 | 
+582 |  4 |                     // Wait two animation frames for layout to settle
+583 |  4 |                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+584 |  4 | 
+585 |  4 |                     // Check if the container fits within target page height
+586 |  5 |                     if (container.scrollHeight <= TARGET_MAX_HEIGHT) {
+587 |  5 |                         fits = true;
+588 |  5 |                         break;
+589 |  4 |                     }
+590 |  3 |                 }
+591 |  3 | 
+592 |  3 |                 // Wait final render cycle (with timeout guard)
+593 |  3 |                 console.log('IMAGE POSITIONING COMPLETE: compression loop done');
+594 |  3 |                 await waitReady();
+595 |  3 | 
+596 |  3 |                 const finalW   = container.offsetWidth;
+597 |  3 |                 const finalH   = container.scrollHeight;
+598 |  3 |                 const finalFS  = chosenConf.fontSize;
+599 |  3 |                 const finalSec = (data.sections || []).length;
+600 |  3 |                 const finalCh  = (data.sections || []).reduce((s,p) => s + p.length, 0);
+601 |  3 | 
+602 |  3 |                 console.log('[LAYOUT] DONE — chars:', finalCh, 'sections:', finalSec, '(ALL PRESERVED)');
+603 |  3 |                 console.log('[LAYOUT] Font size used:', finalFS + 'px');
+604 |  3 |                 console.log('[LAYOUT] Image height used:', chosenImgH + 'px');
+605 |  3 |                 console.log('[LAYOUT] Final clipping dimensions:', finalW + 'x' + finalH + 'px');
+606 |  3 | 
+607 |  3 |                 // Print-ready global styles (removes all watermarks, page breaks, margins, etc.)
+608 |  3 |                 let st = document.getElementById('nc-layout-style');
+609 |  3 |                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
+610 |  3 |                 st.innerHTML = `
+611 |  3 |                     * { -webkit-font-smoothing: antialiased !important; text-rendering: optimizeLegibility !important; }
+612 |  3 |                     body { margin: 0 !important; padding: 20px !important; display: flex !important; justify-content: center !important; align-items: flex-start !important; }
+613 |  3 |                     .newspaper-container { height: auto !important; min-height: unset !important; overflow: visible !important; }
+614 |  4 |                     @media print {
+615 |  4 |                         @page { size: auto; margin: 0; }
+616 |  4 |                         body { padding: 0 !important; background: #fff !important; }
+617 |  4 |                         .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
+618 |  4 |                         * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
+619 |  3 |                     }
+620 |  3 |                     .article-content p, .article-body p, .paragraph { text-align: justify !important; orphans: 2 !important; widows: 2 !important; }
+621 |  3 |                 `;
+622 |  3 | 
+623 |  3 |                 // Log image dimensions and layout selection
+624 |  4 |                 const finalDims = urls.map(url => {
+625 |  4 |                     const img = Array.from(document.querySelectorAll('img')).find(i => 
+626 |  4 |                         i.src === url && !i.closest('.logo-container, .masthead, header, .meta-section, .meta-info, .metadata-bar')
+627 |  4 |                     );
+628 |  4 |                     return img ? `${img.offsetWidth}x${img.offsetHeight}px` : 'unknown';
+629 |  3 |                 }).join(', ');
+630 |  3 | 
+631 |  4 |                 window.__IMAGE_LAYOUT_LOGS__ = {
+632 |  4 |                     image_count: imgCount,
+633 |  4 |                     image_orientations: orientations.join(', '),
+634 |  4 |                     selected_layout: chosenLayoutName,
+635 |  4 |                     final_dimensions: finalDims
+636 |  3 |                 };
+637 |  3 | 
+638 |  3 |                 console.log('LAYOUT COMPLETE');
+639 |  3 |                 console.log('SETTING __LAYOUT_DONE__');
+640 |  3 |                 // Signal Playwright that layout is complete
+641 |  3 |                 window.__LAYOUT_DONE__ = true;
+642 |  2 |             }
+643 |  2 | 
+644 |  2 |             // ── FIX 3: Unconditional 10-second setTimeout failsafe ───────────
+645 |  2 |             // The old try/catch only catches *thrown* errors. A hanging Promise
+646 |  2 |             // (e.g., stalled image load) is NOT a thrown error — the await just
+647 |  2 |             // freezes forever, the catch block is never reached, and Playwright
+648 |  2 |             // times out at 30 s. This setTimeout fires regardless of Promise state.
+649 |  3 |             setTimeout(function() {
+650 |  4 |                 if (!window.__LAYOUT_DONE__) {
+651 |  4 |                     console.log('FORCED LAYOUT COMPLETE: 10s failsafe triggered — setting __LAYOUT_DONE__');
+652 |  4 |                     window.__LAYOUT_DONE__ = true;
+653 |  3 |                 }
+654 |  2 |             }, 10000);
+655 |  2 | 
+656 |  2 |             // Wrap executeLayout in try/catch so that ANY JS error still sets
+657 |  2 |             // window.__LAYOUT_DONE__ = true, preventing Playwright from hanging forever.
+658 |  3 |             (async () => {
+659 |  4 |                 try {
+660 |  4 |                     await executeLayout();
+661 |  4 |                 } catch(err) {
+662 |  4 |                     console.error('[LAYOUT FATAL ERROR]', err && err.message ? err.message : String(err));
+663 |  4 |                     // Guarantee the Playwright wait_for_function never hangs
+664 |  5 |                     if (!window.__LAYOUT_DONE__) {
+665 |  5 |                         console.log('SETTING __LAYOUT_DONE__ via catch block');
+666 |  5 |                         window.__LAYOUT_DONE__ = true;
+667 |  4 |                     }
+668 |  3 |                 }
+669 |  2 |             })();
+670 |  1 |         });
+671 |  1 |         

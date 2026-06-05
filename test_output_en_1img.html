@@ -99,7 +99,7 @@
 
         <!-- Fixed Headline Area: 120px -->
         <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
-            <h2 class="headline" style="margin: 0 0 5px 0; font-size: 40px; line-height: 1.1;">TEST: English - 1 Image</h2>
+                <h2 class="headline" style="font-size: 55px; margin: 0 0 5px 0; line-height: 1.15;">TEST: English - 1 Image</h2>
             <p class="subheadline" style="margin: 0 0 5px 0; font-size: 16px;">Validation of updated stable rendering pipeline</p>
             <div class="byline" style="margin: 0;">By By Antigravity QA Agent</div>
         </div>
@@ -127,7 +127,8 @@
         
         document.addEventListener("DOMContentLoaded", async () => {
             // Global layout constants visible to all nested functions
-            const TARGET_MAX_HEIGHT = 1500;
+            // Global layout constants visible to all nested functions
+            const TARGET_MAX_HEIGHT = 3000;
 
             try {
                 const dataEl = document.getElementById('newspaper-data');
@@ -148,11 +149,16 @@
             if (!container) return;
 
             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
+
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
             // Compression configurations: from spacious to compact
             const configs = [
                 // fontSize, lineHeight, paraMargin, imgMaxPct, padding
+                { fontSize: 24.0, lineHeight: 1.45, paraMargin: 16, imgMaxPct: 0.65, padding: 40 },
+                { fontSize: 22.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
+                { fontSize: 20.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
+                { fontSize: 18.0, lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 },
                 { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
                 { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
                 { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
@@ -257,13 +263,11 @@
                         w0 = W_canvas * 0.55;
                         h0 = w0 / aspect0;
                     }
-                    // Reduce Hero image height by 20% (and adjust width to maintain aspect ratio)
-                    h0 = h0 * 0.8;
-                    w0 = h0 * aspect0;
+                    // Hero image uses its natural computed aspect and width
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
-                        x: Math.round(W_canvas - w0), // Align top-right
+                        x: urls.length === 1 ? Math.round((W_canvas - w0) / 2) : Math.round(W_canvas - w0), // Align center if 1 image, else top-right
                         y: 0,
                         w: Math.round(w0),
                         h: Math.round(h0)
@@ -312,23 +316,38 @@
                     imgEl.style.left = `${obs.x}px`;
                     imgEl.style.top = `${obs.y}px`;
                     imgEl.style.width = `${obs.w}px`;
-                    imgEl.style.height = `${obs.h}px`;
+                    imgEl.style.height = 'auto'; // Adjust border dynamically to content height
                     imgEl.style.boxSizing = 'border-box';
                     imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
                     imgEl.style.padding = '4px';
                     imgEl.style.background = '#fff';
                     imgEl.style.zIndex = '5';
                     
-                    const imgH = obs.h - (obs.caption ? 24 : 8);
+                    let captionHeight = 0;
+                    if (obs.caption) {
+                        const charsPerLine = Math.max(1, Math.floor(obs.w / 6.5));
+                        const lines = Math.ceil(obs.caption.length / charsPerLine);
+                        captionHeight = lines * 15;
+                    }
+                    const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
+                    
                     imgEl.innerHTML = `
                         <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
-                        ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 14px; line-height: 14px;">${obs.caption}</div>` : ''}
+                        ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
                     `;
                     canvas.appendChild(imgEl);
                 });
                 
                 // Define inflated obstacles to carve out margins around text regions (12px cushion)
                 const inflatedObstacles = obstacles.map(obs => {
+                    if (urls.length === 1) {
+                        return {
+                            x: 0,
+                            y: obs.y - 12,
+                            w: W_canvas,
+                            h: obs.h + 24
+                        };
+                    }
                     return {
                         x: obs.x - 12,
                         y: obs.y - 12,
@@ -336,240 +355,261 @@
                         h: obs.h + 24
                     };
                 });
-                
-                // Generate rectangular text regions in each column using vertical interval-splitting
-                const colDivs = [];
-                const regions = [];
-                
-                for (let c = 0; c < N; c++) {
-                    const L_c = c * (W_col + G);
-                    const R_c = L_c + W_col;
+
+                // Function to test layout with a specific canvas height
+                function testFlow(testH) {
+                    canvas.querySelectorAll('.nc-column').forEach(el => el.remove());
                     
-                    // Start with a single full-height interval
-                    let intervals = [{ yStart: 0, yEnd: H_canvas, xOffset: 0, w: W_col }];
+                    const colDivs = [];
+                    const regions = [];
                     
-                    // Split intervals sequentially by intersecting inflated obstacles
-                    inflatedObstacles.forEach(obs => {
-                        const xOverlapStart = Math.max(L_c, obs.x);
-                        const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
-                        if (xOverlapStart >= xOverlapEnd) return; // No horizontal overlap
+                    for (let c = 0; c < N; c++) {
+                        const L_c = c * (W_col + G);
+                        const R_c = L_c + W_col;
                         
-                        const yOverlapStart = Math.max(0, obs.y);
-                        const yOverlapEnd = Math.min(H_canvas, obs.y + obs.h);
-                        if (yOverlapStart >= yOverlapEnd) return;
+                        let intervals = [{ yStart: 0, yEnd: testH, xOffset: 0, w: W_col }];
                         
-                        const nextIntervals = [];
+                        inflatedObstacles.forEach(obs => {
+                            const xOverlapStart = Math.max(L_c, obs.x);
+                            const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
+                            if (xOverlapStart >= xOverlapEnd) return;
+                            
+                            const yOverlapStart = Math.max(0, obs.y);
+                            const yOverlapEnd = Math.min(testH, obs.y + obs.h);
+                            if (yOverlapStart >= yOverlapEnd) return;
+                            
+                            const nextIntervals = [];
+                            intervals.forEach(int => {
+                                const yIntersectStart = Math.max(int.yStart, yOverlapStart);
+                                const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
+                                
+                                if (yIntersectStart >= yIntersectEnd) {
+                                    nextIntervals.push(int);
+                                    return;
+                                }
+                                
+                                if (int.yStart < yIntersectStart) {
+                                    nextIntervals.push({
+                                        yStart: int.yStart,
+                                        yEnd: yIntersectStart,
+                                        xOffset: int.xOffset,
+                                        w: int.w
+                                    });
+                                }
+                                
+                                const obsLeftRel = obs.x - L_c;
+                                const obsRightRel = obs.x + obs.w - L_c;
+                                
+                                if (obsLeftRel <= 0) {
+                                    if (obsRightRel >= W_col) {
+                                        // Covers width
+                                    } else {
+                                        const wRem = W_col - obsRightRel;
+                                        if (wRem >= 40) {
+                                            nextIntervals.push({
+                                                yStart: yIntersectStart,
+                                                yEnd: yIntersectEnd,
+                                                xOffset: obsRightRel,
+                                                w: wRem
+                                            });
+                                        }
+                                    }
+                                } else if (obsRightRel >= W_col) {
+                                    const wRem = obsLeftRel;
+                                    if (wRem >= 40) {
+                                        nextIntervals.push({
+                                            yStart: yIntersectStart,
+                                            yEnd: yIntersectEnd,
+                                            xOffset: 0,
+                                            w: wRem
+                                        });
+                                    }
+                                }
+                                
+                                if (int.yEnd > yIntersectEnd) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectEnd,
+                                        yEnd: int.yEnd,
+                                        xOffset: int.xOffset,
+                                        w: int.w
+                                    });
+                                }
+                            });
+                            intervals = nextIntervals;
+                        });
+                        
+                        const colDiv = document.createElement('div');
+                        colDiv.className = `nc-column col-${c}`;
+                        colDiv.style.position = 'absolute';
+                        colDiv.style.left = `${L_c}px`;
+                        colDiv.style.top = '0px';
+                        colDiv.style.width = `${W_col}px`;
+                        colDiv.style.boxSizing = 'border-box';
+                        canvas.appendChild(colDiv);
+                        colDivs.push(colDiv);
+                        
                         intervals.forEach(int => {
-                            const yIntersectStart = Math.max(int.yStart, yOverlapStart);
-                            const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
+                            const h = int.yEnd - int.yStart;
+                            if (h < 24 || int.w < 40) return;
                             
-                            if (yIntersectStart >= yIntersectEnd) {
-                                // No vertical intersection with this interval, keep it
-                                nextIntervals.push(int);
-                                return;
-                            }
+                            const rBox = document.createElement('div');
+                            rBox.className = 'nc-text-region-box';
+                            rBox.style.position = 'absolute';
+                            rBox.style.left = `${int.xOffset}px`;
+                            rBox.style.top = `${int.yStart}px`;
+                            rBox.style.width = `${int.w}px`;
+                            rBox.style.height = `${h}px`;
+                            rBox.style.boxSizing = 'border-box';
+                            rBox.style.overflow = 'hidden';
                             
-                            // 1. Above split
-                            if (yIntersectStart > int.yStart) {
-                                nextIntervals.push({
-                                    yStart: int.yStart,
-                                    yEnd: yIntersectStart,
-                                    xOffset: int.xOffset,
-                                    w: int.w
-                                });
-                            }
+                            colDiv.appendChild(rBox);
                             
-                            // 2. Intersecting split (side channel text regions next to image)
-                            const obsLeftRel = obs.x - L_c;
-                            const obsRightRel = (obs.x + obs.w) - L_c;
-                            
-                            if (obsLeftRel <= 0) {
-                                // Image covers the left, text channel on the right
-                                const wRem = W_col - obsRightRel;
-                                if (wRem >= 80) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: obsRightRel,
-                                        w: wRem
-                                    });
-                                }
-                            } else if (obsRightRel >= W_col) {
-                                // Image covers the right, text channel on the left
-                                const wRem = obsLeftRel;
-                                if (wRem >= 80) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: 0,
-                                        w: wRem
-                                    });
-                                }
-                            } else {
-                                // Image is centered/in-between
-                                const wLeft = obsLeftRel;
-                                const wRight = W_col - obsRightRel;
-                                if (wLeft >= wRight && wLeft >= 80) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: 0,
-                                        w: wLeft
-                                    });
-                                } else if (wRight >= 80) {
-                                    nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: obsRightRel,
-                                        w: wRight
-                                    });
-                                }
-                            }
-                            
-                            // 3. Below split
-                            if (int.yEnd > yIntersectEnd) {
-                                nextIntervals.push({
-                                    yStart: yIntersectEnd,
-                                    yEnd: int.yEnd,
-                                    xOffset: int.xOffset,
-                                    w: int.w
-                                });
-                            }
+                            regions.push({
+                                colIndex: c,
+                                div: colDiv,
+                                rBox: rBox,
+                                height: h,
+                                y: int.yStart
+                            });
                         });
-                        intervals = nextIntervals;
-                    });
-                    
-                    // Create column absolute container
-                    const colDiv = document.createElement('div');
-                    colDiv.className = `nc-column col-${c}`;
-                    colDiv.style.position = 'absolute';
-                    colDiv.style.left = `${L_c}px`;
-                    colDiv.style.top = '0px';
-                    colDiv.style.width = `${W_col}px`;
-                    colDiv.style.boxSizing = 'border-box';
-                    canvas.appendChild(colDiv);
-                    colDivs.push(colDiv);
-                    
-                    // Render regions as absolute boxes inside column
-                    intervals.forEach(int => {
-                        const h = int.yEnd - int.yStart;
-                        if (h < 24 || int.w < 80) return; // filter out tiny/useless slices
-                        
-                        const rBox = document.createElement('div');
-                        rBox.className = 'nc-text-region-box';
-                        rBox.style.position = 'absolute';
-                        rBox.style.left = `${int.xOffset}px`;
-                        rBox.style.top = `${int.yStart}px`;
-                        rBox.style.width = `${int.w}px`;
-                        rBox.style.height = `${h}px`;
-                        rBox.style.boxSizing = 'border-box';
-                        rBox.style.overflow = 'hidden';
-                        
-                        colDiv.appendChild(rBox);
-                        
-                        regions.push({
-                            colIndex: c,
-                            div: colDiv,
-                            rBox: rBox,
-                            height: h
-                        });
-                    });
-                }
-                
-                // Flow text through regions sequentially
-                const paragraphs = [...data.sections];
-                if (paragraphs.length > 0 && data.dateline) {
-                    const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
-                    paragraphs[0] = prefix + paragraphs[0];
-                }
-                
-                let pIdx = 0;
-                let currentRegionIdx = 0;
-                let activeRegion = regions[currentRegionIdx];
-                let fits = true;
-                
-                while (activeRegion) {
-                    if (pIdx >= paragraphs.length) {
-                        break;
                     }
                     
-                    let text = paragraphs[pIdx];
+                    let rawSections = [];
+                    for (const sec of data.sections) {
+                        rawSections.push(...sec.split(/\n+/).filter(p => p.trim() !== ''));
+                    }
+                    const paragraphs = [...rawSections];
+                    if (paragraphs.length > 0 && data.dateline) {
+                        const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
+                        paragraphs[0] = prefix + paragraphs[0];
+                    }
                     
-                    const p = document.createElement('p');
-                    p.innerText = text;
-                    p.style.fontSize = `${conf.fontSize}px`;
-                    p.style.lineHeight = conf.lineHeight;
-                    p.style.marginBottom = `${conf.paraMargin}px`;
-                    p.style.marginTop = '0';
-                    p.style.textAlign = 'justify';
-                    p.style.wordBreak = 'break-word';
-                    p.style.overflowWrap = 'break-word';
-                    p.style.hyphens = 'auto';
+                    let pIdx = 0;
+                    let currentRegionIdx = 0;
+                    let activeRegion = regions[currentRegionIdx];
+                    let testFits = true;
                     
-                    activeRegion.rBox.appendChild(p);
-                    
-                    if (activeRegion.rBox.scrollHeight > activeRegion.height) {
-                        activeRegion.rBox.removeChild(p);
+                    while (activeRegion) {
+                        if (pIdx >= paragraphs.length) break;
                         
-                        const words = text.split(/\s+/);
-                        const testP = document.createElement('p');
-                        testP.style.fontSize = `${conf.fontSize}px`;
-                        testP.style.lineHeight = conf.lineHeight;
-                        testP.style.marginBottom = `${conf.paraMargin}px`;
-                        testP.style.marginTop = '0';
-                        testP.style.textAlign = 'justify';
-                        testP.style.wordBreak = 'break-word';
-                        testP.style.overflowWrap = 'break-word';
-                        testP.style.hyphens = 'auto';
-                        activeRegion.rBox.appendChild(testP);
+                        let text = paragraphs[pIdx];
+                        const p = document.createElement('p');
+                        p.innerText = text;
+                        p.style.fontSize = `${conf.fontSize}px`;
+                        p.style.lineHeight = conf.lineHeight;
+                        p.style.marginBottom = `${conf.paraMargin}px`;
+                        p.style.marginTop = '0';
+                        p.style.textAlign = 'justify';
+                        p.style.wordBreak = 'break-word';
+                        p.style.overflowWrap = 'break-word';
+                        p.style.hyphens = 'auto';
                         
-                        let wIdx = 0;
-                        for (; wIdx < words.length; wIdx++) {
-                            testP.innerText = words.slice(0, wIdx + 1).join(' ');
-                            if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                        activeRegion.rBox.appendChild(p);
+                        
+                        if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                            activeRegion.rBox.removeChild(p);
+                            
+                            const words = text.split(/\s+/);
+                            const testP = document.createElement('p');
+                            testP.style.fontSize = `${conf.fontSize}px`;
+                            testP.style.lineHeight = conf.lineHeight;
+                            testP.style.marginBottom = `${conf.paraMargin}px`;
+                            testP.style.marginTop = '0';
+                            testP.style.textAlign = 'justify';
+                            testP.style.wordBreak = 'break-word';
+                            testP.style.overflowWrap = 'break-word';
+                            testP.style.hyphens = 'auto';
+                            activeRegion.rBox.appendChild(testP);
+                            
+                            let wIdx = 0;
+                            for (; wIdx < words.length; wIdx++) {
+                                testP.innerText = words.slice(0, wIdx + 1).join(' ');
+                                if (activeRegion.rBox.scrollHeight > activeRegion.height) break;
+                            }
+                            activeRegion.rBox.removeChild(testP);
+                            
+                            if (wIdx > 0) {
+                                const fitP = document.createElement('p');
+                                fitP.innerText = words.slice(0, wIdx).join(' ');
+                                fitP.style.fontSize = `${conf.fontSize}px`;
+                                fitP.style.lineHeight = conf.lineHeight;
+                                fitP.style.marginBottom = `${conf.paraMargin}px`;
+                                fitP.style.marginTop = '0';
+                                fitP.style.textAlign = 'justify';
+                                fitP.style.wordBreak = 'break-word';
+                                fitP.style.overflowWrap = 'break-word';
+                                fitP.style.hyphens = 'auto';
+                                activeRegion.rBox.appendChild(fitP);
+                            }
+                            
+                            const remainingText = words.slice(wIdx).join(' ');
+                            if (remainingText.trim().length > 0) {
+                                paragraphs.splice(pIdx, 1, remainingText);
+                            } else {
+                                pIdx++;
+                            }
+                            
+                            currentRegionIdx++;
+                            activeRegion = regions[currentRegionIdx];
+                            
+                            if (!activeRegion) {
+                                if (pIdx < paragraphs.length) {
+                                    testFits = false;
+                                }
                                 break;
                             }
-                        }
-                        activeRegion.rBox.removeChild(testP);
-                        
-                        if (wIdx > 0) {
-                            const fitP = document.createElement('p');
-                            fitP.innerText = words.slice(0, wIdx).join(' ');
-                            fitP.style.fontSize = `${conf.fontSize}px`;
-                            fitP.style.lineHeight = conf.lineHeight;
-                            fitP.style.marginBottom = `${conf.paraMargin}px`;
-                            fitP.style.marginTop = '0';
-                            fitP.style.textAlign = 'justify';
-                            fitP.style.wordBreak = 'break-word';
-                            fitP.style.overflowWrap = 'break-word';
-                            fitP.style.hyphens = 'auto';
-                            activeRegion.rBox.appendChild(fitP);
-                        }
-                        
-                        const remainingText = words.slice(wIdx).join(' ');
-                        if (remainingText.trim().length > 0) {
-                            paragraphs.splice(pIdx, 1, remainingText);
                         } else {
                             pIdx++;
                         }
-                        
-                        currentRegionIdx++;
-                        activeRegion = regions[currentRegionIdx];
-                        
-                        if (!activeRegion) {
-                            if (pIdx < paragraphs.length) {
-                                fits = false;
-                            }
-                            break;
+                    }
+                    
+                    return { fits: testFits, regions: regions };
+                }
+
+                const maxH = H_canvas;
+                let res = testFlow(maxH);
+                let fits = res.fits;
+                let finalRegions = res.regions;
+
+                // If it fits perfectly at max height, binary search to balance columns
+                if (fits) {
+                    let minH = 150;
+                    let highH = maxH;
+                    let bestH = maxH;
+                    
+                    for (let step = 0; step < 8; step++) {
+                        let midH = Math.round((minH + highH) / 2);
+                        let midRes = testFlow(midH);
+                        if (midRes.fits) {
+                            bestH = midH;
+                            highH = midH;
+                            finalRegions = midRes.regions;
+                        } else {
+                            minH = midH + 1;
                         }
-                    } else {
-                        pIdx++;
+                    }
+                    
+                    // Re-apply the best valid height if the last midH didn't fit
+                    if (bestH !== Math.round((minH - 1 + highH) / 2)) {
+                        let bestRes = testFlow(bestH);
+                        finalRegions = bestRes.regions;
                     }
                 }
                 
-                if (fits) {
-                    canvas.style.height = `${H_canvas}px`;
+                let maxY = 0;
+                for (const r of finalRegions) {
+                    let contentH = 0;
+                    if (r.rBox.lastElementChild) {
+                        contentH = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight;
+                    }
+                    const contentBottom = r.y + contentH;
+                    if (contentBottom > maxY) maxY = contentBottom;
                 }
+                for (const img of obstacles) {
+                    const imgBottom = img.y + img.h;
+                    if (imgBottom > maxY) maxY = imgBottom;
+                }
+                canvas.style.height = `${Math.max(maxY + 40, 150)}px`;
                 
                 window.__IMAGE_LAYOUT_LOGS__ = {
                     image_count: imgCount,
@@ -603,48 +643,8 @@
 
                 for (let i = 0; i < configs.length; i++) {
                     const conf = configs[i];
-                    container.style.padding = conf.padding + 'px';
-                    
-                    const innerBorder = container.querySelector('.inner-border');
-                    if (innerBorder) {
-                        innerBorder.style.padding = Math.round(conf.padding * 0.8) + 'px';
-                    }
-
-                    const headline = container.querySelector('.headline');
-                    if (headline) {
-                        let hlSize = Math.min(54, Math.round(conf.fontSize * 3.4));
-                        headline.style.fontSize = hlSize + 'px';
-                        headline.style.lineHeight = '1.1';
-                        let count = 0;
-                        while (hlSize > 20 && count < 20) {
-                            const lh = parseInt(window.getComputedStyle(headline).lineHeight) || hlSize * 1.1;
-                            const lines = Math.round(headline.offsetHeight / lh);
-                            if (lines <= 2) {
-                                break;
-                            }
-                            hlSize -= 2;
-                            headline.style.fontSize = hlSize + 'px';
-                            count++;
-                        }
-                    }
-
-                    const subheadline = container.querySelector('.subheadline, .subtitle');
-                    if (subheadline) {
-                        let subSize = Math.min(22, Math.round(conf.fontSize * 1.4));
-                        subheadline.style.fontSize = subSize + 'px';
-                        subheadline.style.lineHeight = '1.3';
-                        let count = 0;
-                        while (subSize > 12 && count < 10) {
-                            const lh = parseInt(window.getComputedStyle(subheadline).lineHeight) || subSize * 1.3;
-                            const lines = Math.round(subheadline.offsetHeight / lh);
-                            if (lines <= 2) {
-                                break;
-                            }
-                            subSize -= 1.5;
-                            subheadline.style.fontSize = subSize + 'px';
-                            count++;
-                        }
-                    }
+                    // Removed overrides for padding, headline, and subheadline
+                    // to respect the templates' built-in styles ("formats and paddings")
 
                     let dcStyle = document.getElementById('nc-dropcap-style');
                     if (!dcStyle) {
