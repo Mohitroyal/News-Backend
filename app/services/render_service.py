@@ -558,6 +558,14 @@ class RenderService:
                 
                 // Define inflated obstacles to carve out margins around text regions (12px cushion)
                 const inflatedObstacles = obstacles.map(obs => {
+                    if (urls.length === 1) {
+                        return {
+                            x: 0,
+                            y: obs.y - 12,
+                            w: W_canvas,
+                            h: obs.h + 24
+                        };
+                    }
                     return {
                         x: obs.x - 12,
                         y: obs.y - 12,
