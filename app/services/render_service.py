@@ -686,7 +686,10 @@ class RenderService:
                     
                     let rawSections = [];
                     for (const sec of data.sections) {
-                        rawSections.push(...sec.split(/\n+/).filter(p => p.trim() !== ''));
+                        const cleanSec = sec.replace(/\n+/g, ' ').trim();
+                        if (cleanSec) {
+                            rawSections.push(cleanSec);
+                        }
                     }
                     const paragraphs = [...rawSections];
                     if (paragraphs.length > 0 && data.dateline) {
