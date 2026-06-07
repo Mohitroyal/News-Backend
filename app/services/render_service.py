@@ -847,6 +847,32 @@ class RenderService:
 
                 await waitReady();
 
+                // Auto-shrink headline if it's too tall (especially for translated Indic scripts)
+                const headline = container.querySelector('.headline');
+                if (headline) {
+                    const maxHeadlineHeight = 220; // max acceptable height for headline
+                    let currentFontSize = parseFloat(window.getComputedStyle(headline).fontSize) || 68;
+                    let count = 0;
+                    while (headline.offsetHeight > maxHeadlineHeight && currentFontSize > 24 && count < 40) {
+                        currentFontSize -= 2;
+                        headline.style.fontSize = currentFontSize + 'px';
+                        headline.style.lineHeight = '1.1';
+                        count++;
+                    }
+                }
+                
+                // Auto-shrink subheadline if it's too tall
+                const subheadline = container.querySelector('.subheadline');
+                if (subheadline) {
+                    let subSize = parseFloat(window.getComputedStyle(subheadline).fontSize) || 19;
+                    let count = 0;
+                    while (subheadline.offsetHeight > 80 && subSize > 14 && count < 15) {
+                        subSize -= 1;
+                        subheadline.style.fontSize = subSize + 'px';
+                        count++;
+                    }
+                }
+
                 container.style.height    = 'auto';
                 container.style.minHeight = 'unset';
                 container.style.overflow  = 'visible';
