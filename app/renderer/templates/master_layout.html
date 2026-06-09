@@ -201,9 +201,9 @@
         :root {
             --primary-color: {{ primary_color | default('#000000') }};
             --accent-color: {{ accent_color | default('#333333') }};
-            --bg-color: #fcfcfc;
-            --text-color: #111111;
-            --border-color: #000000;
+            --bg-color: #F5F1E8;
+            --text-color: #000000;
+            --border-color: #333333;
             
             {% if font_family == 'playfair' %}
                 --font-family-chosen: 'Playfair Display', serif;
@@ -273,7 +273,7 @@
         .newspaper-container {
             border: 1px solid var(--border-color);
             padding: 2px;
-            background-color: #fff;
+            background-color: var(--bg-color);
             box-shadow: 0 0 20px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
@@ -348,7 +348,7 @@
             line-height: 1.1;
             text-align: center;
             margin: 0 0 15px 0;
-            color: var(--text-color);
+            color: #111111;
         }
 
         .subtitle {
