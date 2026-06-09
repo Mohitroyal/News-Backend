@@ -2,12 +2,12 @@
 
 /* Color Theme: Royal Midnight Navy, Ivory White, Classic Charcoal, Gold accents */
 :root {
-    --bg-color: #faf9f6;
-    --paper-color: #ffffff;
-    --text-color: #0f172a; /* Slate 900 */
+    --bg-color: #F5F1E8;
+    --paper-color: #F5F1E8;
+    --text-color: #000000;
     --accent-color: #0a192f; /* Deep Navy */
     --gold-color: #b38f32;
-    --border-color: #0a192f;
+    --border-color: #333333;
     --column-gap: 24px;
 }
 
@@ -110,7 +110,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     font-size: 50px;
     font-weight: 900;
     line-height: 1.15;
-    color: var(--text-color);
+    color: #111111;
     margin: 0 0 10px 0;
     letter-spacing: -1px;
 }

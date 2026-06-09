@@ -2,9 +2,9 @@
 
 /* Color Theme: Saffron, Gold, Crimson accents, Warm BroadSheet Paper Background */
 :root {
-    --bg-color: #fcf8f2;
-    --paper-color: #ffffff;
-    --text-color: #1a1a1a;
+    --bg-color: #F5F1E8;
+    --paper-color: #F5F1E8;
+    --text-color: #000000;
     --accent-color: #e67e22; /* Saffron/Orange */
     --accent-dark: #A30000;
     --border-color: #333333;
@@ -111,7 +111,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     font-size: 54px;
     font-weight: 900;
     line-height: 1.15;
-    color: var(--text-color);
+    color: #111111;
     margin: 0 0 12px 0;
     letter-spacing: -1px;
 }
