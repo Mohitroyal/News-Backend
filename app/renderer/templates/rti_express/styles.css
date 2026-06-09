@@ -2,11 +2,11 @@
 
 /* Color Theme: Bold Crimson Red, Stark Black, Ash White Paper Background */
 :root {
-    --bg-color: #f5f5f3;
-    --paper-color: #ffffff;
-    --text-color: #0b0b0b;
+    --bg-color: #F5F1E8;
+    --paper-color: #F5F1E8;
+    --text-color: #000000;
     --accent-color: #a30000; /* Bold Red */
-    --border-color: #111111;
+    --border-color: #333333;
     --column-gap: 26px;
 }
 
@@ -110,7 +110,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     font-size: 68px;
     font-weight: bold;
     line-height: 1.15;
-    color: var(--text-color);
+    color: #111111;
     margin: 0;
     letter-spacing: -0.5px;
 }
