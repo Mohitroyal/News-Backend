@@ -187,6 +187,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 render_data = {
                     **formatted,
                     "id": str(clipping_id),
+                    "headline": clipping.headline,
                     "publication_name": clipping.publication_name,
                     "publication_date": clipping.publication_date,
                     "image_url": safe_image_url,
