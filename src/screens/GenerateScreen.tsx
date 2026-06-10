@@ -30,7 +30,7 @@ export const GenerateScreen = () => {
   const [imageUrls,     setImageUrls]     = useState<string[]>(currentConfig.imageUrls || []);
   const [loading,       setLoading]       = useState(false);
   const [stageIndex,    setStageIndex]    = useState(-1); // -1 = idle
-  const [columnMode,    setColumnMode]    = useState<'auto' | 'manual'>('auto');
+  const [columnMode,    setColumnMode]    = useState<'auto' | 'manual'>(currentConfig.columnMode || 'auto');
 
   const currentStage = stageIndex >= 0 ? GEN_STAGES[Math.min(stageIndex, GEN_STAGES.length - 1)] : null;
 
@@ -118,6 +118,7 @@ export const GenerateScreen = () => {
         language,
         fontFamily,
         layoutColumns: finalColumns,
+        columnMode,
         imageUrls,
         imageUrl:        imageUrls[0] || '',
         publicationName: selectedTemplateDetails.name,

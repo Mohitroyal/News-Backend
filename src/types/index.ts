@@ -54,6 +54,7 @@ export interface GenerationConfig {
   publicationDate: string;
   layoutColumns: number;
   fontFamily?: string;
+  columnMode?: 'auto' | 'manual';
 }
 
 export interface Generation {
