@@ -30,6 +30,7 @@ export const GenerateScreen = () => {
   const [imageUrls,     setImageUrls]     = useState<string[]>(currentConfig.imageUrls || []);
   const [loading,       setLoading]       = useState(false);
   const [stageIndex,    setStageIndex]    = useState(-1); // -1 = idle
+  const [columnMode,    setColumnMode]    = useState<'auto' | 'manual'>('auto');
 
   const currentStage = stageIndex >= 0 ? GEN_STAGES[Math.min(stageIndex, GEN_STAGES.length - 1)] : null;
 
@@ -102,13 +103,21 @@ export const GenerateScreen = () => {
       const selectedTemplateDetails =
         TEMPLATES_LIST.find(t => t.id === currentConfig.templateId) || TEMPLATES_LIST[0];
 
+      let finalColumns = layoutColumns;
+      if (columnMode === 'auto') {
+        const len = content.length;
+        if (len < 500) finalColumns = 1;
+        else if (len < 1200) finalColumns = 2;
+        else finalColumns = 3;
+      }
+
       const configToSave = {
         ...currentConfig,
         headline,
         articleContent: content,
         language,
         fontFamily,
-        layoutColumns,
+        layoutColumns: finalColumns,
         imageUrls,
         imageUrl:        imageUrls[0] || '',
         publicationName: selectedTemplateDetails.name,
@@ -323,17 +332,29 @@ export const GenerateScreen = () => {
                 <option value="courier">Courier</option>
               </select>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">Columns</label>
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300 flex flex-col gap-2">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Columns</label>
+              
               <select
-                value={layoutColumns}
-                onChange={(e) => setLayoutColumns(Number(e.target.value))}
+                value={columnMode}
+                onChange={(e) => setColumnMode(e.target.value as 'auto' | 'manual')}
                 className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               >
-                <option value={1}>1 Column</option>
-                <option value={2}>2 Columns</option>
-                <option value={3}>3 Columns</option>
+                <option value="auto">Auto</option>
+                <option value="manual">Manual</option>
               </select>
+
+              {columnMode === 'manual' && (
+                <select
+                  value={layoutColumns}
+                  onChange={(e) => setLayoutColumns(Number(e.target.value))}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                >
+                  <option value={1}>1 Column</option>
+                  <option value={2}>2 Columns</option>
+                  <option value={3}>3 Columns</option>
+                </select>
+              )}
             </div>
           </div>
 
