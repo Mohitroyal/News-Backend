@@ -45,7 +45,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     background: var(--paper-color);
     border: 2px solid var(--border-color);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-    padding: 40px;
+    padding: 40px 15px;
     box-sizing: border-box;
     position: relative;
     display: flex;
