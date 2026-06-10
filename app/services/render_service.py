@@ -465,7 +465,7 @@ class RenderService:
                 
                 // Get canvas boundaries relative to target maximum page height
                 const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
-                const H_canvas = TARGET_MAX_HEIGHT - canvasTop - 60; // 60px padding/footer margin
+                let H_canvas = Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60); // 60px padding/footer margin
                 
                 // Calculate image dimensions and create absolute obstacles
                 const obstacles = [];
@@ -525,6 +525,13 @@ class RenderService:
                         }
                     }
                 }
+
+                let maxYObs = 0;
+                obstacles.forEach(obs => {
+                    if (obs.y + obs.h > maxYObs) maxYObs = obs.y + obs.h;
+                });
+                H_canvas = Math.max(H_canvas, maxYObs + 400);
+                
                 
                 // Render absolute images onto canvas
                 obstacles.forEach(obs => {
