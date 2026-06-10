@@ -829,7 +829,7 @@ class RenderService:
                     const imgBottom = img.y + img.h;
                     if (imgBottom > maxY) maxY = imgBottom;
                 }
-                canvas.style.height = `${Math.max(maxY + 40, 150)}px`;
+                canvas.style.height = `${Math.max(maxY, 150)}px`;
                 
                 window.__IMAGE_LAYOUT_LOGS__ = {
                     image_count: imgCount,
