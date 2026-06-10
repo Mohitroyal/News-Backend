@@ -83,9 +83,13 @@
         }
 
         /* ─── HEADLINE BLOCK ────────────────────────────────────── */
-        .headline-block {
+        .headline-block, .headline-section {
             text-align: center;
-            margin: 22px 0 14px;
+            margin: 22px 0 14px !important;
+            background-color: #FFF8DC !important;
+            padding: 15px !important;
+            border: 2px solid #D60000 !important;
+            border-left: 2px solid #D60000 !important; /* override injected left-border */
         }
         .headline {
             font-family: 'Playfair Display', serif;
@@ -94,8 +98,7 @@
             line-height: 1.12;
             letter-spacing: -1px;
             color: var(--ink);
-            background-color: #FFF8DC;
-            display: inline;
+            display: block;
         }
 
         /* ─── SUBHEADLINE ───────────────────────────────────────── */
