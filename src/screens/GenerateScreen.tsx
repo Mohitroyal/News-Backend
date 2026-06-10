@@ -106,8 +106,8 @@ export const GenerateScreen = () => {
       let finalColumns = layoutColumns;
       if (columnMode === 'auto') {
         const len = content.length;
-        if (len < 500) finalColumns = 1;
-        else if (len < 1200) finalColumns = 2;
+        if (len < 350) finalColumns = 1;
+        else if (len < 850) finalColumns = 2;
         else finalColumns = 3;
       }
 
