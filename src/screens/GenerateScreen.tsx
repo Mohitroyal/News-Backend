@@ -224,23 +224,23 @@ export const GenerateScreen = () => {
     TEMPLATES_LIST.find(t => t.id === currentConfig.templateId) || TEMPLATES_LIST[0];
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      <div className="flex-none p-4 pb-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Generate</h1>
+    <div className="flex flex-col bg-gray-50 dark:bg-ink-black transition-colors duration-300">
+      <div className="flex-none p-4 pb-2 bg-white dark:bg-ink-black border-b border-gray-100 dark:border-prussian-blue transition-colors duration-300">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-alabaster-grey transition-colors duration-300">Generate</h1>
       </div>
 
       <div className="p-6 max-w-md mx-auto relative" style={{ paddingBottom: '10rem' }}>
         <div className="space-y-6">
 
           {/* Language Selector */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-3">
               <Globe className="w-4 h-4 text-blue-500" /> Language
             </label>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl p-4 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium appearance-none"
+              className="w-full bg-gray-50 dark:bg-dusk-blue border border-gray-200 dark:border-dusty-denim rounded-2xl p-4 text-gray-900 dark:text-alabaster-grey focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium appearance-none"
             >
               <option value="en">English</option>
               <option value="te">Telugu (తెలుగు)</option>
@@ -252,20 +252,20 @@ export const GenerateScreen = () => {
           </div>
 
           {/* Headline */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Headline</label>
+          <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-2">Headline</label>
             <input
               type="text"
               placeholder="E.g. The Future of AI"
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl p-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-lg font-medium"
+              className="w-full bg-gray-50 dark:bg-dusk-blue border border-gray-200 dark:border-dusty-denim rounded-2xl p-4 text-gray-900 dark:text-alabaster-grey placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-lg font-medium"
             />
           </div>
 
           {/* Content Snippet */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-2">
               <Type className="w-4 h-4 text-blue-500" /> Article Content
             </label>
             <textarea
@@ -273,20 +273,20 @@ export const GenerateScreen = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}
-              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl p-4 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
+              className="w-full bg-gray-50 dark:bg-dusk-blue border border-gray-200 dark:border-dusty-denim rounded-2xl p-4 text-gray-900 dark:text-alabaster-grey placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
             />
           </div>
 
           {/* Featured Images */}
-          <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-3">
               <ImageIcon className="w-4 h-4 text-blue-500" /> Featured Images (Max 3)
             </label>
 
             {imageUrls.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {imageUrls.map((url, idx) => (
-                  <div key={idx} className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 aspect-square group bg-gray-100 dark:bg-gray-700">
+                  <div key={idx} className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-dusty-denim aspect-square group bg-gray-100 dark:bg-dusk-blue">
                     <img src={url} alt={`Uploaded ${idx + 1}`} className="w-full h-full object-cover" />
                     <div className="absolute bottom-1 left-1 bg-green-500 rounded-full p-0.5">
                       <CheckCircle2 className="h-3 w-3 text-white" />
@@ -306,12 +306,12 @@ export const GenerateScreen = () => {
               <button
                 onClick={handleImageUpload}
                 disabled={loading}
-                className="w-full relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-6 text-center bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                className="w-full relative border-2 border-dashed border-gray-300 dark:border-dusty-denim rounded-2xl p-6 text-center bg-gray-50 dark:bg-dusk-blue/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
-                  <ImageIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tap to upload image</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">{3 - imageUrls.length} remaining · auto-compressed</p>
+                  <ImageIcon className="h-6 w-6 text-gray-400 dark:text-dusty-denim" />
+                  <p className="text-sm font-medium text-gray-600 dark:text-dusty-denim">Tap to upload image</p>
+                  <p className="text-xs text-gray-500 dark:text-dusty-denim">{3 - imageUrls.length} remaining · auto-compressed</p>
                 </div>
               </button>
             )}
@@ -319,12 +319,12 @@ export const GenerateScreen = () => {
 
           {/* Typography & Layout */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">Font</label>
+            <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-dusty-denim mb-2 uppercase tracking-wider">Font</label>
               <select
                 value={fontFamily}
                 onChange={(e) => setFontFamily(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full bg-gray-50 dark:bg-dusk-blue border border-gray-200 dark:border-dusty-denim rounded-xl p-3 text-gray-900 dark:text-alabaster-grey text-sm focus:outline-none focus:border-blue-500"
               >
                 <option value="playfair">Playfair</option>
                 <option value="merriweather">Merriweather</option>
@@ -332,13 +332,13 @@ export const GenerateScreen = () => {
                 <option value="courier">Courier</option>
               </select>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 transition-colors duration-300 flex flex-col gap-2">
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Columns</label>
+            <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300 flex flex-col gap-2">
+              <label className="block text-xs font-semibold text-gray-500 dark:text-dusty-denim uppercase tracking-wider">Columns</label>
               
               <select
                 value={columnMode}
                 onChange={(e) => setColumnMode(e.target.value as 'auto' | 'manual')}
-                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full bg-gray-50 dark:bg-dusk-blue border border-gray-200 dark:border-dusty-denim rounded-xl p-3 text-gray-900 dark:text-alabaster-grey text-sm focus:outline-none focus:border-blue-500"
               >
                 <option value="auto">Auto</option>
                 <option value="manual">Manual</option>
@@ -348,7 +348,7 @@ export const GenerateScreen = () => {
                 <select
                   value={layoutColumns}
                   onChange={(e) => setLayoutColumns(Number(e.target.value))}
-                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full bg-gray-50 dark:bg-dusk-blue border border-gray-200 dark:border-dusty-denim rounded-xl p-3 text-gray-900 dark:text-alabaster-grey text-sm focus:outline-none focus:border-blue-500"
                 >
                   <option value={1}>1 Column</option>
                   <option value={2}>2 Columns</option>
@@ -361,13 +361,13 @@ export const GenerateScreen = () => {
           {/* Logo / Template Status */}
           <div
             onClick={() => navigate('/templates')}
-            className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform duration-300"
+            className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform duration-300"
           >
             <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-1">
                 <Newspaper className="w-4 h-4 text-blue-500" /> Active Logo
               </label>
-              <p className="text-gray-900 dark:text-white font-bold">{selectedTemplateDetails.name}</p>
+              <p className="text-gray-900 dark:text-alabaster-grey font-bold">{selectedTemplateDetails.name}</p>
             </div>
             <div className="text-blue-600 dark:text-blue-400 font-medium text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
               Change
@@ -385,18 +385,18 @@ export const GenerateScreen = () => {
 
         {/* Live progress bar shown during generation */}
         {loading && currentStage && (
-          <div className="mb-3 bg-white dark:bg-gray-800 rounded-2xl px-4 py-3 shadow-md border border-gray-100 dark:border-gray-700">
+          <div className="mb-3 bg-white dark:bg-prussian-blue rounded-2xl px-4 py-3 shadow-md border border-gray-100 dark:border-dusk-blue">
             <div className="flex justify-between items-center mb-1.5">
               <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{currentStage.label}</span>
-              <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{currentStage.pct}%</span>
+              <span className="text-xs font-mono text-gray-500 dark:text-dusty-denim">{currentStage.pct}%</span>
             </div>
-            <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-gray-100 dark:bg-dusk-blue rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700 ease-out"
                 style={{ width: `${currentStage.pct}%` }}
               />
             </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 text-center">
+            <p className="text-[10px] text-gray-400 dark:text-dusty-denim mt-1.5 text-center">
               This can take up to 2–3 minutes. Do not close the app.
             </p>
           </div>
