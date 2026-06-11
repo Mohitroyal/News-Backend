@@ -924,8 +924,6 @@ class RenderService:
                         .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
                         * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
                     }
-                    .headline { color: #D60000 !important; font-weight: 900 !important; text-shadow: 0 1px 0 rgba(0,0,0,0.08) !important; }
-                    .headline-section { border-left-color: #D60000 !important; }
                 `;
 
                 console.log('LAYOUT COMPLETE');
