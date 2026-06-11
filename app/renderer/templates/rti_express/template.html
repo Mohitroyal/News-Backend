@@ -10,7 +10,7 @@
 <body>
     <div class="newspaper-container">
         <!-- Watermark -->
-        <div class="watermark" style="position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%) scale(1.8); opacity: 0.2; pointer-events: none; z-index: 9999; width: 85%; display: flex; justify-content: center; align-items: center; filter: drop-shadow(0px 4px 15px rgba(0,0,0,0.5));">
+        <div class="watermark" style="position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%) scale(1.8); opacity: 0.2; pointer-events: none; z-index: 0; width: 85%; display: flex; justify-content: center; align-items: center; filter: drop-shadow(0px 4px 15px rgba(0,0,0,0.5));">
             {% set current_logo = logo_id if logo_id else template_id %}
             {% if current_logo == 'bharath_reporter' %}
                 {% include 'bharath_reporter/logo.svg' %}
