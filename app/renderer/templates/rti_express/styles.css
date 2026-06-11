@@ -5,8 +5,9 @@
     --bg-color: #F5F1E8;
     --paper-color: #F5F1E8;
     --text-color: #000000;
-    --accent-color: #a30000; /* Bold Red */
-    --border-color: #333333;
+    --accent-color: #a30000;
+    /* Bold Red */
+    --border-color: #CFE8FF;
     --column-gap: 26px;
 }
 
@@ -22,24 +23,39 @@ body {
 }
 
 /* Multilingual Font Families */
-html[lang="hi"] body, html[lang="hi"] .paragraph, html[lang="hi"] .headline {
+html[lang="hi"] body,
+html[lang="hi"] .paragraph,
+html[lang="hi"] .headline {
     font-family: 'Noto Serif Devanagari', serif;
 }
-html[lang="te"] body, html[lang="te"] .paragraph, html[lang="te"] .headline {
+
+html[lang="te"] body,
+html[lang="te"] .paragraph,
+html[lang="te"] .headline {
     font-family: 'Noto Serif Telugu', serif;
 }
-html[lang="kn"] body, html[lang="kn"] .paragraph, html[lang="kn"] .headline {
+
+html[lang="kn"] body,
+html[lang="kn"] .paragraph,
+html[lang="kn"] .headline {
     font-family: 'Noto Serif Kannada', serif;
 }
-html[lang="ta"] body, html[lang="ta"] .paragraph, html[lang="ta"] .headline {
+
+html[lang="ta"] body,
+html[lang="ta"] .paragraph,
+html[lang="ta"] .headline {
     font-family: 'Noto Serif Tamil', serif;
 }
-html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
+
+html[lang="ml"] body,
+html[lang="ml"] .paragraph,
+html[lang="ml"] .headline {
     font-family: 'Noto Serif Malayalam', serif;
 }
 
 .newspaper-container {
-    width: 1060px; /* Precise broadsheet width */
+    width: 1060px;
+    /* Precise broadsheet width */
     height: auto;
     min-height: 500px;
     background: var(--paper-color);
@@ -135,7 +151,8 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    flex-grow: 1; /* Make the body grow to push footer to the bottom */
+    flex-grow: 1;
+    /* Make the body grow to push footer to the bottom */
 }
 
 /* IMAGE SECTION */
@@ -169,7 +186,13 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
 
 /* ARTICLE CONTENT SECTION - MULTI-COLUMN */
 .article-content {
-    columns: {{ layout_columns | default(3) }};
+    columns: {
+            {
+            layout_columns | default(3)
+        }
+    }
+
+    ;
     column-gap: var(--column-gap);
     column-rule: 1px solid #dcdcd8;
     text-align: justify;
@@ -209,7 +232,8 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     word-wrap: break-word;
     border-top: 2px solid var(--border-color);
     padding-top: 12px;
-    margin-top: auto; /* Push the footer to the bottom of the container */
+    margin-top: auto;
+    /* Push the footer to the bottom of the container */
     font-size: 11.5px;
     text-transform: uppercase;
     letter-spacing: 1.5px;

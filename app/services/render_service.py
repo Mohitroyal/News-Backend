@@ -545,7 +545,7 @@ class RenderService:
                     imgEl.style.boxSizing = 'border-box';
                     imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
                     imgEl.style.padding = '4px';
-                    imgEl.style.background = '#fff';
+                    imgEl.style.background = 'var(--bg-color, #F5F1E8)';
                     imgEl.style.zIndex = '5';
                     
                     let captionHeight = 0;
