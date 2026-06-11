@@ -916,8 +916,8 @@ class RenderService:
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
                 st.innerHTML = `
                     * { -webkit-font-smoothing: antialiased !important; text-rendering: optimizeLegibility !important; }
-                    body { margin: 0 !important; padding: 20px !important; display: flex !important; justify-content: center !important; align-items: flex-start !important; }
-                    .newspaper-container { height: auto !important; min-height: unset !important; overflow: visible !important; }
+                    body { margin: 0 !important; padding: 0 !important; display: flex !important; justify-content: center !important; align-items: flex-start !important; }
+                    .newspaper-container { height: auto !important; min-height: unset !important; overflow: visible !important; box-shadow: none !important; margin: 0 !important; }
                     @media print {
                         @page { size: auto; margin: 0; }
                         body { padding: 0 !important; background: #fff !important; }
@@ -1076,7 +1076,7 @@ class RenderService:
                     _log_memory("generate_png: Before Screenshot")
                     print(f"[PLAYWRIGHT] Screenshot Started")
                     sys.stdout.flush()
-                    await page.screenshot(path=output_path, full_page=False, type="png", timeout=300000)
+                    await page.locator('.newspaper-container').first.screenshot(path=output_path, type="png", timeout=300000)
                     print(f"[PLAYWRIGHT] Screenshot Completed")
                     sys.stdout.flush()
                     print(f"[PLAYWRIGHT] PNG Saved")
