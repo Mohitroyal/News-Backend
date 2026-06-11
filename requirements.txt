@@ -2,48 +2,48 @@
 # Generated from backend/requirements.txt with dev-only packages removed
 
 # ── Web Framework ─────────────────────────────────────────────────────────────
-fastapi>=0.111.0
-uvicorn[standard]>=0.30.1
+fastapi
+uvicorn[standard]
 
 # ── Data Validation ───────────────────────────────────────────────────────────
-pydantic>=2.7.4
-pydantic-settings>=2.3.1
+pydantic
+pydantic-settings
 
 # ── Database ──────────────────────────────────────────────────────────────────
-sqlalchemy>=2.0.31
-psycopg2-binary>=2.9.9          # PostgreSQL driver (binary = no native build needed)
-alembic>=1.13.1                 # Database migrations
+sqlalchemy
+psycopg2-binary
+alembic
 
 # ── Authentication ────────────────────────────────────────────────────────────
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
+python-jose[cryptography]
+passlib[bcrypt]
 
 # ── File Uploads ──────────────────────────────────────────────────────────────
-python-multipart>=0.0.9
+python-multipart
 
 # ── Payments ──────────────────────────────────────────────────────────────────
-stripe>=9.10.0
+stripe
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
-supabase>=2.5.1
+supabase
 
 # ── HTTP Client ───────────────────────────────────────────────────────────────
 httpx
 
 # ── HTML Rendering & PDF ──────────────────────────────────────────────────────
-jinja2>=3.1.4
-playwright>=1.44.0              # install-deps + install chromium in build command
+jinja2
+playwright              # install-deps + install chromium in build command
 
 # ── Templating Utilities ──────────────────────────────────────────────────────
-pillow>=10.3.0                  # Image processing for PNG generation
+pillow                  # Image processing for PNG generation
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
-python-dotenv>=1.0.1
-structlog>=24.1.0               # Structured logging
-langdetect>=1.0.9               # Language detection
+python-dotenv
+structlog               # Structured logging
+langdetect              # Language detection
 
 # ── WSGI / Process manager ───────────────────────────────────────────────────
-gunicorn>=22.0.0
+gunicorn
 
 # ── REMOVED (dev/local-only) ──────────────────────────────────────────────────
 # celery                        Not needed — using FastAPI BackgroundTasks
@@ -53,4 +53,4 @@ gunicorn>=22.0.0
 # pytest-asyncio                Dev only
 email-validator
 playwright
-psutil>=5.9.0
+psutil
