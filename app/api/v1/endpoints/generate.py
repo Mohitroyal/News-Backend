@@ -197,7 +197,6 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "font_family": clipping.font_family or "playfair",
                     "logo_id": clipping.logo_id or clipping.template_id,
                     "is_premium": is_premium,
-                    "logo_mode": getattr(clipping, "logo_mode", True),
                 }
 
                 if clipping.template_id == "custom":
@@ -493,7 +492,6 @@ async def create_clipping(
         publication_date=clipping_in.publication_date,
         layout_columns=clipping_in.layout_columns,
         font_family=clipping_in.font_family or "playfair",
-        logo_mode=clipping_in.logo_mode,
         status="processing"
     )
     db.add(clipping)

@@ -10,7 +10,6 @@
 <body>
     <div class="newspaper-container">
         <!-- Watermark -->
-        {% if logo_mode is not defined or logo_mode %}
         <div class="watermark" style="position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%) scale(1.8); opacity: 0.2; pointer-events: none; z-index: 0; width: 85%; display: flex; justify-content: center; align-items: center; filter: drop-shadow(0px 4px 15px rgba(0,0,0,0.5));">
             {% set current_logo = logo_id if logo_id else template_id %}
             {% if current_logo == 'bharath_reporter' %}
@@ -27,7 +26,6 @@
                 {% endif %}
             {% endif %}
         </div>
-        {% endif %}
 
         <!-- ZONE 1: Logo Zone (Height: 90px) -->
         <div class="logo-zone" style="height: 90px; display: flex; justify-content: center; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; padding: 0; overflow: hidden; width: 100%;">

@@ -40,7 +40,6 @@ class ClippingBase(BaseModel):
     publication_date: str = Field(alias="publicationDate")
     layout_columns: int = Field(3, alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
-    logo_mode: bool = Field(True, alias="logoMode")
 
     class Config:
         populate_by_name = True
@@ -68,7 +67,6 @@ class Clipping(BaseModel):
     status: str
     layout_columns: int = Field(3, alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
-    logo_mode: bool = Field(True, alias="logoMode")
     created_at: datetime = Field(alias="createdAt")
 
     class Config:
