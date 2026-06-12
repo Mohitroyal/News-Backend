@@ -427,7 +427,7 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
-            function applySinglePassLayout(conf, S) {
+            function applySinglePassLayout(conf, S, H_layout) {
                 // Clear the compositor canvas
                 canvas.innerHTML = '';
                 
@@ -441,7 +441,7 @@ class RenderService:
                 
                 // Get canvas boundaries relative to target maximum page height
                 const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
-                const H_canvas = Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60); // 60px padding/footer margin
+                const H_canvas = H_layout || Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60); // 60px padding/footer margin
                 
                 // Calculate image dimensions and create absolute obstacles
                 const obstacles = [];
@@ -464,9 +464,9 @@ class RenderService:
                     
                     if (urls.length > 1) {
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * Math.max(0.28, Math.min(0.40, 0.33 * S_img));
+                        let w1 = W_canvas * Math.max(0.32, Math.min(0.46, 0.38 * S_img));
                         let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * 0.85);
+                        h1 = Math.min(h1, imgHeightPx * 0.95);
                         let y1 = h0 + 60; // Spacing below Hero
                         obstacles.push({
                             url: urls[1],
@@ -665,6 +665,11 @@ class RenderService:
                     p.style.overflowWrap = 'break-word';
                     activeRegion.rBox.appendChild(p);
                     
+                    if (currentRegionIdx === regions.length - 1) {
+                        pIdx++;
+                        continue;
+                    }
+                    
                     if (activeRegion.rBox.scrollHeight > activeRegion.height) {
                         activeRegion.rBox.removeChild(p);
                         const words = text.split(/\s+/);
@@ -690,7 +695,13 @@ class RenderService:
                 
                 let maxY = 0;
                 regions.forEach(r => {
-                    if (r.rBox.lastElementChild) maxY = Math.max(maxY, r.y + r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight);
+                    if (r.rBox.lastElementChild) {
+                        const contentHeight = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight + 4;
+                        r.rBox.style.height = `${contentHeight}px`;
+                        maxY = Math.max(maxY, r.y + contentHeight);
+                    } else {
+                        r.rBox.style.height = '0px';
+                    }
                 });
                 obstacles.forEach(img => maxY = Math.max(maxY, img.y + img.h));
                 canvas.style.height = `${Math.max(maxY, 150)}px`;
@@ -720,21 +731,56 @@ class RenderService:
                 
                 let obstacleArea = 0;
                 const imgHeightPx = Math.round(0.58 * W_canvas);
+                const obstacles = [];
+                
+                let S_img = S || 1.0;
                 if (urls.length > 0) {
                     const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * Math.max(0.48, Math.min(0.60, 0.55 * S));
-                    obstacleArea += w0 * Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
+                    let w0 = W_canvas * Math.max(0.48, Math.min(0.60, 0.55 * S_img));
+                    let h0 = Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
+                    obstacles.push({ x: Math.round(W_canvas - w0), y: 0, w: Math.round(w0), h: Math.round(h0) });
                     if (urls.length > 1) {
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * Math.max(0.28, Math.min(0.40, 0.33 * S));
-                        obstacleArea += w1 * Math.min(w1 / aspect1, imgHeightPx * 0.85);
+                        let w1 = W_canvas * Math.max(0.32, Math.min(0.46, 0.38 * S_img));
+                        let h1 = Math.min(w1 / aspect1, imgHeightPx * 0.95);
+                        let y1 = h0 + 60;
+                        obstacles.push({ x: 0, y: Math.round(y1), w: Math.round(w1), h: Math.round(h1) });
                     }
                 }
                 
-                const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - obstacleArea) / (totalChars * 0.54));
-                const conf = { fontSize: Math.max(16.0, Math.min(23.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
+                // Available width for columns: N * W_col.
+                // But images block some of the columns. Let's compute the available area for text.
+                let blockedArea = 0;
+                obstacles.forEach(obs => {
+                    for (let c = 0; c < N; c++) {
+                        const L_c = c * (W_col + 24);
+                        const R_c = L_c + W_col;
+                        const xOverlapStart = Math.max(L_c, obs.x);
+                        const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
+                        if (xOverlapStart < xOverlapEnd) {
+                            blockedArea += (xOverlapEnd - xOverlapStart) * obs.h;
+                        }
+                    }
+                });
+                
+                const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - blockedArea) / (totalChars * 0.54));
+                const conf = { fontSize: Math.max(15.0, Math.min(21.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
-                applySinglePassLayout(conf, S);
+                const areaPerChar = conf.fontSize * conf.fontSize * 0.55 * conf.lineHeight;
+                const totalTextArea = totalChars * areaPerChar;
+                
+                let H_target = (totalTextArea + blockedArea) / (N * W_col);
+                H_target = H_target * 1.15;
+                
+                let maxObstacleY = 0;
+                obstacles.forEach(obs => {
+                    maxObstacleY = Math.max(maxObstacleY, obs.y + obs.h);
+                });
+                
+                let H_layout = Math.max(maxObstacleY + 20, Math.round(H_target));
+                H_layout = Math.max(300, Math.min(H_avail, H_layout));
+
+                applySinglePassLayout(conf, S, H_layout);
                 
                 let st = document.getElementById('nc-layout-style');
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }

@@ -66,6 +66,7 @@ html[lang="ml"] .headline {
     position: relative;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* HEADER SECTION */
