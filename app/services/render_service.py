@@ -370,24 +370,7 @@ class RenderService:
 
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
-            // Compression configurations: from spacious to compact (focusing on 16px-21px range)
-            const configs = [
-                { fontSize: 21.0, lineHeight: 1.40, paraMargin: 14 },
-                { fontSize: 20.0, lineHeight: 1.40, paraMargin: 14 },
-                { fontSize: 19.0, lineHeight: 1.38, paraMargin: 13 },
-                { fontSize: 18.0, lineHeight: 1.35, paraMargin: 12 },
-                { fontSize: 17.5, lineHeight: 1.35, paraMargin: 11 },
-                { fontSize: 17.0, lineHeight: 1.35, paraMargin: 10 },
-                { fontSize: 16.5, lineHeight: 1.32, paraMargin: 10 },
-                { fontSize: 16.0, lineHeight: 1.32, paraMargin: 8 },
-                // Emergency overflow fallbacks
-                { fontSize: 15.0, lineHeight: 1.30, paraMargin: 8 },
-                { fontSize: 14.0, lineHeight: 1.28, paraMargin: 6 },
-                { fontSize: 13.0, lineHeight: 1.25, paraMargin: 5 },
-                { fontSize: 12.0, lineHeight: 1.20, paraMargin: 4 },
-                { fontSize: 10.0, lineHeight: 1.15, paraMargin: 3 },
-                { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2 }
-            ];
+            // O(1) performance: Pre-computed configs array removed.
 
             // waitReady utility with timeout
             async function waitReady() {
@@ -792,30 +775,9 @@ class RenderService:
                 let fits = res.fits;
                 let finalRegions = res.regions;
 
-                // If it fits perfectly at max height, binary search to balance columns
-                if (fits) {
-                    let minH = 150;
-                    let highH = maxH;
-                    let bestH = maxH;
-                    
-                    for (let step = 0; step < 8; step++) {
-                        let midH = Math.round((minH + highH) / 2);
-                        let midRes = testFlow(midH);
-                        if (midRes.fits) {
-                            bestH = midH;
-                            highH = midH;
-                            finalRegions = midRes.regions;
-                        } else {
-                            minH = midH + 1;
-                        }
-                    }
-                    
-                    // Re-apply the best valid height if the last midH didn't fit
-                    if (bestH !== Math.round((minH - 1 + highH) / 2)) {
-                        let bestRes = testFlow(bestH);
-                        finalRegions = bestRes.regions;
-                    }
-                }
+                // O(1) Performance Constraint: Do not perform recursive balancing.
+                // We accept the natural max height to avoid text reflow passes.
+                // The columns will end naturally without a secondary bottom-balancing pass.
                 
                 let maxY = 0;
                 for (const r of finalRegions) {
@@ -885,53 +847,38 @@ class RenderService:
                 container.style.minHeight = 'unset';
                 container.style.overflow  = 'visible';
 
-                let chosenConf = configs[0];
-                let bestFits = false;
-                let bestScore = -1;
+                // O(1) Single-Pass Font Selection
+                let chosenFontSize = 18.0;
+                let chosenLineHeight = 1.35;
+                let chosenParaMargin = 12;
 
-                for (let i = 0; i < configs.length; i++) {
-                    const conf = configs[i];
+                if (totalChars < 1200) { chosenFontSize = 18.0; }
+                else if (totalChars < 1800) { chosenFontSize = 17.5; }
+                else if (totalChars < 2500) { chosenFontSize = 17.0; }
+                else if (totalChars < 3500) { chosenFontSize = 16.5; }
+                else if (totalChars < 4500) { chosenFontSize = 16.0; chosenLineHeight = 1.32; chosenParaMargin = 10; }
+                else if (totalChars < 5500) { chosenFontSize = 15.0; chosenLineHeight = 1.30; chosenParaMargin = 8; }
+                else if (totalChars < 7000) { chosenFontSize = 14.0; chosenLineHeight = 1.28; chosenParaMargin = 6; }
+                else if (totalChars < 8500) { chosenFontSize = 13.0; chosenLineHeight = 1.25; chosenParaMargin = 5; }
+                else { chosenFontSize = 11.5; chosenLineHeight = 1.20; chosenParaMargin = 4; }
 
-                    let dcStyle = document.getElementById('nc-dropcap-style');
-                    if (!dcStyle) {
-                        dcStyle = document.createElement('style');
-                        dcStyle.id = 'nc-dropcap-style';
-                        document.head.appendChild(dcStyle);
-                    }
-                    dcStyle.innerHTML = '';
-
-                    const testFits = applyConfig(conf);
-                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-                    if (testFits && container.scrollHeight <= TARGET_MAX_HEIGHT) {
-                        // Intelligent Layout: Pick the font size that leaves the least whitespace
-                        const fillRatio = container.scrollHeight / TARGET_MAX_HEIGHT;
-                        let score = fillRatio;
-                        
-                        // Strong preference for 16px - 18px range
-                        if (conf.fontSize >= 16.0 && conf.fontSize <= 18.0) {
-                            score += 0.5; 
-                        } else if (conf.fontSize > 18.0 && conf.fontSize <= 21.0) {
-                            score += 0.2; // Acceptable if needed to fill space
-                        }
-                        
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestFits = true;
-                            chosenConf = conf;
-                        }
-                    }
+                let dcStyle = document.getElementById('nc-dropcap-style');
+                if (!dcStyle) {
+                    dcStyle = document.createElement('style');
+                    dcStyle.id = 'nc-dropcap-style';
+                    document.head.appendChild(dcStyle);
                 }
-                
-                // Re-apply the best found configuration to lock it in
-                if (bestFits) {
-                    applyConfig(chosenConf);
-                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                } else {
-                    // Fallback to the smallest font size if nothing fit perfectly
-                    applyConfig(configs[configs.length - 1]);
-                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                }
+                dcStyle.innerHTML = '';
+
+                const singleConf = {
+                    fontSize: chosenFontSize,
+                    lineHeight: chosenLineHeight,
+                    paraMargin: chosenParaMargin
+                };
+
+                // Perform EXACTLY one rendering pass
+                applyConfig(singleConf);
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                 await waitReady();
 
