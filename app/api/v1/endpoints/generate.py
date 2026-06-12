@@ -14,7 +14,6 @@ from app.core.config import settings
 from app.models.user import User
 import uuid
 import os
-import time
 import logging
 import traceback as _traceback
 import sys
@@ -144,59 +143,41 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 # --- [2] Image Processing ---
                 stage = "Image Processing"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 from app.services.image_service import image_service
                 safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
                 safe_image_urls = [image_service.process_and_resize(u) for u in (clipping.image_urls or [])]
-                stage_duration = time.time() - stage_start
-                print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                _log_memory(f"{stage} - Exit")
+                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
 
                 # --- [4] Content Generation & Translation ---
                 stage = "Translation" if clipping.language and clipping.language.lower() != "en" else "Content Generation"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 formatted = await grok_service.format_article(clipping.article_content, clipping.language)
                 clipping.content_formatted = formatted
-                stage_duration = time.time() - stage_start
-                print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                _log_memory(f"{stage} - Exit")
+                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
 
                 # --- Save to rendering ---
                 stage = "Database Save (rendering)"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 print("START status update"); sys.stdout.flush()
                 clipping.status = "rendering"
                 db.commit()
                 print("END status update"); sys.stdout.flush()
-                stage_duration = time.time() - stage_start
-                print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                _log_memory(f"{stage} - Exit")
+                print(f"[COMPLETED] {stage}"); sys.stdout.flush()
 
                 # --- [5] Template Selection ---
                 stage = "Template Selection"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 template_id = clipping.template_id or "classic"
-                stage_duration = time.time() - stage_start
-                print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                _log_memory(f"{stage} - Exit")
+                print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
 
                 # --- [7] HTML Generation & [6] Layout Rendering ---
                 stage = "HTML Generation"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 owner = db.query(User).filter(User.id == clipping.user_id).first()
                 is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
 
@@ -228,29 +209,21 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
                 else:
                     html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
-                stage_duration = time.time() - stage_start
-                print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                _log_memory(f"{stage} - Exit")
-
-                # --- [9] Screenshot / PNG Generation ---
-                stage = "Screenshot Generation"
+                    print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
+                # --- [9] PNG & PDF Asset Generation ---
+                stage = "Asset Generation"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 temp_png = f"temp_{clipping_id}.png"
-                print(f"TEMP FILE CREATED: {temp_png}"); sys.stdout.flush()
+                temp_pdf = f"temp_{clipping_id}.pdf"
+                print(f"TEMP FILES CREATED: {temp_png}, {temp_pdf}"); sys.stdout.flush()
                 try:
-                    print("START screenshot"); sys.stdout.flush()
-                    print("START png save"); sys.stdout.flush()
-                    await asyncio.wait_for(render_service.generate_png(html, temp_png), timeout=60.0)
-                    print("END png save"); sys.stdout.flush()
-                    print("END screenshot"); sys.stdout.flush()
-                    stage_duration = time.time() - stage_start
-                    print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                    _log_memory(f"{stage} - Exit")
-                except Exception as png_err:
-                    err_str = f"{type(png_err).__name__} {str(png_err)}".lower()
+                    print("START asset generation"); sys.stdout.flush()
+                    await asyncio.wait_for(render_service.generate_clipping_assets(html, temp_png, temp_pdf), timeout=90.0)
+                    print("END asset generation"); sys.stdout.flush()
+                    print(f"[COMPLETED] {stage}"); sys.stdout.flush()
+                except Exception as asset_err:
+                    err_str = f"{type(asset_err).__name__} {str(asset_err)}".lower()
                     if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
                         stage = "Chromium Launch Failed"
                     elif "timeout" in err_str:
@@ -260,72 +233,35 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     else:
                         stage = "Page Rendering Failed"
                     last_failed_stage = stage
-                    print(f"[FAILED] {stage} | {type(png_err).__name__}: {png_err}"); sys.stdout.flush()
-                    raise png_err
+                    print(f"[FAILED] {stage} | {type(asset_err).__name__}: {asset_err}"); sys.stdout.flush()
+                    raise asset_err
 
                 # --- [10] Supabase Upload PNG ---
                 stage = "Supabase Upload (PNG)"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 try:
                     png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
                     if os.path.exists(temp_png):
                         os.remove(temp_png)
                         print(f"TEMP FILE DELETED: {temp_png}"); sys.stdout.flush()
-                    stage_duration = time.time() - stage_start
-                    print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                    _log_memory(f"{stage} - Exit")
+                    print(f"[COMPLETED] {stage} -> {png_url}"); sys.stdout.flush()
                 except Exception as png_up_err:
                     stage = "Supabase Upload Failed"
                     last_failed_stage = stage
                     print(f"[FAILED] {stage} | {type(png_up_err).__name__}: {png_up_err}"); sys.stdout.flush()
                     raise png_up_err
 
-                # --- [11] PDF Generation ---
-                stage = "PDF Generation"
-                last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
-                temp_pdf = f"temp_{clipping_id}.pdf"
-                print(f"TEMP FILE CREATED: {temp_pdf}"); sys.stdout.flush()
-                try:
-                    print("START pdf generation"); sys.stdout.flush()
-                    await asyncio.wait_for(render_service.generate_pdf(html, temp_pdf), timeout=60.0)
-                    print("END pdf generation"); sys.stdout.flush()
-                    stage_duration = time.time() - stage_start
-                    print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                    _log_memory(f"{stage} - Exit")
-                except Exception as pdf_err:
-                    err_str = f"{type(pdf_err).__name__} {str(pdf_err)}".lower()
-                    if "executable" in err_str or "launch" in err_str or "chromium" in err_str or "browser" in err_str:
-                        stage = "Chromium Launch Failed"
-                    elif "timeout" in err_str:
-                        stage = "Screenshot Timeout"
-                    elif "memory" in err_str:
-                        stage = "Memory Limit Exceeded"
-                    else:
-                        stage = "Page Rendering Failed"
-                    last_failed_stage = stage
-                    print(f"[FAILED] {stage} | {type(pdf_err).__name__}: {pdf_err}"); sys.stdout.flush()
-                    raise pdf_err
-
-                # --- [12] Supabase Upload PDF ---
+                # --- [11] Supabase Upload PDF ---
                 stage = "Supabase Upload (PDF)"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 try:
                     pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
                     if os.path.exists(temp_pdf):
                         os.remove(temp_pdf)
                         print(f"TEMP FILE DELETED: {temp_pdf}"); sys.stdout.flush()
-                    stage_duration = time.time() - stage_start
-                    print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                    _log_memory(f"{stage} - Exit")
+                    print(f"[COMPLETED] {stage} -> {pdf_url}"); sys.stdout.flush()
                 except Exception as pdf_up_err:
                     stage = "Supabase Upload Failed"
                     last_failed_stage = stage
@@ -335,9 +271,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 # --- [13] Database Save (completed) ---
                 stage = "Database Save (completed)"
                 last_failed_stage = stage
-                print(f"[TIMING] {stage}: Entry"); sys.stdout.flush()
-                _log_memory(f"{stage} - Entry")
-                stage_start = time.time()
+                print(f"[STARTED] {stage}"); sys.stdout.flush()
                 print("START status update"); sys.stdout.flush()
                 clipping.png_url = png_url
                 clipping.pdf_url = pdf_url
@@ -352,9 +286,6 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
 
                 db.commit()
                 print("END status update"); sys.stdout.flush()
-                stage_duration = time.time() - stage_start
-                print(f"[TIMING] {stage}: Exit (took {stage_duration:.4f}s)"); sys.stdout.flush()
-                _log_memory(f"{stage} - Exit")
 
                 # --- [14] Email Notification ---
                 stage = "Email Notification"
@@ -510,81 +441,6 @@ async def _background_process_clipping(clipping_id: Any):
             print(f"[PIPELINE FATAL] Could not write timeout failure to DB: {emergency_err}"); sys.stdout.flush()
     except Exception as e:
         print(f"[PIPELINE FATAL] Unhandled exception in background task: {type(e).__name__}: {e}"); sys.stdout.flush()
-
-
-@router.post("/test-prod-public", response_model=dict)
-async def create_test_prod_clipping(
-    *,
-    db: Session = Depends(get_db),
-    clipping_in: ClippingCreate,
-    background_tasks: BackgroundTasks
-) -> Any:
-    user = db.query(User).first()
-    if not user:
-        import uuid
-        user = User(
-            id=uuid.uuid4(),
-            email="test-prod-dummy@example.com",
-            full_name="Prod Dummy User",
-            is_active=True,
-            subscription_plan="free",
-            subscription_status="active",
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    clipping = Clipping(
-        user_id=user.id,
-        headline=clipping_in.headline,
-        article_content=clipping_in.article_content,
-        language=clipping_in.language,
-        tone=clipping_in.tone,
-        template_id=clipping_in.template_id,
-        logo_id=clipping_in.logo_id or clipping_in.template_id,
-        image_url=clipping_in.image_url,
-        image_urls=clipping_in.image_urls or [],
-        publication_name=clipping_in.publication_name,
-        publication_date=clipping_in.publication_date,
-        layout_columns=clipping_in.layout_columns,
-        font_family=clipping_in.font_family or "playfair",
-        status="processing"
-    )
-    db.add(clipping)
-    db.commit()
-    db.refresh(clipping)
-
-    background_tasks.add_task(_background_process_clipping, clipping.id)
-
-    return jsonable_encoder({
-        "success": True,
-        "data": clipping,
-        "message": "Public test generation started successfully"
-    })
-
-
-@router.get("/test-prod-public-ping", response_model=dict)
-def ping_test_clipping_public() -> Any:
-    return {"status": "ok", "message": "Public test generation endpoint is live"}
-
-
-@router.get("/test-prod-public/{id}", response_model=dict)
-def get_test_clipping_public(
-    id: uuid.UUID,
-    db: Session = Depends(get_db)
-) -> Any:
-    clipping = db.query(Clipping).filter(Clipping.id == id).first()
-    if not clipping:
-        raise HTTPException(status_code=404, detail="Clipping not found")
-        
-    resp_data = jsonable_encoder(clipping)
-    resp_data = _enrich_clipping_response(clipping, resp_data)
-
-    return jsonable_encoder({
-        "success": True,
-        "data": resp_data,
-        "message": "Clipping retrieved successfully"
-    })
 
 
 @router.post("/", response_model=dict)
@@ -820,14 +676,10 @@ def update_clipping_layout(
     clipping.status = "rendering"
     db.commit()
 
-    background_tasks.add_task(_background_process_clipping, clipping.id)
+    background_tasks.add_task(process_clipping_task, clipping.id)
 
     return jsonable_encoder({
         "success": True,
         "data": clipping,
         "message": "Layout saved and re-rendering started"
     })
-
-
-
-

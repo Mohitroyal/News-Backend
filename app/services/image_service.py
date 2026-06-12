@@ -18,11 +18,12 @@ class ImageService:
         logger.info(f"[MEMORY] {stage}: {mem_mb:.2f} MB")
 
     @staticmethod
-    def process_and_resize(image_url: str, max_width: int = 1600, max_height: int = 1600) -> str:
+    def process_and_resize(image_url: str, max_width: int = 1200, max_height: int = 1200) -> str:
         """Download, resize, possibly convert, and upload an image.
 
-        - Max dimensions 1600x1600, preserving aspect ratio.
-        - WEBP quality 75.
+        - Max dimensions 1200x1200, preserving aspect ratio.
+        - JPEG quality 90.
+        - Convert large PNGs to JPEG to save space.
         - Dispose image objects promptly and trigger GC.
         """
         if not image_url or not image_url.startswith("http"):
@@ -36,13 +37,17 @@ class ImageService:
                 img_data = response.read()
 
             img = Image.open(io.BytesIO(img_data))
-            orig_format = img.format.upper() if img.format else "WEBP"
+            del img_data
+            orig_format = img.format.upper() if img.format else "JPEG"
             orig_width, orig_height = img.size
             logger.info(f"[ImageService] Original size: {orig_width}x{orig_height}, format: {orig_format}")
 
             # Auto‑orient via EXIF
             try:
-                img = ImageOps.exif_transpose(img)
+                oriented_img = ImageOps.exif_transpose(img)
+                if oriented_img is not img:
+                    img.close()
+                    img = oriented_img
             except Exception as exif_err:
                 logger.warning(f"[ImageService] EXIF transpose failed: {exif_err}")
 
@@ -53,23 +58,40 @@ class ImageService:
             if scale_factor < 1.0:
                 new_w = int(round(img.width * scale_factor))
                 new_h = int(round(img.height * scale_factor))
-                img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                resized_img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                img.close()
+                img = resized_img
                 logger.info(f"[ImageService] Resized to: {new_w}x{new_h}")
             else:
                 logger.info("[ImageService] Image within size limits, no resize performed")
 
-            # Always convert to WEBP
-            final_format = "WEBP"
-            if img.mode in ("RGBA", "LA", "P"):
-                background = Image.new("RGBA", img.size, (255, 255, 255, 255))
-                background.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
-                img = background
-            elif img.mode != "RGB":
-                img = img.convert("RGB")
+            # Decide final format – convert PNG to JPEG if image is large
+            final_format = orig_format
+            if orig_format == "PNG" and (img.width > max_width or img.height > max_height):
+                final_format = "JPEG"
+                logger.info("[ImageService] Converting PNG to JPEG to reduce size")
 
-            ext = "webp"
+            # Ensure RGB mode for JPEG
+            if final_format == "JPEG" and img.mode in ("RGBA", "LA", "P"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode in ("RGBA", "LA"):
+                    background.paste(img, mask=img.split()[-1])
+                else:
+                    rgba_converted = img.convert("RGBA")
+                    background.paste(rgba_converted, mask=rgba_converted.split()[-1])
+                    rgba_converted.close()
+                img.close()
+                img = background
+            elif img.mode not in ("RGB", "RGBA"):
+                converted_img = img.convert("RGB")
+                img.close()
+                img = converted_img
+
+            ext = final_format.lower()
+            if ext == "jpeg":
+                ext = "jpg"
             temp_filename = f"temp_resized_{uuid.uuid4().hex}.{ext}"
-            img.save(temp_filename, format=final_format, quality=75)
+            img.save(temp_filename, format=final_format, quality=90)
             img.close()
             gc.collect()
             logger.info(f"[ImageService] Saved temporary file: {temp_filename}")

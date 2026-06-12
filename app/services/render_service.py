@@ -4,11 +4,6 @@ import logging
 import sys
 import gc
 import psutil
-import time
-import io
-import base64
-import urllib.request
-from PIL import Image, ImageOps
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
@@ -16,68 +11,6 @@ from typing import Dict, Any
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-
-def _url_to_base64_webp(url: str) -> str:
-    """Download, scale down to max 1600px, compress to WebP, and return as data URI."""
-    if not url:
-        return ""
-    if url.startswith("data:image/"):
-        return url  # already base64 encoded
-    
-    try:
-        # 1. Fetch image bytes
-        if url.startswith("http://") or url.startswith("https://"):
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as response:
-                img_data = response.read()
-        else:
-            # Assume local file path
-            if os.path.exists(url):
-                with open(url, "rb") as f:
-                    img_data = f.read()
-            else:
-                return url
-        
-        # 2. Open with Pillow
-        img = Image.open(io.BytesIO(img_data))
-        
-        # EXIF transpose
-        try:
-            img = ImageOps.exif_transpose(img)
-        except Exception:
-            pass
-            
-        # 3. Resize if exceeds 1600px
-        max_dim = 1600
-        w, h = img.size
-        if w > max_dim or h > max_dim:
-            scale = max_dim / max(w, h)
-            new_w = int(round(w * scale))
-            new_h = int(round(h * scale))
-            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            
-        # 4. Save to BytesIO as WebP (compressed)
-        buffer = io.BytesIO()
-        img.save(buffer, format="WEBP", quality=75)
-        webp_bytes = buffer.getvalue()
-        
-        # 5. Base64 encode
-        b64_str = base64.b64encode(webp_bytes).decode('utf-8')
-        data_uri = f"data:image/webp;base64,{b64_str}"
-        
-        # 6. Explicit cleanup
-        img.close()
-        buffer.close()
-        del img_data
-        del webp_bytes
-        gc.collect()
-        
-        return data_uri
-    except Exception as e:
-        print(f"[Image Pre-Optimization ERROR] Failed to process {url}: {e}")
-        sys.stdout.flush()
-        return url
 
 
 def _get_peak_memory() -> float:
@@ -154,9 +87,6 @@ class RenderService:
 
     async def render_html(self, data: Dict[str, Any], template_name: str = "classic.html") -> str:
         """Renders the newspaper template with user data."""
-        start_time = time.time()
-        print(f"[TIMING] render_html: Entry")
-        sys.stdout.flush()
         # 1. Headline safety fallback
         if not data.get("headline"):
             data["headline"] = "NEWSFLASH: Special Report"
@@ -202,16 +132,6 @@ class RenderService:
             data["image_url"] = data["image_urls"][0]
         elif data.get("image_url") and not data.get("image_urls"):
             data["image_urls"] = [data["image_url"]]
-
-        # 3b. Pre-optimize images: Resize to max 1600px and convert to Base64 WebP
-        _log_memory("render_html: Before Image Base64 WebP conversion")
-        optimized_urls = []
-        for url in data.get("image_urls", []):
-            optimized_urls.append(_url_to_base64_webp(url))
-        data["image_urls"] = optimized_urls
-        if optimized_urls:
-            data["image_url"] = optimized_urls[0]
-        _log_memory("render_html: After Image Base64 WebP conversion")
 
         # 4. Logo/template safety fallback
         template_key = template_name.replace(".html", "")
@@ -424,8 +344,6 @@ class RenderService:
         };
         
         document.addEventListener("DOMContentLoaded", async () => {
-            // Global layout constants visible to all nested functions
-            // Global layout constants visible to all nested functions
             const TARGET_MAX_HEIGHT = 1500;
 
             try {
@@ -447,29 +365,7 @@ class RenderService:
             if (!container) return;
 
             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
-
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
-
-            // Compression configurations: from spacious to compact
-            const configs = [
-                // fontSize, lineHeight, paraMargin, imgMaxPct, padding
-                { fontSize: 24.0, lineHeight: 1.45, paraMargin: 16, imgMaxPct: 0.65, padding: 40 },
-                { fontSize: 22.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
-                { fontSize: 20.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
-                { fontSize: 18.0, lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 },
-                { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
-                { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
-                { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
-                { fontSize: 13.5, lineHeight: 1.28, paraMargin: 6,  imgMaxPct: 0.46, padding: 20 },
-                { fontSize: 13.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.43, padding: 18 },
-                { fontSize: 12.5, lineHeight: 1.22, paraMargin: 5,  imgMaxPct: 0.40, padding: 16 },
-                { fontSize: 12.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.38, padding: 14 },
-                { fontSize: 11.5, lineHeight: 1.18, paraMargin: 4,  imgMaxPct: 0.36, padding: 12 },
-                { fontSize: 11.0, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.34, padding: 10 },
-                { fontSize: 10.5, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.32, padding: 10 },
-                { fontSize: 10.0, lineHeight: 1.12, paraMargin: 2,  imgMaxPct: 0.30, padding: 8 },
-                { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
-            ];
 
             // waitReady utility with timeout
             async function waitReady() {
@@ -531,7 +427,7 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
-            function applyConfig(conf) {
+            function applySinglePassLayout(conf) {
                 // Clear the compositor canvas
                 canvas.innerHTML = '';
                 
@@ -545,14 +441,13 @@ class RenderService:
                 
                 // Get canvas boundaries relative to target maximum page height
                 const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
-                let H_canvas = Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60); // 60px padding/footer margin
+                const H_canvas = Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60); // 60px padding/footer margin
                 
                 // Calculate image dimensions and create absolute obstacles
                 const obstacles = [];
-                const imgHeightPx = Math.round(conf.imgMaxPct * W_canvas);
+                const imgHeightPx = Math.round(0.58 * W_canvas);
                 
                 if (urls.length > 0) {
-                    // Hero Image: max width 55% of page width, max height 30% of page height
                     const aspect0 = aspectRatios[0] || 1.2;
                     let w0 = W_canvas * 0.55;
                     let h0 = w0 / aspect0;
@@ -561,7 +456,6 @@ class RenderService:
                         w0 = W_canvas * 0.55;
                         h0 = w0 / aspect0;
                     }
-                    // Hero image uses its natural computed aspect and width
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
@@ -572,10 +466,10 @@ class RenderService:
                     });
                     
                     if (urls.length > 1) {
-                        // Secondary Image: max width exactly 1 column width
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_col;
+                        let w1 = W_canvas * 0.30;
                         let h1 = w1 / aspect1;
+                        h1 = Math.min(h1, imgHeightPx * 0.75);
                         let y1 = h0 + 60; // Spacing below Hero
                         obstacles.push({
                             url: urls[1],
@@ -587,10 +481,10 @@ class RenderService:
                         });
                         
                         if (urls.length > 2) {
-                            // Portrait Image: max width exactly 1 column width
                             const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_col;
+                            let w2 = W_canvas * 0.25;
                             let h2 = w2 / aspect2;
+                            h2 = Math.min(h2, imgHeightPx * 0.65);
                             let y2 = y1 + h1 + 60;
                             obstacles.push({
                                 url: urls[2],
@@ -604,13 +498,6 @@ class RenderService:
                     }
                 }
 
-                let maxYObs = 0;
-                obstacles.forEach(obs => {
-                    if (obs.y + obs.h > maxYObs) maxYObs = obs.y + obs.h;
-                });
-                H_canvas = Math.max(H_canvas, maxYObs + 400);
-                
-                
                 // Render absolute images onto canvas
                 obstacles.forEach(obs => {
                     const imgEl = document.createElement('div');
@@ -619,7 +506,7 @@ class RenderService:
                     imgEl.style.left = `${obs.x}px`;
                     imgEl.style.top = `${obs.y}px`;
                     imgEl.style.width = `${obs.w}px`;
-                    imgEl.style.height = 'auto'; // Adjust border dynamically to content height
+                    imgEl.style.height = 'auto';
                     imgEl.style.boxSizing = 'border-box';
                     imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
                     imgEl.style.padding = '4px';
@@ -641,7 +528,6 @@ class RenderService:
                     canvas.appendChild(imgEl);
                 });
                 
-                // Define inflated obstacles to carve out margins around text regions (12px cushion)
                 const inflatedObstacles = obstacles.map(obs => {
                     return {
                         x: obs.x - 12,
@@ -651,418 +537,221 @@ class RenderService:
                     };
                 });
 
-                // Function to test layout with a specific canvas height
-                function testFlow(testH) {
-                    canvas.querySelectorAll('.nc-column').forEach(el => el.remove());
+                // Flow layout function
+                const regions = [];
+                for (let c = 0; c < N; c++) {
+                    const L_c = c * (W_col + G);
+                    const R_c = L_c + W_col;
                     
-                    const colDivs = [];
-                    const regions = [];
+                    let intervals = [{ yStart: 0, yEnd: H_canvas, xOffset: 0, w: W_col }];
                     
-                    for (let c = 0; c < N; c++) {
-                        const L_c = c * (W_col + G);
-                        const R_c = L_c + W_col;
+                    inflatedObstacles.forEach(obs => {
+                        const xOverlapStart = Math.max(L_c, obs.x);
+                        const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
+                        if (xOverlapStart >= xOverlapEnd) return;
                         
-                        let intervals = [{ yStart: 0, yEnd: testH, xOffset: 0, w: W_col }];
+                        const yOverlapStart = Math.max(0, obs.y);
+                        const yOverlapEnd = Math.min(H_canvas, obs.y + obs.h);
+                        if (yOverlapStart >= yOverlapEnd) return;
                         
-                        inflatedObstacles.forEach(obs => {
-                            const xOverlapStart = Math.max(L_c, obs.x);
-                            const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
-                            if (xOverlapStart >= xOverlapEnd) return;
+                        const nextIntervals = [];
+                        intervals.forEach(int => {
+                            const yIntersectStart = Math.max(int.yStart, yOverlapStart);
+                            const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
                             
-                            const yOverlapStart = Math.max(0, obs.y);
-                            const yOverlapEnd = Math.min(testH, obs.y + obs.h);
-                            if (yOverlapStart >= yOverlapEnd) return;
+                            if (yIntersectStart >= yIntersectEnd) {
+                                nextIntervals.push(int);
+                                return;
+                            }
                             
-                            const nextIntervals = [];
-                            intervals.forEach(int => {
-                                const yIntersectStart = Math.max(int.yStart, yOverlapStart);
-                                const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
-                                
-                                if (yIntersectStart >= yIntersectEnd) {
-                                    nextIntervals.push(int);
-                                    return;
-                                }
-                                
-                                if (int.yStart < yIntersectStart) {
-                                    nextIntervals.push({
-                                        yStart: int.yStart,
-                                        yEnd: yIntersectStart,
-                                        xOffset: int.xOffset,
-                                        w: int.w
-                                    });
-                                }
-                                
-                                const obsLeftRel = obs.x - L_c;
-                                const obsRightRel = obs.x + obs.w - L_c;
-                                
-                                if (obsLeftRel <= 0) {
-                                    if (obsRightRel >= W_col) {
-                                        // Covers width
-                                    } else {
-                                        const wRem = W_col - obsRightRel;
-                                        if (wRem >= 40) {
-                                            nextIntervals.push({
-                                                yStart: yIntersectStart,
-                                                yEnd: yIntersectEnd,
-                                                xOffset: obsRightRel,
-                                                w: wRem
-                                            });
-                                        }
-                                    }
-                                } else if (obsRightRel >= W_col) {
-                                    const wRem = obsLeftRel;
+                            if (int.yStart < yIntersectStart) {
+                                nextIntervals.push({
+                                    yStart: int.yStart,
+                                    yEnd: yIntersectStart,
+                                    xOffset: int.xOffset,
+                                    w: int.w
+                                });
+                            }
+                            
+                            const obsLeftRel = obs.x - L_c;
+                            const obsRightRel = obs.x + obs.w - L_c;
+                            
+                            if (obsLeftRel <= 0) {
+                                if (obsRightRel < W_col) {
+                                    const wRem = W_col - obsRightRel;
                                     if (wRem >= 40) {
                                         nextIntervals.push({
                                             yStart: yIntersectStart,
                                             yEnd: yIntersectEnd,
-                                            xOffset: 0,
+                                            xOffset: obsRightRel,
                                             w: wRem
                                         });
                                     }
                                 }
-                                
-                                if (int.yEnd > yIntersectEnd) {
+                            } else if (obsRightRel >= W_col) {
+                                const wRem = obsLeftRel;
+                                if (wRem >= 40) {
                                     nextIntervals.push({
-                                        yStart: yIntersectEnd,
-                                        yEnd: int.yEnd,
-                                        xOffset: int.xOffset,
-                                        w: int.w
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: 0,
+                                        w: wRem
                                     });
                                 }
-                            });
-                            intervals = nextIntervals;
+                            }
+                            
+                            if (int.yEnd > yIntersectEnd) {
+                                nextIntervals.push({
+                                    yStart: yIntersectEnd,
+                                    yEnd: int.yEnd,
+                                    xOffset: int.xOffset,
+                                    w: int.w
+                                });
+                            }
                         });
-                        
-                        const colDiv = document.createElement('div');
-                        colDiv.className = `nc-column col-${c}`;
-                        colDiv.style.position = 'absolute';
-                        colDiv.style.left = `${L_c}px`;
-                        colDiv.style.top = '0px';
-                        colDiv.style.width = `${W_col}px`;
-                        colDiv.style.boxSizing = 'border-box';
-                        canvas.appendChild(colDiv);
-                        colDivs.push(colDiv);
-                        
-                        intervals.forEach(int => {
-                            const h = int.yEnd - int.yStart;
-                            if (h < 24 || int.w < 40) return;
-                            
-                            const rBox = document.createElement('div');
-                            rBox.className = 'nc-text-region-box';
-                            rBox.style.position = 'absolute';
-                            rBox.style.left = `${int.xOffset}px`;
-                            rBox.style.top = `${int.yStart}px`;
-                            rBox.style.width = `${int.w}px`;
-                            rBox.style.height = `${h}px`;
-                            rBox.style.boxSizing = 'border-box';
-                            rBox.style.overflow = 'hidden';
-                            
-                            colDiv.appendChild(rBox);
-                            
-                            regions.push({
-                                colIndex: c,
-                                div: colDiv,
-                                rBox: rBox,
-                                height: h,
-                                y: int.yStart
-                            });
-                        });
-                    }
+                        intervals = nextIntervals;
+                    });
                     
-                    let rawSections = [];
-                    for (const sec of data.sections) {
-                        const cleanSec = sec.replace(/\n+/g, ' ').trim();
-                        if (cleanSec) {
-                            rawSections.push(cleanSec);
+                    intervals.forEach(int => {
+                        const h = int.yEnd - int.yStart;
+                        if (h < 24 || int.w < 40) return;
+                        
+                        const rBox = document.createElement('div');
+                        rBox.className = 'nc-text-region-box';
+                        rBox.style.position = 'absolute';
+                        rBox.style.left = `${int.xOffset}px`;
+                        rBox.style.top = `${int.yStart}px`;
+                        rBox.style.width = `${int.w}px`;
+                        rBox.style.height = `${h}px`;
+                        rBox.style.boxSizing = 'border-box';
+                        rBox.style.overflow = 'hidden';
+                        
+                        const colDiv = canvas.querySelector(`.col-${c}`) || document.createElement('div');
+                        if (!canvas.contains(colDiv)) {
+                            colDiv.className = `nc-column col-${c}`;
+                            colDiv.style.position = 'absolute';
+                            colDiv.style.left = `${L_c}px`;
+                            colDiv.style.top = '0px';
+                            colDiv.style.width = `${W_col}px`;
+                            canvas.appendChild(colDiv);
                         }
-                    }
-                    const paragraphs = [...rawSections];
-                    if (paragraphs.length > 0 && data.dateline) {
-                        const prefix = (data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `;
-                        paragraphs[0] = prefix + paragraphs[0];
-                    }
-                    
-                    let pIdx = 0;
-                    let currentRegionIdx = 0;
-                    let activeRegion = regions[currentRegionIdx];
-                    let testFits = true;
-                    
-                    let loopSafetyCounter = 0;
-                    while (activeRegion) {
-                        loopSafetyCounter++;
-                        if (loopSafetyCounter > 2000) {
-                            console.error("[LAYOUT ERROR] Hard limit of 2000 iterations reached in testFlow. Aborting to prevent infinite loop.");
-                            testFits = false;
-                            break;
-                        }
-                        if (pIdx >= paragraphs.length) break;
+                        colDiv.appendChild(rBox);
                         
-                        let text = paragraphs[pIdx];
-                        const p = document.createElement('p');
-                        p.innerText = text;
-                        p.style.fontSize = `${conf.fontSize}px`;
-                        p.style.lineHeight = conf.lineHeight;
-                        p.style.marginBottom = `${conf.paraMargin}px`;
-                        p.style.marginTop = '0';
-                        p.style.textAlign = 'justify';
-                        p.style.wordBreak = 'break-word';
-                        p.style.overflowWrap = 'break-word';
-                        p.style.hyphens = 'auto';
-                        
-                        activeRegion.rBox.appendChild(p);
-                        
-                        if (activeRegion.rBox.scrollHeight > activeRegion.height) {
-                            activeRegion.rBox.removeChild(p);
-                            
-                            const words = text.split(/\s+/);
-                            const testP = document.createElement('p');
-                            testP.style.fontSize = `${conf.fontSize}px`;
-                            testP.style.lineHeight = conf.lineHeight;
-                            testP.style.marginBottom = `${conf.paraMargin}px`;
-                            testP.style.marginTop = '0';
-                            testP.style.textAlign = 'justify';
-                            testP.style.wordBreak = 'break-word';
-                            testP.style.overflowWrap = 'break-word';
-                            testP.style.hyphens = 'auto';
-                            activeRegion.rBox.appendChild(testP);
-                            
-                            let low = 0;
-                            let high = words.length;
-                            let wIdx = 0;
-                            while (low < high) {
-                                let mid = Math.floor((low + high) / 2);
-                                testP.innerText = words.slice(0, mid + 1).join(' ');
-                                if (activeRegion.rBox.scrollHeight > activeRegion.height) {
-                                    high = mid;
-                                } else {
-                                    wIdx = mid + 1;
-                                    low = mid + 1;
-                                }
-                            }
-                            
-                            // Re-verify the exact break point
-                            if (wIdx < words.length) {
-                                testP.innerText = words.slice(0, wIdx + 1).join(' ');
-                                if (activeRegion.rBox.scrollHeight > activeRegion.height) {
-                                    // wIdx is correct
-                                } else {
-                                    wIdx++;
-                                }
-                            }
-                            
-                            activeRegion.rBox.removeChild(testP);
-                            
-                            if (wIdx > 0) {
-                                const fitP = document.createElement('p');
-                                fitP.innerText = words.slice(0, wIdx).join(' ');
-                                fitP.style.fontSize = `${conf.fontSize}px`;
-                                fitP.style.lineHeight = conf.lineHeight;
-                                fitP.style.marginBottom = `${conf.paraMargin}px`;
-                                fitP.style.marginTop = '0';
-                                fitP.style.textAlign = 'justify';
-                                fitP.style.wordBreak = 'break-word';
-                                fitP.style.overflowWrap = 'break-word';
-                                fitP.style.hyphens = 'auto';
-                                activeRegion.rBox.appendChild(fitP);
-                            }
-                            
-                            const remainingText = words.slice(wIdx).join(' ');
-                            if (remainingText.trim().length > 0) {
-                                paragraphs.splice(pIdx, 1, remainingText);
-                            } else {
-                                pIdx++;
-                            }
-                            
-                            currentRegionIdx++;
-                            activeRegion = regions[currentRegionIdx];
-                            
-                            if (!activeRegion) {
-                                if (pIdx < paragraphs.length) {
-                                    testFits = false;
-                                }
-                                break;
-                            }
-                        } else {
-                            pIdx++;
-                        }
-                    }
-                    
-                    return { fits: testFits, regions: regions };
+                        regions.push({ rBox, height: h, y: int.yStart });
+                    });
                 }
-
-                const maxH = H_canvas;
-                let res = testFlow(maxH);
-                let fits = res.fits;
-                let finalRegions = res.regions;
-
-                // If it fits perfectly at max height, binary search to balance columns
-                if (fits) {
-                    let minH = 150;
-                    let highH = maxH;
-                    let bestH = maxH;
+                
+                let rawSections = [];
+                for (const sec of data.sections) {
+                    const cleanSec = sec.replace(/\n+/g, ' ').trim();
+                    if (cleanSec) rawSections.push(cleanSec);
+                }
+                const paragraphs = [...rawSections];
+                if (paragraphs.length > 0 && data.dateline) {
+                    paragraphs[0] = ((data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `) + paragraphs[0];
+                }
+                
+                let pIdx = 0;
+                let currentRegionIdx = 0;
+                let activeRegion = regions[currentRegionIdx];
+                
+                while (activeRegion && pIdx < paragraphs.length) {
+                    let text = paragraphs[pIdx];
+                    const p = document.createElement('p');
+                    p.innerText = text;
+                    p.style.fontSize = `${conf.fontSize}px`;
+                    p.style.lineHeight = conf.lineHeight;
+                    p.style.marginBottom = `${conf.paraMargin}px`;
+                    p.style.marginTop = '0';
+                    p.style.textAlign = 'justify';
+                    p.style.wordBreak = 'break-word';
+                    p.style.overflowWrap = 'break-word';
+                    activeRegion.rBox.appendChild(p);
                     
-                    for (let step = 0; step < 8; step++) {
-                        let midH = Math.round((minH + highH) / 2);
-                        let midRes = testFlow(midH);
-                        if (midRes.fits) {
-                            bestH = midH;
-                            highH = midH;
-                            finalRegions = midRes.regions;
-                        } else {
-                            minH = midH + 1;
+                    if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                        activeRegion.rBox.removeChild(p);
+                        const words = text.split(/\s+/);
+                        const testP = p.cloneNode();
+                        activeRegion.rBox.appendChild(testP);
+                        let wIdx = 0;
+                        for (; wIdx < words.length; wIdx++) {
+                            testP.innerText = words.slice(0, wIdx + 1).join(' ');
+                            if (activeRegion.rBox.scrollHeight > activeRegion.height) break;
                         }
-                    }
-                    
-                    // Re-apply the best valid height if the last midH didn't fit
-                    if (bestH !== Math.round((minH - 1 + highH) / 2)) {
-                        let bestRes = testFlow(bestH);
-                        finalRegions = bestRes.regions;
-                    }
+                        activeRegion.rBox.removeChild(testP);
+                        if (wIdx > 0) {
+                            const fitP = p.cloneNode();
+                            fitP.innerText = words.slice(0, wIdx).join(' ');
+                            activeRegion.rBox.appendChild(fitP);
+                        }
+                        const rem = words.slice(wIdx).join(' ');
+                        if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
+                        currentRegionIdx++;
+                        activeRegion = regions[currentRegionIdx];
+                    } else pIdx++;
                 }
                 
                 let maxY = 0;
-                for (const r of finalRegions) {
-                    let contentH = 0;
-                    if (r.rBox.lastElementChild) {
-                        contentH = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight;
-                    }
-                    const contentBottom = r.y + contentH;
-                    if (contentBottom > maxY) maxY = contentBottom;
-                }
-                for (const img of obstacles) {
-                    const imgBottom = img.y + img.h;
-                    if (imgBottom > maxY) maxY = imgBottom;
-                }
+                regions.forEach(r => {
+                    if (r.rBox.lastElementChild) maxY = Math.max(maxY, r.y + r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight);
+                });
+                obstacles.forEach(img => maxY = Math.max(maxY, img.y + img.h));
                 canvas.style.height = `${Math.max(maxY, 150)}px`;
                 
                 window.__IMAGE_LAYOUT_LOGS__ = {
                     image_count: imgCount,
                     image_orientations: orientations.join(', '),
-                    selected_layout: 'Region-Based Newspaper Page Compositor',
+                    selected_layout: 'Region-Based Newspaper Page Compositor (Single-Pass)',
                     final_dimensions: obstacles.map(obs => `${obs.w}x${obs.h}px`).join(', ')
                 };
-                
-                return fits;
             }
 
             async function executeLayout() {
-                console.log('LAYOUT START');
                 const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
                 aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
-                orientations = dims.map(d => {
-                    if (!d.width || !d.height) return 'Square';
-                    if (d.height > d.width) return 'Portrait';
-                    if (d.width > d.height) return 'Landscape';
-                    return 'Square';
-                });
-
                 await waitReady();
 
-                // Auto-shrink headline if it's too tall (especially for translated Indic scripts)
-                const headline = container.querySelector('.headline');
-                if (headline) {
-                    const maxHeadlineHeight = 220; // max acceptable height for headline
-                    let currentFontSize = parseFloat(window.getComputedStyle(headline).fontSize) || 68;
-                    let count = 0;
-                    while (headline.offsetHeight > maxHeadlineHeight && currentFontSize > 24 && count < 40) {
-                        currentFontSize -= 2;
-                        headline.style.fontSize = currentFontSize + 'px';
-                        headline.style.lineHeight = '1.1';
-                        count++;
+                const W_canvas = canvas.offsetWidth || 1060;
+                const N = parseInt(data.layout_columns) || 3;
+                const W_col = (W_canvas - (N - 1) * 24) / N;
+                const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
+                const H_avail = Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60);
+                
+                let obstacleArea = 0;
+                const imgHeightPx = Math.round(0.58 * W_canvas);
+                if (urls.length > 0) {
+                    const aspect0 = aspectRatios[0] || 1.2;
+                    let w0 = W_canvas * 0.55;
+                    obstacleArea += w0 * Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
+                    if (urls.length > 1) {
+                        const aspect1 = aspectRatios[1] || 1.0;
+                        let w1 = W_canvas * 0.30;
+                        obstacleArea += w1 * Math.min(w1 / aspect1, imgHeightPx * 0.75);
                     }
                 }
                 
-                // Auto-shrink subheadline if it's too tall
-                const subheadline = container.querySelector('.subheadline');
-                if (subheadline) {
-                    let subSize = parseFloat(window.getComputedStyle(subheadline).fontSize) || 19;
-                    let count = 0;
-                    while (subheadline.offsetHeight > 80 && subSize > 14 && count < 15) {
-                        subSize -= 1;
-                        subheadline.style.fontSize = subSize + 'px';
-                        count++;
-                    }
-                }
+                const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - obstacleArea) / (totalChars * 0.75));
+                const conf = { fontSize: Math.max(16.0, Math.min(21.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
-                container.style.height    = 'auto';
-                container.style.minHeight = 'unset';
-                container.style.overflow  = 'visible';
-
-                let chosenConf = configs[0];
-                // O(1) Dynamic Font Scaling (16px - 21px) based on exact text length
-                let chosenFontSize = 21.0;
-                let chosenLineHeight = 1.40;
-                let chosenParaMargin = 14;
-
-                if (totalChars > 8000) { chosenFontSize = 15.5; chosenLineHeight = 1.32; chosenParaMargin = 8; }
-                else if (totalChars > 6000) { chosenFontSize = 16.0; chosenLineHeight = 1.32; chosenParaMargin = 8; }
-                else if (totalChars > 4500) { chosenFontSize = 16.5; chosenLineHeight = 1.35; chosenParaMargin = 10; }
-                else if (totalChars > 3500) { chosenFontSize = 17.5; chosenLineHeight = 1.35; chosenParaMargin = 11; }
-                else if (totalChars > 2500) { chosenFontSize = 18.0; chosenLineHeight = 1.35; chosenParaMargin = 12; }
-                else if (totalChars > 1500) { chosenFontSize = 19.5; chosenLineHeight = 1.38; chosenParaMargin = 13; }
-                else { chosenFontSize = 21.0; chosenLineHeight = 1.40; chosenParaMargin = 14; }
-
-                let dcStyle = document.getElementById('nc-dropcap-style');
-                if (!dcStyle) {
-                    dcStyle = document.createElement('style');
-                    dcStyle.id = 'nc-dropcap-style';
-                    document.head.appendChild(dcStyle);
-                }
-                dcStyle.innerHTML = '';
-
-                const singleConf = {
-                    fontSize: chosenFontSize,
-                    lineHeight: chosenLineHeight,
-                    paraMargin: chosenParaMargin,
-                    imgMaxPct: 1.0 // Disable shrinkage
-                };
-
-                // Single layout optimization pass
-                applyConfig(singleConf);
-                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-                await waitReady();
-
+                applySinglePassLayout(conf);
+                
                 let st = document.getElementById('nc-layout-style');
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
                 st.innerHTML = `
-                    * { -webkit-font-smoothing: antialiased !important; text-rendering: optimizeLegibility !important; }
-                    body { margin: 0 !important; padding: 0 !important; display: flex !important; justify-content: center !important; align-items: flex-start !important; }
-                    .newspaper-container { height: auto !important; min-height: unset !important; overflow: visible !important; box-shadow: none !important; margin: 0 !important; }
-                    @media print {
-                        @page { size: auto; margin: 0; }
-                        body { padding: 0 !important; background: #fff !important; }
-                        .newspaper-container { border: none !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
-                        * { page-break-inside: avoid !important; page-break-after: avoid !important; page-break-before: avoid !important; }
-                    }
+                    * { -webkit-font-smoothing: antialiased !important; }
+                    body { margin: 0 !important; padding: 0 !important; }
+                    .newspaper-container { height: auto !important; min-height: unset !important; }
                 `;
-
-                console.log('LAYOUT COMPLETE');
                 window.__LAYOUT_DONE__ = true;
             }
 
-            setTimeout(function() {
-                if (!window.__LAYOUT_DONE__) {
-                    console.log('FORCED LAYOUT COMPLETE: 10s failsafe triggered — setting __LAYOUT_DONE__');
-                    window.__LAYOUT_DONE__ = true;
-                }
-            }, 10000);
-
-            (async () => {
-                try {
-                    await executeLayout();
-                } catch(err) {
-                    console.error('[LAYOUT FATAL ERROR]', err && err.message ? err.message : String(err));
-                    if (!window.__LAYOUT_DONE__) {
-                        window.__LAYOUT_DONE__ = true;
-                    }
-                }
-            })();
+            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 10000);
+            executeLayout();
         });
         </script>
         """
 
-                # Combine the data block and the logic block
+        # Combine the data block and the logic block
         script_block = data_script + "\n" + script_block
 
         if "</body>" in html:
@@ -1079,311 +768,58 @@ class RenderService:
             print(f"[DEBUG] Could not save debug HTML: {e}")
             sys.stdout.flush()
 
-        duration = time.time() - start_time
-        print(f"[TIMING] render_html: Exit (took {duration:.4f}s)")
-        sys.stdout.flush()
         return html
 
-    async def generate_png(self, html_content: str, output_path: str):
-        """Uses Playwright to take a high-quality screenshot of the rendered HTML."""
-        start_time = time.time()
-        print(f"[TIMING] generate_png: Entry")
-        sys.stdout.flush()
-        _log_memory("generate_png: Enter")
+    async def generate_clipping_assets(self, html_content: str, png_path: str | None = None, pdf_path: str | None = None):
+        """Uses Playwright to render HTML and take both a PNG screenshot and/or a PDF print."""
+        _log_memory("generate_clipping_assets: Enter")
         chrome_path = _get_chromium_executable()
-
         launch_kwargs = {
             "headless": True,
-            "args": [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--js-flags=--max-old-space-size=256",
-            ],
+            "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--js-flags=--max-old-space-size=256"],
         }
-        if chrome_path:
-            launch_kwargs["executable_path"] = chrome_path
+        if chrome_path: launch_kwargs["executable_path"] = chrome_path
 
         max_attempts = 2
         for attempt in range(max_attempts):
             browser = None
-            page = None
-            playwright_context = None
             try:
-                _log_memory(f"generate_png: Attempt {attempt + 1} - Before Launch")
-                print(f"[PLAYWRIGHT] Browser Launch Started (Attempt {attempt + 1})")
-                sys.stdout.flush()
-                
-                playwright_context = await async_playwright().start()
-                browser = await playwright_context.chromium.launch(**launch_kwargs)
-                print(f"BROWSER CREATED (PNG attempt {attempt + 1})"); sys.stdout.flush()
-                _log_memory("generate_png: After Launch")
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(**launch_kwargs)
+                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3)
+                    page.on("console", lambda msg: print(f"[BROWSER] {msg.type.upper()}: {msg.text}"))
+                    page.set_default_timeout(300000)
 
-                page = await browser.new_page(
-                    viewport={"width": 1200, "height": 1600},
-                    device_scale_factor=3,
-                )
-                print(f"PAGE CREATED (PNG)"); sys.stdout.flush()
+                    if html_content.startswith("http"): await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
+                    else: await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
 
-                page.on("console", lambda msg: print(f"[BROWSER] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
-                page.on("pageerror", lambda err: print(f"[BROWSER ERROR] {err}") or sys.stdout.flush())
-                
-                page.set_default_timeout(300000)
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
 
-                _log_memory("generate_png: Before Content Loaded")
-                if html_content.startswith("http://") or html_content.startswith("https://"):
-                    await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
-                else:
-                    await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
+                    layout_info = await page.evaluate("""() => {
+                        const cont = document.querySelector('.newspaper-container');
+                        return { width: cont ? cont.offsetWidth : 1200, height: cont ? cont.scrollHeight : 1600 };
+                    }""")
+                    
+                    await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 60})
 
-                print(f"[PLAYWRIGHT] HTML Loaded")
-                sys.stdout.flush()
+                    if png_path:
+                        await page.locator('.newspaper-container').first.screenshot(path=png_path, type="png")
+                    if pdf_path:
+                        await page.pdf(path=pdf_path, width=f"{layout_info.get('width', 1060)/96.0}in", height=f"{(layout_info.get('height', 1600)+15)/96.0}in", print_background=True, margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"})
 
-                _log_memory("generate_png: After Content Loaded / Before Wait Layout")
-                await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
-                print("[PLAYWRIGHT] Layout complete!")
-                sys.stdout.flush()
-
-                _log_memory("generate_png: After Layout Complete")
-
-                # Get container dimensions and column info
-                layout_info = await page.evaluate("""
-                    () => {
-                        const container = document.querySelector('.newspaper-container');
-                        const cols = document.querySelectorAll('.nc-column');
-                        const data = window.NEWSPAPER_DATA || {};
-                        
-                        let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
-                        
-                        return {
-                            width: container ? container.offsetWidth : 1200,
-                            height: container ? container.scrollHeight : 1600,
-                            selected_columns: data.layout_columns || 3,
-                            rendered_columns: renderedCols
-                        };
-                    }
-                """)
-                
-                # Exact required logging format
-                print(f"Selected Columns: {layout_info.get('selected_columns')}")
-                print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
-                print(f"[PLAYWRIGHT] Container dimensions: {layout_info}")
-                sys.stdout.flush()
-
-                # Image layout logging
-                image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
-                if image_logs:
-                    print(f"Image Count: {image_logs.get('image_count')}")
-                    print(f"Image Orientation: {image_logs.get('image_orientations')}")
-                    print(f"Selected Layout: {image_logs.get('selected_layout')}")
-                    print(f"Final Image Dimensions: {image_logs.get('final_dimensions')}")
-                    sys.stdout.flush()
-
-                viewport_width = 1200
-                viewport_height = layout_info.get("height", 1600) + 60
-                await page.set_viewport_size({"width": viewport_width, "height": viewport_height})
-
-                _log_memory("generate_png: Before Screenshot")
-                print(f"[PLAYWRIGHT] Screenshot Started")
-                sys.stdout.flush()
-                await page.locator('.newspaper-container').first.screenshot(path=output_path, type="png", timeout=300000)
-                print(f"[PLAYWRIGHT] Screenshot Completed")
-                sys.stdout.flush()
-                print(f"[PLAYWRIGHT] PNG Saved")
-                sys.stdout.flush()
-                
-                _log_memory("generate_png: After Screenshot (Success)")
-                duration = time.time() - start_time
-                print(f"[TIMING] generate_png: Exit (Success) (took {duration:.4f}s)")
-                sys.stdout.flush()
-                return
+                    await browser.close()
+                    return
             except Exception as e:
-                print(f"[PLAYWRIGHT WARNING] generate_png attempt {attempt + 1} failed: {e}")
-                sys.stdout.flush()
-                if attempt == max_attempts - 1:
-                    print(f"[PLAYWRIGHT] Screenshot Creation: FAILED (Reason: {e})")
-                    sys.stdout.flush()
-                    duration = time.time() - start_time
-                    print(f"[TIMING] generate_png: Exit (Failed) (took {duration:.4f}s)")
-                    sys.stdout.flush()
-                    raise
+                if attempt == max_attempts - 1: raise
             finally:
-                if page:
-                    try:
-                        await page.close()
-                        print(f"PAGE CLOSED (PNG)"); sys.stdout.flush()
-                    except Exception:
-                        pass
-                if browser:
-                    try:
-                        await browser.close()
-                        print(f"BROWSER CLOSED (PNG attempt {attempt + 1})"); sys.stdout.flush()
-                    except Exception as close_err:
-                        print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
-                        sys.stdout.flush()
-                if playwright_context:
-                    try:
-                        await playwright_context.stop()
-                    except Exception:
-                        pass
-                _log_memory("generate_png: Finally clean up")
+                if browser: await browser.close()
                 gc.collect()
+
+    async def generate_png(self, html_content: str, output_path: str):
+        await self.generate_clipping_assets(html_content, png_path=output_path)
 
     async def generate_pdf(self, html_content: str, output_path: str):
-        """Uses Playwright to generate a PDF from the HTML content."""
-        start_time = time.time()
-        print(f"[TIMING] generate_pdf: Entry")
-        sys.stdout.flush()
-        _log_memory("generate_pdf: Enter")
-        logger.info("Starting PDF generation")
-        chrome_path = _get_chromium_executable()
-
-        launch_kwargs = {
-            "headless": True,
-            "args": [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--js-flags=--max-old-space-size=256",
-            ],
-        }
-        if chrome_path:
-            launch_kwargs["executable_path"] = chrome_path
-
-        max_attempts = 2
-        for attempt in range(max_attempts):
-            browser = None
-            page = None
-            playwright_context = None
-            try:
-                _log_memory(f"generate_pdf: Attempt {attempt + 1} - Before Launch")
-                print(f"[PLAYWRIGHT] Browser Launch Started (PDF) (Attempt {attempt + 1})")
-                sys.stdout.flush()
-                
-                playwright_context = await async_playwright().start()
-                browser = await playwright_context.chromium.launch(**launch_kwargs)
-                print(f"BROWSER CREATED (PDF attempt {attempt + 1})"); sys.stdout.flush()
-                _log_memory("generate_pdf: After Launch")
-
-                page = await browser.new_page(
-                    viewport={"width": 1200, "height": 1600},
-                    device_scale_factor=3,
-                )
-                print(f"PAGE CREATED (PDF)"); sys.stdout.flush()
-
-                page.on("console", lambda msg: print(f"[BROWSER PDF] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
-                page.on("pageerror", lambda err: print(f"[BROWSER PDF ERROR] {err}") or sys.stdout.flush())
-
-                page.set_default_timeout(300000)
-                
-                _log_memory("generate_pdf: Before Content Loaded")
-                if html_content.startswith("http://") or html_content.startswith("https://"):
-                    await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
-                else:
-                    await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
-
-                print(f"[PLAYWRIGHT] HTML Loaded (PDF)")
-                sys.stdout.flush()
-
-                _log_memory("generate_pdf: After Content Loaded / Before Wait Layout")
-                await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
-                print("[PLAYWRIGHT] Layout complete (PDF)!")
-                sys.stdout.flush()
-
-                _log_memory("generate_pdf: After Layout Complete")
-
-                # Get container dimensions and column info
-                layout_info = await page.evaluate("""
-                    () => {
-                        const container = document.querySelector('.newspaper-container');
-                        const cols = document.querySelectorAll('.nc-column');
-                        const data = window.NEWSPAPER_DATA || {};
-                        
-                        let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
-                        
-                        return {
-                            width: container ? container.offsetWidth : 1060,
-                            height: container ? container.scrollHeight : 1600,
-                            selected_columns: data.layout_columns || 3,
-                            rendered_columns: renderedCols
-                        };
-                    }
-                """)
-                
-                # Exact required logging format
-                print(f"Selected Columns: {layout_info.get('selected_columns')}")
-                print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
-                print(f"[PLAYWRIGHT] Container dimensions for PDF: {layout_info}")
-                sys.stdout.flush()
-
-                # Image layout logging
-                image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
-                if image_logs:
-                    print(f"Image Count: {image_logs.get('image_count')}")
-                    print(f"Image Orientation: {image_logs.get('image_orientations')}")
-                    print(f"Selected Layout: {image_logs.get('selected_layout')}")
-                    print(f"Final Image Dimensions: {image_logs.get('final_dimensions')}")
-                    sys.stdout.flush()
-
-                # Convert px to inches (96 px = 1 inch) for standard PDF printing
-                width_in = layout_info.get("width", 1060) / 96.0
-                height_in = (layout_info.get("height", 1600) + 15) / 96.0
-
-                _log_memory("generate_pdf: Before PDF Creation")
-                print(f"[PLAYWRIGHT] PDF Creation Started")
-                sys.stdout.flush()
-                await page.pdf(
-                    path=output_path,
-                    width=f"{width_in}in",
-                    height=f"{height_in}in",
-                    print_background=True,
-                    margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"}
-                )
-                print(f"[PLAYWRIGHT] PDF Creation Completed")
-                sys.stdout.flush()
-                print(f"[PLAYWRIGHT] PDF Saved")
-                sys.stdout.flush()
-
-                _log_memory("generate_pdf: After PDF Creation (Success)")
-                logger.info("PDF generated successfully")
-                duration = time.time() - start_time
-                print(f"[TIMING] generate_pdf: Exit (Success) (took {duration:.4f}s)")
-                sys.stdout.flush()
-                return
-            except Exception as e:
-                logger.exception("PDF generation failed")
-                print(f"[PLAYWRIGHT WARNING] generate_pdf attempt {attempt + 1} failed: {e}")
-                sys.stdout.flush()
-                if attempt == max_attempts - 1:
-                    print(f"[PLAYWRIGHT] PDF Creation: FAILED (Reason: {e})")
-                    sys.stdout.flush()
-                    duration = time.time() - start_time
-                    print(f"[TIMING] generate_pdf: Exit (Failed) (took {duration:.4f}s)")
-                    sys.stdout.flush()
-                    raise
-            finally:
-                if page:
-                    try:
-                        await page.close()
-                        print(f"PAGE CLOSED (PDF)"); sys.stdout.flush()
-                    except Exception:
-                        pass
-                if browser:
-                    try:
-                        await browser.close()
-                        print(f"BROWSER CLOSED (PDF attempt {attempt + 1})"); sys.stdout.flush()
-                    except Exception as close_err:
-                        print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
-                        sys.stdout.flush()
-                if playwright_context:
-                    try:
-                        await playwright_context.stop()
-                    except Exception:
-                        pass
-                _log_memory("generate_pdf: Finally clean up")
-                gc.collect()
+        await self.generate_clipping_assets(html_content, pdf_path=output_path)
 
 
 render_service = RenderService()
