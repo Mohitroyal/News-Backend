@@ -417,9 +417,9 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                     
                     if (urls.length > 1) {
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * 0.30;
+                        let w1 = W_canvas * 0.35;
                         let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * 0.75);
+                        h1 = Math.min(h1, imgHeightPx * 0.85);
                         let y1 = h0 + 60; // Spacing below Hero
                         obstacles.push({
                             url: urls[1],
@@ -675,13 +675,13 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                     obstacleArea += w0 * Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
                     if (urls.length > 1) {
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * 0.30;
-                        obstacleArea += w1 * Math.min(w1 / aspect1, imgHeightPx * 0.75);
+                        let w1 = W_canvas * 0.35;
+                        obstacleArea += w1 * Math.min(w1 / aspect1, imgHeightPx * 0.85);
                     }
                 }
                 
-                const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - obstacleArea) / (totalChars * 0.42));
-                const conf = { fontSize: Math.max(16.0, Math.min(28.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
+                const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - obstacleArea) / (totalChars * 0.54));
+                const conf = { fontSize: Math.max(16.0, Math.min(23.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
                 applySinglePassLayout(conf);
                 
