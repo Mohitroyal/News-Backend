@@ -4,6 +4,11 @@ import logging
 import sys
 import gc
 import psutil
+import time
+import io
+import base64
+import urllib.request
+from PIL import Image, ImageOps
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
@@ -11,6 +16,68 @@ from typing import Dict, Any
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _url_to_base64_webp(url: str) -> str:
+    """Download, scale down to max 1600px, compress to WebP, and return as data URI."""
+    if not url:
+        return ""
+    if url.startswith("data:image/"):
+        return url  # already base64 encoded
+    
+    try:
+        # 1. Fetch image bytes
+        if url.startswith("http://") or url.startswith("https://"):
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                img_data = response.read()
+        else:
+            # Assume local file path
+            if os.path.exists(url):
+                with open(url, "rb") as f:
+                    img_data = f.read()
+            else:
+                return url
+        
+        # 2. Open with Pillow
+        img = Image.open(io.BytesIO(img_data))
+        
+        # EXIF transpose
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+            
+        # 3. Resize if exceeds 1600px
+        max_dim = 1600
+        w, h = img.size
+        if w > max_dim or h > max_dim:
+            scale = max_dim / max(w, h)
+            new_w = int(round(w * scale))
+            new_h = int(round(h * scale))
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            
+        # 4. Save to BytesIO as WebP (compressed)
+        buffer = io.BytesIO()
+        img.save(buffer, format="WEBP", quality=75)
+        webp_bytes = buffer.getvalue()
+        
+        # 5. Base64 encode
+        b64_str = base64.b64encode(webp_bytes).decode('utf-8')
+        data_uri = f"data:image/webp;base64,{b64_str}"
+        
+        # 6. Explicit cleanup
+        img.close()
+        buffer.close()
+        del img_data
+        del webp_bytes
+        gc.collect()
+        
+        return data_uri
+    except Exception as e:
+        print(f"[Image Pre-Optimization ERROR] Failed to process {url}: {e}")
+        sys.stdout.flush()
+        return url
 
 
 def _get_peak_memory() -> float:
@@ -87,6 +154,9 @@ class RenderService:
 
     async def render_html(self, data: Dict[str, Any], template_name: str = "classic.html") -> str:
         """Renders the newspaper template with user data."""
+        start_time = time.time()
+        print(f"[TIMING] render_html: Entry")
+        sys.stdout.flush()
         # 1. Headline safety fallback
         if not data.get("headline"):
             data["headline"] = "NEWSFLASH: Special Report"
@@ -132,6 +202,16 @@ class RenderService:
             data["image_url"] = data["image_urls"][0]
         elif data.get("image_url") and not data.get("image_urls"):
             data["image_urls"] = [data["image_url"]]
+
+        # 3b. Pre-optimize images: Resize to max 1600px and convert to Base64 WebP
+        _log_memory("render_html: Before Image Base64 WebP conversion")
+        optimized_urls = []
+        for url in data.get("image_urls", []):
+            optimized_urls.append(_url_to_base64_webp(url))
+        data["image_urls"] = optimized_urls
+        if optimized_urls:
+            data["image_url"] = optimized_urls[0]
+        _log_memory("render_html: After Image Base64 WebP conversion")
 
         # 4. Logo/template safety fallback
         template_key = template_name.replace(".html", "")
@@ -707,7 +787,14 @@ class RenderService:
                     let activeRegion = regions[currentRegionIdx];
                     let testFits = true;
                     
+                    let loopSafetyCounter = 0;
                     while (activeRegion) {
+                        loopSafetyCounter++;
+                        if (loopSafetyCounter > 2000) {
+                            console.error("[LAYOUT ERROR] Hard limit of 2000 iterations reached in testFlow. Aborting to prevent infinite loop.");
+                            testFits = false;
+                            break;
+                        }
                         if (pIdx >= paragraphs.length) break;
                         
                         let text = paragraphs[pIdx];
@@ -992,10 +1079,16 @@ class RenderService:
             print(f"[DEBUG] Could not save debug HTML: {e}")
             sys.stdout.flush()
 
+        duration = time.time() - start_time
+        print(f"[TIMING] render_html: Exit (took {duration:.4f}s)")
+        sys.stdout.flush()
         return html
 
     async def generate_png(self, html_content: str, output_path: str):
         """Uses Playwright to take a high-quality screenshot of the rendered HTML."""
+        start_time = time.time()
+        print(f"[TIMING] generate_png: Entry")
+        sys.stdout.flush()
         _log_memory("generate_png: Enter")
         chrome_path = _get_chromium_executable()
 
@@ -1015,124 +1108,133 @@ class RenderService:
         max_attempts = 2
         for attempt in range(max_attempts):
             browser = None
+            page = None
+            playwright_context = None
             try:
                 _log_memory(f"generate_png: Attempt {attempt + 1} - Before Launch")
                 print(f"[PLAYWRIGHT] Browser Launch Started (Attempt {attempt + 1})")
                 sys.stdout.flush()
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(**launch_kwargs)
-                    print(f"BROWSER CREATED (PNG attempt {attempt + 1})"); sys.stdout.flush()
-                    print(f"[PLAYWRIGHT] Browser Launch Success")
-                    sys.stdout.flush()
-                    _log_memory("generate_png: After Launch")
+                
+                playwright_context = await async_playwright().start()
+                browser = await playwright_context.chromium.launch(**launch_kwargs)
+                print(f"BROWSER CREATED (PNG attempt {attempt + 1})"); sys.stdout.flush()
+                _log_memory("generate_png: After Launch")
 
-                    print(f"[PLAYWRIGHT] New Page Started")
-                    sys.stdout.flush()
-                    page = await browser.new_page(
-                        viewport={"width": 1200, "height": 1600},
-                        device_scale_factor=3,
-                    )
-                    print(f"PAGE CREATED (PNG)"); sys.stdout.flush()
-                    print(f"[PLAYWRIGHT] New Page Success")
+                page = await browser.new_page(
+                    viewport={"width": 1200, "height": 1600},
+                    device_scale_factor=3,
+                )
+                print(f"PAGE CREATED (PNG)"); sys.stdout.flush()
+
+                page.on("console", lambda msg: print(f"[BROWSER] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
+                page.on("pageerror", lambda err: print(f"[BROWSER ERROR] {err}") or sys.stdout.flush())
+                
+                page.set_default_timeout(300000)
+
+                _log_memory("generate_png: Before Content Loaded")
+                if html_content.startswith("http://") or html_content.startswith("https://"):
+                    await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
+                else:
+                    await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
+
+                print(f"[PLAYWRIGHT] HTML Loaded")
+                sys.stdout.flush()
+
+                _log_memory("generate_png: After Content Loaded / Before Wait Layout")
+                await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
+                print("[PLAYWRIGHT] Layout complete!")
+                sys.stdout.flush()
+
+                _log_memory("generate_png: After Layout Complete")
+
+                # Get container dimensions and column info
+                layout_info = await page.evaluate("""
+                    () => {
+                        const container = document.querySelector('.newspaper-container');
+                        const cols = document.querySelectorAll('.nc-column');
+                        const data = window.NEWSPAPER_DATA || {};
+                        
+                        let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
+                        
+                        return {
+                            width: container ? container.offsetWidth : 1200,
+                            height: container ? container.scrollHeight : 1600,
+                            selected_columns: data.layout_columns || 3,
+                            rendered_columns: renderedCols
+                        };
+                    }
+                """)
+                
+                # Exact required logging format
+                print(f"Selected Columns: {layout_info.get('selected_columns')}")
+                print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
+                print(f"[PLAYWRIGHT] Container dimensions: {layout_info}")
+                sys.stdout.flush()
+
+                # Image layout logging
+                image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
+                if image_logs:
+                    print(f"Image Count: {image_logs.get('image_count')}")
+                    print(f"Image Orientation: {image_logs.get('image_orientations')}")
+                    print(f"Selected Layout: {image_logs.get('selected_layout')}")
+                    print(f"Final Image Dimensions: {image_logs.get('final_dimensions')}")
                     sys.stdout.flush()
 
-                    # FIX 4: Forward browser console logs to backend logs
-                    # Without this, JS errors/hangs are invisible in Render logs.
-                    page.on("console", lambda msg: print(f"[BROWSER] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
-                    page.on("pageerror", lambda err: print(f"[BROWSER ERROR] {err}") or sys.stdout.flush())
-                    
-                    page.set_default_timeout(300000)
+                viewport_width = 1200
+                viewport_height = layout_info.get("height", 1600) + 60
+                await page.set_viewport_size({"width": viewport_width, "height": viewport_height})
 
-                    if html_content.startswith("http://") or html_content.startswith("https://"):
-                        await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
-                    else:
-                        await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
-
-                    print(f"[PLAYWRIGHT] HTML Loaded")
-                    sys.stdout.flush()
-
-                    print("[PLAYWRIGHT] Waiting for layout to complete...")
-                    sys.stdout.flush()
-                    # 25s timeout: JS 10s failsafe fires first, then this resolves cleanly.
-                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
-                    print("[PLAYWRIGHT] Layout complete!")
-                    sys.stdout.flush()
-
-                    # Get container dimensions and column info
-                    layout_info = await page.evaluate("""
-                        () => {
-                            const container = document.querySelector('.newspaper-container');
-                            const cols = document.querySelectorAll('.nc-column');
-                            const data = window.NEWSPAPER_DATA || {};
-                            
-                            let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
-                            
-                            return {
-                                width: container ? container.offsetWidth : 1200,
-                                height: container ? container.scrollHeight : 1600,
-                                selected_columns: data.layout_columns || 3,
-                                rendered_columns: renderedCols
-                            };
-                        }
-                    """)
-                    
-                    # Exact required logging format
-                    print(f"Selected Columns: {layout_info.get('selected_columns')}")
-                    print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
-                    print(f"[PLAYWRIGHT] Container dimensions: {layout_info}")
-                    sys.stdout.flush()
-
-                    # Image layout logging
-                    image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
-                    if image_logs:
-                        print(f"Image Count: {image_logs.get('image_count')}")
-                        print(f"Image Orientation: {image_logs.get('image_orientations')}")
-                        print(f"Selected Layout: {image_logs.get('selected_layout')}")
-                        print(f"Final Image Dimensions: {image_logs.get('final_dimensions')}")
-                        sys.stdout.flush()
-
-                    # Set viewport to exact layout dimensions (width 1200 is perfect for margins,
-                    # height is container height + 60px for padding/margins)
-                    viewport_width = 1200
-                    viewport_height = layout_info.get("height", 1600) + 60
-                    await page.set_viewport_size({"width": viewport_width, "height": viewport_height})
-
-                    _log_memory("generate_png: Before Screenshot")
-                    print(f"[PLAYWRIGHT] Screenshot Started")
-                    sys.stdout.flush()
-                    await page.locator('.newspaper-container').first.screenshot(path=output_path, type="png", timeout=300000)
-                    print(f"[PLAYWRIGHT] Screenshot Completed")
-                    sys.stdout.flush()
-                    print(f"[PLAYWRIGHT] PNG Saved")
-                    sys.stdout.flush()
-                    
-                    await browser.close()
-                    print(f"PAGE CLOSED (PNG)"); sys.stdout.flush()
-                    print(f"BROWSER CLOSED (PNG attempt {attempt + 1})"); sys.stdout.flush()
-                    browser = None
-                    _log_memory("generate_png: After Browser Close (Success)")
-                    return
+                _log_memory("generate_png: Before Screenshot")
+                print(f"[PLAYWRIGHT] Screenshot Started")
+                sys.stdout.flush()
+                await page.locator('.newspaper-container').first.screenshot(path=output_path, type="png", timeout=300000)
+                print(f"[PLAYWRIGHT] Screenshot Completed")
+                sys.stdout.flush()
+                print(f"[PLAYWRIGHT] PNG Saved")
+                sys.stdout.flush()
+                
+                _log_memory("generate_png: After Screenshot (Success)")
+                duration = time.time() - start_time
+                print(f"[TIMING] generate_png: Exit (Success) (took {duration:.4f}s)")
+                sys.stdout.flush()
+                return
             except Exception as e:
                 print(f"[PLAYWRIGHT WARNING] generate_png attempt {attempt + 1} failed: {e}")
                 sys.stdout.flush()
                 if attempt == max_attempts - 1:
                     print(f"[PLAYWRIGHT] Screenshot Creation: FAILED (Reason: {e})")
                     sys.stdout.flush()
+                    duration = time.time() - start_time
+                    print(f"[TIMING] generate_png: Exit (Failed) (took {duration:.4f}s)")
+                    sys.stdout.flush()
                     raise
             finally:
+                if page:
+                    try:
+                        await page.close()
+                        print(f"PAGE CLOSED (PNG)"); sys.stdout.flush()
+                    except Exception:
+                        pass
                 if browser:
                     try:
                         await browser.close()
-                        print(f"PAGE CLOSED (PNG)"); sys.stdout.flush()
                         print(f"BROWSER CLOSED (PNG attempt {attempt + 1})"); sys.stdout.flush()
                     except Exception as close_err:
                         print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
                         sys.stdout.flush()
+                if playwright_context:
+                    try:
+                        await playwright_context.stop()
+                    except Exception:
+                        pass
                 _log_memory("generate_png: Finally clean up")
                 gc.collect()
 
     async def generate_pdf(self, html_content: str, output_path: str):
         """Uses Playwright to generate a PDF from the HTML content."""
+        start_time = time.time()
+        print(f"[TIMING] generate_pdf: Entry")
+        sys.stdout.flush()
         _log_memory("generate_pdf: Enter")
         logger.info("Starting PDF generation")
         chrome_path = _get_chromium_executable()
@@ -1153,107 +1255,103 @@ class RenderService:
         max_attempts = 2
         for attempt in range(max_attempts):
             browser = None
+            page = None
+            playwright_context = None
             try:
                 _log_memory(f"generate_pdf: Attempt {attempt + 1} - Before Launch")
                 print(f"[PLAYWRIGHT] Browser Launch Started (PDF) (Attempt {attempt + 1})")
                 sys.stdout.flush()
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(**launch_kwargs)
-                    print(f"BROWSER CREATED (PDF attempt {attempt + 1})"); sys.stdout.flush()
-                    print(f"[PLAYWRIGHT] Browser Launch Success (PDF)")
-                    sys.stdout.flush()
-                    _log_memory("generate_pdf: After Launch")
+                
+                playwright_context = await async_playwright().start()
+                browser = await playwright_context.chromium.launch(**launch_kwargs)
+                print(f"BROWSER CREATED (PDF attempt {attempt + 1})"); sys.stdout.flush()
+                _log_memory("generate_pdf: After Launch")
 
-                    print(f"[PLAYWRIGHT] New Page Started (PDF)")
-                    sys.stdout.flush()
-                    page = await browser.new_page(
-                        viewport={"width": 1200, "height": 1600},
-                        device_scale_factor=3,
-                    )
-                    print(f"PAGE CREATED (PDF)"); sys.stdout.flush()
-                    print(f"[PLAYWRIGHT] New Page Success (PDF)")
-                    sys.stdout.flush()
+                page = await browser.new_page(
+                    viewport={"width": 1200, "height": 1600},
+                    device_scale_factor=3,
+                )
+                print(f"PAGE CREATED (PDF)"); sys.stdout.flush()
 
-                    # FIX 4: Forward browser console logs to backend logs (PDF path)
-                    page.on("console", lambda msg: print(f"[BROWSER PDF] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
-                    page.on("pageerror", lambda err: print(f"[BROWSER PDF ERROR] {err}") or sys.stdout.flush())
+                page.on("console", lambda msg: print(f"[BROWSER PDF] {msg.type.upper()}: {msg.text}") or sys.stdout.flush())
+                page.on("pageerror", lambda err: print(f"[BROWSER PDF ERROR] {err}") or sys.stdout.flush())
 
-                    page.set_default_timeout(300000)
-                    
-                    if html_content.startswith("http://") or html_content.startswith("https://"):
-                        await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
-                    else:
-                        await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
+                page.set_default_timeout(300000)
+                
+                _log_memory("generate_pdf: Before Content Loaded")
+                if html_content.startswith("http://") or html_content.startswith("https://"):
+                    await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
+                else:
+                    await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
 
-                    print(f"[PLAYWRIGHT] HTML Loaded (PDF)")
-                    sys.stdout.flush()
+                print(f"[PLAYWRIGHT] HTML Loaded (PDF)")
+                sys.stdout.flush()
 
-                    print("[PLAYWRIGHT] Waiting for layout to complete (PDF)...")
-                    sys.stdout.flush()
-                    # 25s timeout: JS 10s failsafe fires first, then this resolves cleanly.
-                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
-                    print("[PLAYWRIGHT] Layout complete (PDF)!")
-                    sys.stdout.flush()
+                _log_memory("generate_pdf: After Content Loaded / Before Wait Layout")
+                await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
+                print("[PLAYWRIGHT] Layout complete (PDF)!")
+                sys.stdout.flush()
 
-                    # Get container dimensions and column info
-                    layout_info = await page.evaluate("""
-                        () => {
-                            const container = document.querySelector('.newspaper-container');
-                            const cols = document.querySelectorAll('.nc-column');
-                            const data = window.NEWSPAPER_DATA || {};
-                            
-                            let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
-                            
-                            return {
-                                width: container ? container.offsetWidth : 1060,
-                                height: container ? container.scrollHeight : 1600,
-                                selected_columns: data.layout_columns || 3,
-                                rendered_columns: renderedCols
-                            };
-                        }
-                    """)
-                    
-                    # Exact required logging format
-                    print(f"Selected Columns: {layout_info.get('selected_columns')}")
-                    print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
-                    print(f"[PLAYWRIGHT] Container dimensions for PDF: {layout_info}")
-                    sys.stdout.flush()
+                _log_memory("generate_pdf: After Layout Complete")
 
-                    # Image layout logging
-                    image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
-                    if image_logs:
-                        print(f"Image Count: {image_logs.get('image_count')}")
-                        print(f"Image Orientation: {image_logs.get('image_orientations')}")
-                        print(f"Selected Layout: {image_logs.get('selected_layout')}")
-                        print(f"Final Image Dimensions: {image_logs.get('final_dimensions')}")
-                        sys.stdout.flush()
+                # Get container dimensions and column info
+                layout_info = await page.evaluate("""
+                    () => {
+                        const container = document.querySelector('.newspaper-container');
+                        const cols = document.querySelectorAll('.nc-column');
+                        const data = window.NEWSPAPER_DATA || {};
+                        
+                        let renderedCols = cols.length > 0 ? cols.length : (data.layout_columns || 3);
+                        
+                        return {
+                            width: container ? container.offsetWidth : 1060,
+                            height: container ? container.scrollHeight : 1600,
+                            selected_columns: data.layout_columns || 3,
+                            rendered_columns: renderedCols
+                        };
+                    }
+                """)
+                
+                # Exact required logging format
+                print(f"Selected Columns: {layout_info.get('selected_columns')}")
+                print(f"Rendered Columns: {layout_info.get('rendered_columns')}")
+                print(f"[PLAYWRIGHT] Container dimensions for PDF: {layout_info}")
+                sys.stdout.flush()
 
-                    # Convert px to inches (96 px = 1 inch) for standard PDF printing
-                    width_in = layout_info.get("width", 1060) / 96.0
-                    height_in = (layout_info.get("height", 1600) + 15) / 96.0
-
-                    _log_memory("generate_pdf: Before PDF Creation")
-                    print(f"[PLAYWRIGHT] PDF Creation Started")
-                    sys.stdout.flush()
-                    await page.pdf(
-                        path=output_path,
-                        width=f"{width_in}in",
-                        height=f"{height_in}in",
-                        print_background=True,
-                        margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"}
-                    )
-                    print(f"[PLAYWRIGHT] PDF Creation Completed")
-                    sys.stdout.flush()
-                    print(f"[PLAYWRIGHT] PDF Saved")
+                # Image layout logging
+                image_logs = await page.evaluate("window.__IMAGE_LAYOUT_LOGS__ || null")
+                if image_logs:
+                    print(f"Image Count: {image_logs.get('image_count')}")
+                    print(f"Image Orientation: {image_logs.get('image_orientations')}")
+                    print(f"Selected Layout: {image_logs.get('selected_layout')}")
+                    print(f"Final Image Dimensions: {image_logs.get('final_dimensions')}")
                     sys.stdout.flush()
 
-                    await browser.close()
-                    print(f"PAGE CLOSED (PDF)"); sys.stdout.flush()
-                    print(f"BROWSER CLOSED (PDF attempt {attempt + 1})"); sys.stdout.flush()
-                    browser = None
-                    _log_memory("generate_pdf: After Browser Close (Success)")
-                    logger.info("PDF generated successfully")
-                    return
+                # Convert px to inches (96 px = 1 inch) for standard PDF printing
+                width_in = layout_info.get("width", 1060) / 96.0
+                height_in = (layout_info.get("height", 1600) + 15) / 96.0
+
+                _log_memory("generate_pdf: Before PDF Creation")
+                print(f"[PLAYWRIGHT] PDF Creation Started")
+                sys.stdout.flush()
+                await page.pdf(
+                    path=output_path,
+                    width=f"{width_in}in",
+                    height=f"{height_in}in",
+                    print_background=True,
+                    margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"}
+                )
+                print(f"[PLAYWRIGHT] PDF Creation Completed")
+                sys.stdout.flush()
+                print(f"[PLAYWRIGHT] PDF Saved")
+                sys.stdout.flush()
+
+                _log_memory("generate_pdf: After PDF Creation (Success)")
+                logger.info("PDF generated successfully")
+                duration = time.time() - start_time
+                print(f"[TIMING] generate_pdf: Exit (Success) (took {duration:.4f}s)")
+                sys.stdout.flush()
+                return
             except Exception as e:
                 logger.exception("PDF generation failed")
                 print(f"[PLAYWRIGHT WARNING] generate_pdf attempt {attempt + 1} failed: {e}")
@@ -1261,15 +1359,29 @@ class RenderService:
                 if attempt == max_attempts - 1:
                     print(f"[PLAYWRIGHT] PDF Creation: FAILED (Reason: {e})")
                     sys.stdout.flush()
+                    duration = time.time() - start_time
+                    print(f"[TIMING] generate_pdf: Exit (Failed) (took {duration:.4f}s)")
+                    sys.stdout.flush()
                     raise
             finally:
+                if page:
+                    try:
+                        await page.close()
+                        print(f"PAGE CLOSED (PDF)"); sys.stdout.flush()
+                    except Exception:
+                        pass
                 if browser:
                     try:
                         await browser.close()
-                        print("BROWSER CLOSED"); sys.stdout.flush()
+                        print(f"BROWSER CLOSED (PDF attempt {attempt + 1})"); sys.stdout.flush()
                     except Exception as close_err:
                         print(f"[PLAYWRIGHT WARNING] Failed to close browser: {close_err}")
                         sys.stdout.flush()
+                if playwright_context:
+                    try:
+                        await playwright_context.stop()
+                    except Exception:
+                        pass
                 _log_memory("generate_pdf: Finally clean up")
                 gc.collect()
 
