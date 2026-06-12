@@ -822,3 +822,9 @@ def get_test_clipping_public(
         "data": resp_data,
         "message": "Clipping retrieved successfully"
     })
+
+
+@router.get("/test-prod-public-ping", response_model=dict)
+def ping_test_clipping_public() -> Any:
+    return {"status": "ok", "message": "Public test generation endpoint is live"}
+
