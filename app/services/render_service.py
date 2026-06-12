@@ -432,8 +432,8 @@ class RenderService:
                 if (urls.length > 0) {
                     let S_scale = S_img;
                     let gap = 60;
-                    if (urls.length > 2 && totalChars < 1200) {
-                        const scaleFactor = Math.max(0.65, 1.0 - (1200 - totalChars) / 1500);
+                    if (urls.length > 2 && totalChars < 2500) {
+                        const scaleFactor = Math.max(0.65, 1.0 - (2500 - totalChars) / 3000);
                         S_scale = S_img * scaleFactor;
                         gap = 30;
                     }
@@ -441,7 +441,7 @@ class RenderService:
                     const aspect0 = aspectRatios[0] || 1.2;
                     let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
                     let h0 = w0 / aspect0;
-                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 1200 ? 0.75 : 1.0));
+                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
@@ -455,16 +455,16 @@ class RenderService:
                         const aspect1 = aspectRatios[1] || 1.0;
                         let w1 = W_canvas * Math.max(0.28, Math.min(0.46, 0.38 * S_scale));
                         let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 1200 ? 0.70 : 0.95));
+                        h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.70 : 0.95));
                         let y1 = h0 + gap; // Spacing below Hero
                         
                         if (urls.length > 2) {
                             const aspect2 = aspectRatios[2] || 0.8;
                             let w2 = W_canvas * Math.max(0.18, Math.min(0.28, 0.25 * S_scale));
                             let h2 = w2 / aspect2;
-                            h2 = Math.min(h2, imgHeightPx * (urls.length > 2 && totalChars < 1200 ? 0.50 : 0.65));
+                            h2 = Math.min(h2, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.50 : 0.65));
                             
-                            if (totalChars < 1200) {
+                            if (totalChars < 2500) {
                                 // Side-by-side layout at the bottom
                                 obstacles.push({
                                     url: urls[1],
@@ -814,7 +814,7 @@ class RenderService:
                 });
                 
                 const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - blockedArea) / (totalChars * 0.54));
-                const maxFontSize = (urls.length > 2 && totalChars < 1200) ? 23.0 : 21.0;
+                const maxFontSize = (urls.length > 2 && totalChars < 2500) ? 23.0 : 21.0;
                 const conf = { fontSize: Math.max(15.0, Math.min(maxFontSize, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
                 // Let's run a binary search to find the minimum height where the text fits.
