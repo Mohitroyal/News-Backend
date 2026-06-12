@@ -731,7 +731,7 @@ class RenderService:
                 }
                 
                 const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - obstacleArea) / (totalChars * 0.75));
-                const conf = { fontSize: Math.max(16.0, Math.min(21.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
+                const conf = { fontSize: Math.max(16.0, Math.min(24.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
                 applySinglePassLayout(conf);
                 
