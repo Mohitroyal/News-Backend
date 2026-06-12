@@ -630,9 +630,9 @@ class RenderService:
                             colDiv.style.left = `${L_c}px`;
                             colDiv.style.top = '0px';
                             colDiv.style.width = `${W_col}px`;
-                            if (isFinal) canvas.appendChild(colDiv);
+                            canvas.appendChild(colDiv);
                         }
-                        if (isFinal) colDiv.appendChild(rBox);
+                        colDiv.appendChild(rBox);
                         
                         regions.push({ rBox, height: h, y: int.yStart });
                     });
