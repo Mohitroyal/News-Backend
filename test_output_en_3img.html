@@ -377,7 +377,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
-            function applySinglePassLayout(conf) {
+            function applySinglePassLayout(conf, S) {
                 // Clear the compositor canvas
                 canvas.innerHTML = '';
                 
@@ -397,15 +397,12 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                 const obstacles = [];
                 const imgHeightPx = Math.round(0.58 * W_canvas);
                 
+                let S_img = S || 1.0;
                 if (urls.length > 0) {
                     const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * 0.55;
+                    let w0 = W_canvas * Math.max(0.48, Math.min(0.60, 0.55 * S_img));
                     let h0 = w0 / aspect0;
                     h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
-                    if (w0 > W_canvas * 0.55) {
-                        w0 = W_canvas * 0.55;
-                        h0 = w0 / aspect0;
-                    }
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
@@ -417,7 +414,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                     
                     if (urls.length > 1) {
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * 0.35;
+                        let w1 = W_canvas * Math.max(0.28, Math.min(0.40, 0.33 * S_img));
                         let h1 = w1 / aspect1;
                         h1 = Math.min(h1, imgHeightPx * 0.85);
                         let y1 = h0 + 60; // Spacing below Hero
@@ -432,7 +429,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                         
                         if (urls.length > 2) {
                             const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_canvas * 0.25;
+                            let w2 = W_canvas * Math.max(0.20, Math.min(0.28, 0.25 * S_img));
                             let h2 = w2 / aspect2;
                             h2 = Math.min(h2, imgHeightPx * 0.65);
                             let y2 = y1 + h1 + 60;
@@ -661,6 +658,10 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                 aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
                 await waitReady();
 
+                // Dynamic scaling factor S based on character count
+                let S = 1.0 - (totalChars - 1400) / 3000;
+                S = Math.max(0.75, Math.min(1.25, S));
+
                 const W_canvas = canvas.offsetWidth || 1060;
                 const N = parseInt(data.layout_columns) || 3;
                 const W_col = (W_canvas - (N - 1) * 24) / N;
@@ -671,11 +672,11 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                 const imgHeightPx = Math.round(0.58 * W_canvas);
                 if (urls.length > 0) {
                     const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * 0.55;
+                    let w0 = W_canvas * Math.max(0.48, Math.min(0.60, 0.55 * S));
                     obstacleArea += w0 * Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
                     if (urls.length > 1) {
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * 0.35;
+                        let w1 = W_canvas * Math.max(0.28, Math.min(0.40, 0.33 * S));
                         obstacleArea += w1 * Math.min(w1 / aspect1, imgHeightPx * 0.85);
                     }
                 }
@@ -683,7 +684,7 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
                 const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - obstacleArea) / (totalChars * 0.54));
                 const conf = { fontSize: Math.max(16.0, Math.min(23.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
-                applySinglePassLayout(conf);
+                applySinglePassLayout(conf, S);
                 
                 let st = document.getElementById('nc-layout-style');
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
