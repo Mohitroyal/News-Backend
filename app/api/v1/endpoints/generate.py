@@ -752,3 +752,73 @@ def update_clipping_layout(
         "data": clipping,
         "message": "Layout saved and re-rendering started"
     })
+
+
+@router.post("/test-prod-public", response_model=dict)
+async def create_test_prod_clipping(
+    *,
+    db: Session = Depends(get_db),
+    clipping_in: ClippingCreate,
+    background_tasks: BackgroundTasks
+) -> Any:
+    user = db.query(User).first()
+    if not user:
+        import uuid
+        user = User(
+            id=uuid.uuid4(),
+            email="test-prod-dummy@example.com",
+            full_name="Prod Dummy User",
+            is_active=True,
+            subscription_plan="free",
+            subscription_status="active",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    clipping = Clipping(
+        user_id=user.id,
+        headline=clipping_in.headline,
+        article_content=clipping_in.article_content,
+        language=clipping_in.language,
+        tone=clipping_in.tone,
+        template_id=clipping_in.template_id,
+        logo_id=clipping_in.logo_id or clipping_in.template_id,
+        image_url=clipping_in.image_url,
+        image_urls=clipping_in.image_urls or [],
+        publication_name=clipping_in.publication_name,
+        publication_date=clipping_in.publication_date,
+        layout_columns=clipping_in.layout_columns,
+        font_family=clipping_in.font_family or "playfair",
+        status="processing"
+    )
+    db.add(clipping)
+    db.commit()
+    db.refresh(clipping)
+
+    background_tasks.add_task(_background_process_clipping, clipping.id)
+
+    return jsonable_encoder({
+        "success": True,
+        "data": clipping,
+        "message": "Public test generation started successfully"
+    })
+
+
+@router.get("/test-prod-public/{id}", response_model=dict)
+def get_test_clipping_public(
+    id: uuid.UUID,
+    db: Session = Depends(get_db)
+) -> Any:
+    clipping = db.query(Clipping).filter(Clipping.id == id).first()
+    if not clipping:
+        raise HTTPException(status_code=404, detail="Clipping not found")
+        
+    resp_data = jsonable_encoder(clipping)
+    resp_data = _enrich_clipping_response(clipping, resp_data)
+
+    return jsonable_encoder({
+        "success": True,
+        "data": resp_data,
+        "message": "Clipping retrieved successfully"
+    })
