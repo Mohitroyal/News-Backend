@@ -58,17 +58,24 @@ async def run_test():
             "template_id": "national_news"
         },
         {
-            "name": "English - 3 Images (Low Content Test)",
-            "lang": "en",
+            "name": "Telugu - 3 Images (Low Content Test)",
+            "lang": "te",
+            "headline": "ఎంఈఓ ఎల్ సత్యనారాయణ ఆధ్వర్యంలో ఎన్రోల్మెంట్ డ్రైవ్ కార్యక్రమం..",
+            "subheadline": "బడి ఈడు పిల్లలను ప్రభుత్వ పాఠశాలలో జాయిన్ చేయాలని అవగాహన..",
+            "publication_name": "భారత్ రిపోర్టర్",
+            "dateline": "పోలవరం, మే 13",
+            "byline": "దామోదర రావు, దిలీప్",
             "sections": [
-                "This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page."
+                "పోలవరం మండలంలో మండల విద్యాశాఖ అధికారి ఎల్ సత్యనారాయణ ఆధ్వర్యంలో బుధవారం ఎన్రోల్మెంట్ డ్రైవ్ కార్యక్రమం నిర్వహిస్తున్నారు. అనంతరం ఎంఈఓ ఎల్ సత్యనారాయణ మాట్లాడుతూ ఎన్రోల్మెంట్ డ్రైవ్ కార్యక్రమం లో భాగంగా 1 వ తరగతి నుండి 10 వ తరగతి వరకు ఉన్న బడి బయట పిల్లలను,డ్రాపౌట్లను గుర్తించి, అంగన్వాడీ లో ఉన్న 5 సంవత్సరం లు దాటిన పిల్లలను ప్రభుత్వ పాఠశాలలో జాయిన్ చేయించాలని లక్ష్యంతో పిల్లల తల్లిదండ్రులకు గ్రామస్తులకు అవగాహన కల్పించడం జరిగిందన్నారు. బుధవారం",
+                "కమ్మర గూడెం, బీసీ కాలనీ, పాత పోలవరం లలో ఎన్రోల్మెంట్ డ్రైవ్ నిర్వహించడం జరిగిందన్నారు. రాష్ట్ర ప్రభుత్వం ప్రభుత్వ పాఠశాలలో చదువుకునే విద్యార్థులకు ఎన్నో ఉచిత పథకాలు, అన్ని సౌకర్యాలు కల్పిస్తుందని అన్నారు. ఉపాధ్యాయులు మెరుగైన విద్యను అందిస్తున్నారన్నారు. అందుకు నిదర్శనం ఈ సంవత్సరం 10వ తరగతి పరీక్ష ఫలితాల్లో సాధించిన పార్శంటేజ్, విద్యార్థులు సాధించిన మార్కులే అన్నారు. ఐదు సంవత్సరాలు దాటిన అంగనవాడి విద్యార్థులు, డ్రాపౌట్ విద్యార్థులు, ఒకటి నుండి 10వ తరగతి వరకు చదువుకుంటున్న విద్యార్థులు ప్రభుత్వ పాఠశాలలో జాయిన్ అవ్వాలని కోరారు.",
+                "ఈ కార్యక్రమంలో మండల విద్యాశాఖ అధికారి ఎల్ సత్య నారాయణగారు, సి ఆర్ పి లు దామోదర రావు, దిలీప్ , ప్రధానోపాధ్యాయులు పోసరావు, ఎన్ వి ఎస్ మూర్తి, మల్లికార్జున రావు తదితరులు పాల్గొన్నారు."
             ],
             "image_urls": [
                 "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80",
                 "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
                 "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
             ],
-            "template_id": "national_news"
+            "template_id": "bharath_reporter"
         }
     ]
 
@@ -79,9 +86,9 @@ async def run_test():
         
         # Mock rendering data
         render_data = {
-            "headline": f"TEST: {tc['name']}",
-            "subheadline": "Validation of updated stable rendering pipeline",
-            "publication_name": "NewsCraft Test Edition",
+            "headline": tc.get("headline", f"TEST: {tc['name']}"),
+            "subheadline": tc.get("subheadline", "Validation of updated stable rendering pipeline"),
+            "publication_name": tc.get("publication_name", "NewsCraft Test Edition"),
             "publication_date": "Sunday, May 31, 2026",
             "image_url": tc["image_urls"][0],
             "image_urls": tc["image_urls"],
@@ -91,8 +98,8 @@ async def run_test():
             "logo_id": tc["template_id"],
             "is_premium": False,
             "sections": tc["sections"],
-            "dateline": "HYDERABAD",
-            "byline": "By Antigravity QA Agent"
+            "dateline": tc.get("dateline", "HYDERABAD"),
+            "byline": tc.get("byline", "By Antigravity QA Agent")
         }
 
         # 1. Render HTML
