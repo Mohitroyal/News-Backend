@@ -56,6 +56,19 @@ async def run_test():
                 "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
             ],
             "template_id": "national_news"
+        },
+        {
+            "name": "English - 3 Images (Low Content Test)",
+            "lang": "en",
+            "sections": [
+                "This is the first paragraph of a breaking news story. The layout engine will auto-wrap and format this content into columns to make it look like a real newspaper page."
+            ],
+            "image_urls": [
+                "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80",
+                "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+            ],
+            "template_id": "national_news"
         }
     ]
 
@@ -88,14 +101,15 @@ async def run_test():
         print(f"HTML rendered successfully. Size: {len(html)} chars")
 
         # Save HTML for visual inspection
-        html_file = f"test_output_{tc['lang']}_{len(tc['image_urls'])}img.html"
+        slug = tc['name'].lower().replace(" - ", "_").replace(" ", "_").replace("(", "").replace(")", "").replace("-", "_")
+        html_file = f"test_output_{slug}.html"
         with open(html_file, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"HTML saved to {html_file}")
 
         # 2. Generate PNG
         print("[2/3] Generating PNG...")
-        png_file = f"test_output_{tc['lang']}_{len(tc['image_urls'])}img.png"
+        png_file = f"test_output_{slug}.png"
         try:
             await render_service.generate_png(html, png_file)
             print(f"PNG generated successfully -> {png_file}")
@@ -105,7 +119,7 @@ async def run_test():
 
         # 3. Generate PDF
         print("[3/3] Generating PDF...")
-        pdf_file = f"test_output_{tc['lang']}_{len(tc['image_urls'])}img.pdf"
+        pdf_file = f"test_output_{slug}.pdf"
         try:
             await render_service.generate_pdf(html, pdf_file)
             print(f"PDF generated successfully -> {pdf_file}")

@@ -427,6 +427,97 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
+            function getObstacles(W_canvas, S_img, imgHeightPx) {
+                const obstacles = [];
+                if (urls.length > 0) {
+                    let S_scale = S_img;
+                    let gap = 60;
+                    if (urls.length > 2 && totalChars < 1200) {
+                        const scaleFactor = Math.max(0.65, 1.0 - (1200 - totalChars) / 1500);
+                        S_scale = S_img * scaleFactor;
+                        gap = 30;
+                    }
+                    
+                    const aspect0 = aspectRatios[0] || 1.2;
+                    let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
+                    let h0 = w0 / aspect0;
+                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 1200 ? 0.75 : 1.0));
+                    obstacles.push({
+                        url: urls[0],
+                        caption: captions[0] || '',
+                        x: Math.round(W_canvas - w0), // Always align top-right
+                        y: 0,
+                        w: Math.round(w0),
+                        h: Math.round(h0)
+                    });
+                    
+                    if (urls.length > 1) {
+                        const aspect1 = aspectRatios[1] || 1.0;
+                        let w1 = W_canvas * Math.max(0.28, Math.min(0.46, 0.38 * S_scale));
+                        let h1 = w1 / aspect1;
+                        h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 1200 ? 0.70 : 0.95));
+                        let y1 = h0 + gap; // Spacing below Hero
+                        
+                        if (urls.length > 2) {
+                            const aspect2 = aspectRatios[2] || 0.8;
+                            let w2 = W_canvas * Math.max(0.18, Math.min(0.28, 0.25 * S_scale));
+                            let h2 = w2 / aspect2;
+                            h2 = Math.min(h2, imgHeightPx * (urls.length > 2 && totalChars < 1200 ? 0.50 : 0.65));
+                            
+                            if (totalChars < 1200) {
+                                // Side-by-side layout at the bottom
+                                obstacles.push({
+                                    url: urls[1],
+                                    caption: captions[1] || '',
+                                    x: 0,
+                                    y: Math.round(y1),
+                                    w: Math.round(w1),
+                                    h: Math.round(h1)
+                                });
+                                obstacles.push({
+                                    url: urls[2],
+                                    caption: captions[2] || '',
+                                    x: Math.round(W_canvas - w2),
+                                    y: Math.round(y1),
+                                    w: Math.round(w2),
+                                    h: Math.round(h2)
+                                });
+                            } else {
+                                // Standard stacked layout
+                                obstacles.push({
+                                    url: urls[1],
+                                    caption: captions[1] || '',
+                                    x: 0,
+                                    y: Math.round(y1),
+                                    w: Math.round(w1),
+                                    h: Math.round(h1)
+                                });
+                                let y2 = y1 + h1 + gap;
+                                obstacles.push({
+                                    url: urls[2],
+                                    caption: captions[2] || '',
+                                    x: Math.round(W_canvas - w2),
+                                    y: Math.round(y2),
+                                    w: Math.round(w2),
+                                    h: Math.round(h2)
+                                });
+                            }
+                        } else {
+                            // Standard 2-image layout
+                            obstacles.push({
+                                url: urls[1],
+                                caption: captions[1] || '',
+                                x: 0,
+                                y: Math.round(y1),
+                                w: Math.round(w1),
+                                h: Math.round(h1)
+                            });
+                        }
+                    }
+                }
+                return obstacles;
+            }
+
             function runLayoutPass(conf, S, H_layout, isFinal) {
                 // Clear the compositor canvas
                 canvas.innerHTML = '';
@@ -442,56 +533,9 @@ class RenderService:
                 const H_canvas = H_layout;
                 
                 // Calculate image dimensions and create absolute obstacles
-                const obstacles = [];
                 const imgHeightPx = Math.round(0.58 * W_canvas);
-                
                 let S_img = S || 1.0;
-                if (urls.length > 0) {
-                    const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * Math.max(0.48, Math.min(0.60, 0.55 * S_img));
-                    let h0 = w0 / aspect0;
-                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
-                    obstacles.push({
-                        url: urls[0],
-                        caption: captions[0] || '',
-                        x: Math.round(W_canvas - w0), // Always align top-right
-                        y: 0,
-                        w: Math.round(w0),
-                        h: Math.round(h0)
-                    });
-                    
-                    if (urls.length > 1) {
-                        const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * Math.max(0.32, Math.min(0.46, 0.38 * S_img));
-                        let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * 0.95);
-                        let y1 = h0 + 60; // Spacing below Hero
-                        obstacles.push({
-                            url: urls[1],
-                            caption: captions[1] || '',
-                            x: 0, // Middle-left
-                            y: Math.round(y1),
-                            w: Math.round(w1),
-                            h: Math.round(h1)
-                        });
-                        
-                        if (urls.length > 2) {
-                            const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_canvas * Math.max(0.20, Math.min(0.28, 0.25 * S_img));
-                            let h2 = w2 / aspect2;
-                            h2 = Math.min(h2, imgHeightPx * 0.65);
-                            let y2 = y1 + h1 + 60;
-                            obstacles.push({
-                                url: urls[2],
-                                caption: captions[2] || '',
-                                x: Math.round(W_canvas - w2), // Bottom-right
-                                y: Math.round(y2),
-                                w: Math.round(w2),
-                                h: Math.round(h2)
-                            });
-                        }
-                    }
-                }
+                const obstacles = getObstacles(W_canvas, S_img, imgHeightPx);
 
                 // Render absolute images onto canvas if it's the final pass
                 if (isFinal) {
@@ -745,23 +789,9 @@ class RenderService:
                 const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
                 const H_avail = Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60);
                 
-                // Let's compute obstacle boundaries to find maxObstacleY
-                const obstacles = [];
                 const imgHeightPx = Math.round(0.58 * W_canvas);
                 let S_img = S || 1.0;
-                if (urls.length > 0) {
-                    const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * Math.max(0.48, Math.min(0.60, 0.55 * S_img));
-                    let h0 = Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
-                    obstacles.push({ x: Math.round(W_canvas - w0), y: 0, w: Math.round(w0), h: Math.round(h0) });
-                    if (urls.length > 1) {
-                        const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * Math.max(0.32, Math.min(0.46, 0.38 * S_img));
-                        let h1 = Math.min(w1 / aspect1, imgHeightPx * 0.95);
-                        let y1 = h0 + 60;
-                        obstacles.push({ x: 0, y: Math.round(y1), w: Math.round(w1), h: Math.round(h1) });
-                    }
-                }
+                const obstacles = getObstacles(W_canvas, S_img, imgHeightPx);
                 
                 let maxObstacleY = 0;
                 obstacles.forEach(obs => {
@@ -784,7 +814,8 @@ class RenderService:
                 });
                 
                 const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - blockedArea) / (totalChars * 0.54));
-                const conf = { fontSize: Math.max(15.0, Math.min(21.0, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
+                const maxFontSize = (urls.length > 2 && totalChars < 1200) ? 23.0 : 21.0;
+                const conf = { fontSize: Math.max(15.0, Math.min(maxFontSize, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
                 // Let's run a binary search to find the minimum height where the text fits.
                 let low = Math.max(300, Math.round(maxObstacleY + 30));
