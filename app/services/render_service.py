@@ -739,11 +739,30 @@ class RenderService:
                             testP.style.hyphens = 'auto';
                             activeRegion.rBox.appendChild(testP);
                             
+                            let low = 0;
+                            let high = words.length;
                             let wIdx = 0;
-                            for (; wIdx < words.length; wIdx++) {
-                                testP.innerText = words.slice(0, wIdx + 1).join(' ');
-                                if (activeRegion.rBox.scrollHeight > activeRegion.height) break;
+                            while (low < high) {
+                                let mid = Math.floor((low + high) / 2);
+                                testP.innerText = words.slice(0, mid + 1).join(' ');
+                                if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                                    high = mid;
+                                } else {
+                                    wIdx = mid + 1;
+                                    low = mid + 1;
+                                }
                             }
+                            
+                            // Re-verify the exact break point
+                            if (wIdx < words.length) {
+                                testP.innerText = words.slice(0, wIdx + 1).join(' ');
+                                if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                                    // wIdx is correct
+                                } else {
+                                    wIdx++;
+                                }
+                            }
+                            
                             activeRegion.rBox.removeChild(testP);
                             
                             if (wIdx > 0) {
