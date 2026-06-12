@@ -492,11 +492,10 @@ class RenderService:
                     });
                     
                     if (urls.length > 1) {
-                        // Secondary Image: max width 30% of page width
+                        // Secondary Image: max width exactly 1 column width
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * 0.30;
+                        let w1 = W_col;
                         let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * 0.75);
                         let y1 = h0 + 60; // Spacing below Hero
                         obstacles.push({
                             url: urls[1],
@@ -508,11 +507,10 @@ class RenderService:
                         });
                         
                         if (urls.length > 2) {
-                            // Portrait Image: max width 25% of page width, size unchanged
+                            // Portrait Image: max width exactly 1 column width
                             const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_canvas * 0.25;
+                            let w2 = W_col;
                             let h2 = w2 / aspect2;
-                            h2 = Math.min(h2, imgHeightPx * 0.65);
                             let y2 = y1 + h1 + 60;
                             obstacles.push({
                                 url: urls[2],
@@ -885,30 +883,37 @@ class RenderService:
                 container.style.overflow  = 'visible';
 
                 let chosenConf = configs[0];
-                let fits = false;
+                // O(1) Dynamic Font Scaling (16px - 21px) based on exact text length
+                let chosenFontSize = 21.0;
+                let chosenLineHeight = 1.40;
+                let chosenParaMargin = 14;
 
-                for (let i = 0; i < configs.length; i++) {
-                    const conf = configs[i];
-                    // Removed overrides for padding, headline, and subheadline
-                    // to respect the templates' built-in styles ("formats and paddings")
+                if (totalChars > 8000) { chosenFontSize = 15.5; chosenLineHeight = 1.32; chosenParaMargin = 8; }
+                else if (totalChars > 6000) { chosenFontSize = 16.0; chosenLineHeight = 1.32; chosenParaMargin = 8; }
+                else if (totalChars > 4500) { chosenFontSize = 16.5; chosenLineHeight = 1.35; chosenParaMargin = 10; }
+                else if (totalChars > 3500) { chosenFontSize = 17.5; chosenLineHeight = 1.35; chosenParaMargin = 11; }
+                else if (totalChars > 2500) { chosenFontSize = 18.0; chosenLineHeight = 1.35; chosenParaMargin = 12; }
+                else if (totalChars > 1500) { chosenFontSize = 19.5; chosenLineHeight = 1.38; chosenParaMargin = 13; }
+                else { chosenFontSize = 21.0; chosenLineHeight = 1.40; chosenParaMargin = 14; }
 
-                    let dcStyle = document.getElementById('nc-dropcap-style');
-                    if (!dcStyle) {
-                        dcStyle = document.createElement('style');
-                        dcStyle.id = 'nc-dropcap-style';
-                        document.head.appendChild(dcStyle);
-                    }
-                    dcStyle.innerHTML = '';
-
-                    fits = applyConfig(conf);
-                    chosenConf = conf;
-
-                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-                    if (fits && container.scrollHeight <= TARGET_MAX_HEIGHT) {
-                        break;
-                    }
+                let dcStyle = document.getElementById('nc-dropcap-style');
+                if (!dcStyle) {
+                    dcStyle = document.createElement('style');
+                    dcStyle.id = 'nc-dropcap-style';
+                    document.head.appendChild(dcStyle);
                 }
+                dcStyle.innerHTML = '';
+
+                const singleConf = {
+                    fontSize: chosenFontSize,
+                    lineHeight: chosenLineHeight,
+                    paraMargin: chosenParaMargin,
+                    imgMaxPct: 1.0 // Disable shrinkage
+                };
+
+                // Single layout optimization pass
+                applyConfig(singleConf);
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                 await waitReady();
 
