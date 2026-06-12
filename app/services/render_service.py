@@ -370,7 +370,26 @@ class RenderService:
 
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
-            // O(1) performance: Pre-computed configs array removed.
+            // Compression configurations: from spacious to compact
+            const configs = [
+                // fontSize, lineHeight, paraMargin, imgMaxPct, padding
+                { fontSize: 24.0, lineHeight: 1.45, paraMargin: 16, imgMaxPct: 0.65, padding: 40 },
+                { fontSize: 22.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
+                { fontSize: 20.0, lineHeight: 1.40, paraMargin: 14, imgMaxPct: 0.60, padding: 35 },
+                { fontSize: 18.0, lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 },
+                { fontSize: 16.5, lineHeight: 1.35, paraMargin: 10, imgMaxPct: 0.55, padding: 30 },
+                { fontSize: 15.5, lineHeight: 1.32, paraMargin: 8,  imgMaxPct: 0.52, padding: 25 },
+                { fontSize: 14.5, lineHeight: 1.30, paraMargin: 7,  imgMaxPct: 0.49, padding: 22 },
+                { fontSize: 13.5, lineHeight: 1.28, paraMargin: 6,  imgMaxPct: 0.46, padding: 20 },
+                { fontSize: 13.0, lineHeight: 1.25, paraMargin: 5,  imgMaxPct: 0.43, padding: 18 },
+                { fontSize: 12.5, lineHeight: 1.22, paraMargin: 5,  imgMaxPct: 0.40, padding: 16 },
+                { fontSize: 12.0, lineHeight: 1.20, paraMargin: 4,  imgMaxPct: 0.38, padding: 14 },
+                { fontSize: 11.5, lineHeight: 1.18, paraMargin: 4,  imgMaxPct: 0.36, padding: 12 },
+                { fontSize: 11.0, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.34, padding: 10 },
+                { fontSize: 10.5, lineHeight: 1.15, paraMargin: 3,  imgMaxPct: 0.32, padding: 10 },
+                { fontSize: 10.0, lineHeight: 1.12, paraMargin: 2,  imgMaxPct: 0.30, padding: 8 },
+                { fontSize:  9.0, lineHeight: 1.10, paraMargin: 2,  imgMaxPct: 0.28, padding: 6 }
+            ];
 
             // waitReady utility with timeout
             async function waitReady() {
@@ -450,23 +469,19 @@ class RenderService:
                 
                 // Calculate image dimensions and create absolute obstacles
                 const obstacles = [];
-                // Dynamically scale images based on total text length to eliminate whitespace
-                let imgScaleFactor = 1.0;
-                if (totalChars < 1200) imgScaleFactor = 1.5;
-                else if (totalChars < 2000) imgScaleFactor = 1.35;
-                else if (totalChars < 3000) imgScaleFactor = 1.2;
-                else if (totalChars > 6000) imgScaleFactor = 0.85;
-                else if (totalChars > 8000) imgScaleFactor = 0.7;
-                
-                const imgHeightPx = Math.round(0.65 * W_canvas);
+                const imgHeightPx = Math.round(conf.imgMaxPct * W_canvas);
                 
                 if (urls.length > 0) {
-                    // Hero Image:
+                    // Hero Image: max width 55% of page width, max height 30% of page height
                     const aspect0 = aspectRatios[0] || 1.2;
-                    let w0 = W_canvas * Math.min(0.85, 0.55 * imgScaleFactor);
+                    let w0 = W_canvas * 0.55;
                     let h0 = w0 / aspect0;
-                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.4, imgHeightPx);
-                    
+                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
+                    if (w0 > W_canvas * 0.55) {
+                        w0 = W_canvas * 0.55;
+                        h0 = w0 / aspect0;
+                    }
+                    // Hero image uses its natural computed aspect and width
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
@@ -477,31 +492,32 @@ class RenderService:
                     });
                     
                     if (urls.length > 1) {
-                        // Secondary Image (middle-right, or middle-left)
+                        // Secondary Image: max width 30% of page width
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * Math.min(0.50, 0.30 * imgScaleFactor);
+                        let w1 = W_canvas * 0.30;
                         let h1 = w1 / aspect1;
-                        let y1 = h0 + 40; 
+                        h1 = Math.min(h1, imgHeightPx * 0.75);
+                        let y1 = h0 + 60; // Spacing below Hero
                         obstacles.push({
                             url: urls[1],
                             caption: captions[1] || '',
-                            x: Math.round(W_canvas - w1), // Move to Middle-Right to balance
+                            x: 0, // Middle-left
                             y: Math.round(y1),
                             w: Math.round(w1),
                             h: Math.round(h1)
                         });
                         
                         if (urls.length > 2) {
-                            // Bottom-left Image (as requested, dynamic resizing)
+                            // Portrait Image: max width 25% of page width, size unchanged
                             const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_canvas * Math.min(0.45, 0.25 * imgScaleFactor);
+                            let w2 = W_canvas * 0.25;
                             let h2 = w2 / aspect2;
-                            // Dynamically push to bottom-left area, below hero
-                            let y2 = y1 + h1 + 40;
+                            h2 = Math.min(h2, imgHeightPx * 0.65);
+                            let y2 = y1 + h1 + 60;
                             obstacles.push({
                                 url: urls[2],
                                 caption: captions[2] || '',
-                                x: 0, // Bottom-left alignment
+                                x: Math.round(W_canvas - w2), // Bottom-right
                                 y: Math.round(y2),
                                 w: Math.round(w2),
                                 h: Math.round(h2)
@@ -547,13 +563,13 @@ class RenderService:
                     canvas.appendChild(imgEl);
                 });
                 
-                // Define inflated obstacles to carve out margins around text regions (8px cushion)
+                // Define inflated obstacles to carve out margins around text regions (12px cushion)
                 const inflatedObstacles = obstacles.map(obs => {
                     return {
-                        x: obs.x - 8,
-                        y: obs.y - 8,
-                        w: obs.w + 16,
-                        h: obs.h + 16
+                        x: obs.x - 12,
+                        y: obs.y - 12,
+                        w: obs.w + 24,
+                        h: obs.h + 24
                     };
                 });
 
@@ -775,9 +791,30 @@ class RenderService:
                 let fits = res.fits;
                 let finalRegions = res.regions;
 
-                // O(1) Performance Constraint: Do not perform recursive balancing.
-                // We accept the natural max height to avoid text reflow passes.
-                // The columns will end naturally without a secondary bottom-balancing pass.
+                // If it fits perfectly at max height, binary search to balance columns
+                if (fits) {
+                    let minH = 150;
+                    let highH = maxH;
+                    let bestH = maxH;
+                    
+                    for (let step = 0; step < 8; step++) {
+                        let midH = Math.round((minH + highH) / 2);
+                        let midRes = testFlow(midH);
+                        if (midRes.fits) {
+                            bestH = midH;
+                            highH = midH;
+                            finalRegions = midRes.regions;
+                        } else {
+                            minH = midH + 1;
+                        }
+                    }
+                    
+                    // Re-apply the best valid height if the last midH didn't fit
+                    if (bestH !== Math.round((minH - 1 + highH) / 2)) {
+                        let bestRes = testFlow(bestH);
+                        finalRegions = bestRes.regions;
+                    }
+                }
                 
                 let maxY = 0;
                 for (const r of finalRegions) {
@@ -847,38 +884,31 @@ class RenderService:
                 container.style.minHeight = 'unset';
                 container.style.overflow  = 'visible';
 
-                // O(1) Single-Pass Font Selection
-                let chosenFontSize = 18.0;
-                let chosenLineHeight = 1.35;
-                let chosenParaMargin = 12;
+                let chosenConf = configs[0];
+                let fits = false;
 
-                if (totalChars < 1200) { chosenFontSize = 18.0; }
-                else if (totalChars < 1800) { chosenFontSize = 17.5; }
-                else if (totalChars < 2500) { chosenFontSize = 17.0; }
-                else if (totalChars < 3500) { chosenFontSize = 16.5; }
-                else if (totalChars < 4500) { chosenFontSize = 16.0; chosenLineHeight = 1.32; chosenParaMargin = 10; }
-                else if (totalChars < 5500) { chosenFontSize = 15.0; chosenLineHeight = 1.30; chosenParaMargin = 8; }
-                else if (totalChars < 7000) { chosenFontSize = 14.0; chosenLineHeight = 1.28; chosenParaMargin = 6; }
-                else if (totalChars < 8500) { chosenFontSize = 13.0; chosenLineHeight = 1.25; chosenParaMargin = 5; }
-                else { chosenFontSize = 11.5; chosenLineHeight = 1.20; chosenParaMargin = 4; }
+                for (let i = 0; i < configs.length; i++) {
+                    const conf = configs[i];
+                    // Removed overrides for padding, headline, and subheadline
+                    // to respect the templates' built-in styles ("formats and paddings")
 
-                let dcStyle = document.getElementById('nc-dropcap-style');
-                if (!dcStyle) {
-                    dcStyle = document.createElement('style');
-                    dcStyle.id = 'nc-dropcap-style';
-                    document.head.appendChild(dcStyle);
+                    let dcStyle = document.getElementById('nc-dropcap-style');
+                    if (!dcStyle) {
+                        dcStyle = document.createElement('style');
+                        dcStyle.id = 'nc-dropcap-style';
+                        document.head.appendChild(dcStyle);
+                    }
+                    dcStyle.innerHTML = '';
+
+                    fits = applyConfig(conf);
+                    chosenConf = conf;
+
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                    if (fits && container.scrollHeight <= TARGET_MAX_HEIGHT) {
+                        break;
+                    }
                 }
-                dcStyle.innerHTML = '';
-
-                const singleConf = {
-                    fontSize: chosenFontSize,
-                    lineHeight: chosenLineHeight,
-                    paraMargin: chosenParaMargin
-                };
-
-                // Perform EXACTLY one rendering pass
-                applyConfig(singleConf);
-                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                 await waitReady();
 
