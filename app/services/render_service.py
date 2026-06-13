@@ -714,10 +714,10 @@ class RenderService:
                     imgDiv.style.background = 'var(--bg-color, #F5F1E8)';
                     
                     const colW = W_col;
-                    const imgH = Math.min(220, colW / aspect2);
+                    const imgH = Math.min(600, colW / aspect2);
                     
                     imgDiv.innerHTML = `
-                        <img src="${urls[2]}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                        <img src="${urls[2]}" style="width: 100%; height: ${imgH}px; object-fit: contain; display: block;" />
                         ${captions[2] ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${captions[2]}</div>` : ''}
                     `;
                     
