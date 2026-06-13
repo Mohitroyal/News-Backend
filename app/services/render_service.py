@@ -453,66 +453,19 @@ class RenderService:
                     
                     if (urls.length > 1) {
                         const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * Math.max(0.28, Math.min(0.46, 0.38 * S_scale));
+                        let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
                         let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.70 : 0.95));
+                        h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
                         let y1 = h0 + gap; // Spacing below Hero
                         
-                        if (urls.length > 2) {
-                            const aspect2 = aspectRatios[2] || 0.8;
-                            let w2 = W_canvas * Math.max(0.18, Math.min(0.28, 0.25 * S_scale));
-                            let h2 = w2 / aspect2;
-                            h2 = Math.min(h2, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.50 : 0.65));
-                            
-                            if (totalChars < 2500) {
-                                // Side-by-side layout at the bottom
-                                obstacles.push({
-                                    url: urls[1],
-                                    caption: captions[1] || '',
-                                    x: 0,
-                                    y: Math.round(y1),
-                                    w: Math.round(w1),
-                                    h: Math.round(h1)
-                                });
-                                obstacles.push({
-                                    url: urls[2],
-                                    caption: captions[2] || '',
-                                    x: Math.round(W_canvas - w2),
-                                    y: Math.round(y1),
-                                    w: Math.round(w2),
-                                    h: Math.round(h2)
-                                });
-                            } else {
-                                // Standard stacked layout
-                                obstacles.push({
-                                    url: urls[1],
-                                    caption: captions[1] || '',
-                                    x: 0,
-                                    y: Math.round(y1),
-                                    w: Math.round(w1),
-                                    h: Math.round(h1)
-                                });
-                                let y2 = y1 + h1 + gap;
-                                obstacles.push({
-                                    url: urls[2],
-                                    caption: captions[2] || '',
-                                    x: Math.round(W_canvas - w2),
-                                    y: Math.round(y2),
-                                    w: Math.round(w2),
-                                    h: Math.round(h2)
-                                });
-                            }
-                        } else {
-                            // Standard 2-image layout
-                            obstacles.push({
-                                url: urls[1],
-                                caption: captions[1] || '',
-                                x: 0,
-                                y: Math.round(y1),
-                                w: Math.round(w1),
-                                h: Math.round(h1)
-                            });
-                        }
+                        obstacles.push({
+                            url: urls[1],
+                            caption: captions[1] || '',
+                            x: 0,
+                            y: Math.round(y1),
+                            w: Math.round(w1),
+                            h: Math.round(h1)
+                        });
                     }
                 }
                 return obstacles;
@@ -747,6 +700,42 @@ class RenderService:
                 
                 if (pIdx < paragraphs.length) {
                     return false; // Did not fit all paragraphs
+                }
+                
+                if (urls.length > 2 && activeRegion) {
+                    const aspect2 = aspectRatios[2] || 1.0;
+                    const imgDiv = document.createElement('div');
+                    imgDiv.className = 'nc-embedded-image';
+                    imgDiv.style.width = '100%';
+                    imgDiv.style.marginTop = '12px';
+                    imgDiv.style.boxSizing = 'border-box';
+                    imgDiv.style.border = `1px solid ${data.border_color || '#000'}`;
+                    imgDiv.style.padding = '4px';
+                    imgDiv.style.background = 'var(--bg-color, #F5F1E8)';
+                    
+                    const colW = W_col;
+                    const imgH = Math.min(220, colW / aspect2);
+                    
+                    imgDiv.innerHTML = `
+                        <img src="${urls[2]}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                        ${captions[2] ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${captions[2]}</div>` : ''}
+                    `;
+                    
+                    activeRegion.rBox.appendChild(imgDiv);
+                    
+                    if (activeRegion.rBox.scrollHeight > activeRegion.height) {
+                        activeRegion.rBox.removeChild(imgDiv);
+                        if (currentRegionIdx < regions.length - 1) {
+                            currentRegionIdx++;
+                            activeRegion = regions[currentRegionIdx];
+                            activeRegion.rBox.appendChild(imgDiv);
+                            if (!isFinal && activeRegion.rBox.scrollHeight > activeRegion.height) {
+                                return false;
+                            }
+                        } else {
+                            if (!isFinal) return false;
+                        }
+                    }
                 }
                 
                 if (isFinal) {
