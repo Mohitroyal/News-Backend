@@ -427,7 +427,8 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
-            function getObstacles(W_canvas, S_img, imgHeightPx) {
+            function getObstacles(W_canvas, S_img, imgHeightPx, H_canvas) {
+                H_canvas = H_canvas || 1200;
                 const obstacles = [];
                 if (urls.length > 0) {
                     let S_scale = S_img;
@@ -467,6 +468,23 @@ class RenderService:
                             h: Math.round(h1)
                         });
                     }
+
+                    if (urls.length > 2) {
+                        const aspect2 = aspectRatios[2] || 1.0;
+                        let w2 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
+                        let h2 = w2 / aspect2;
+                        h2 = Math.min(h2, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                        let y2 = H_canvas - h2;
+                        
+                        obstacles.push({
+                            url: urls[2],
+                            caption: captions[2] || '',
+                            x: Math.round(W_canvas - w2), // Align bottom-right
+                            y: Math.round(y2),
+                            w: Math.round(w2),
+                            h: Math.round(h2)
+                        });
+                    }
                 }
                 return obstacles;
             }
@@ -488,7 +506,7 @@ class RenderService:
                 // Calculate image dimensions and create absolute obstacles
                 const imgHeightPx = Math.round(0.58 * W_canvas);
                 let S_img = S || 1.0;
-                const obstacles = getObstacles(W_canvas, S_img, imgHeightPx);
+                const obstacles = getObstacles(W_canvas, S_img, imgHeightPx, H_canvas);
 
                 // Render absolute images onto canvas if it's the final pass
                 if (isFinal) {
@@ -702,41 +720,7 @@ class RenderService:
                     return false; // Did not fit all paragraphs
                 }
                 
-                if (urls.length > 2 && activeRegion) {
-                    const aspect2 = aspectRatios[2] || 1.0;
-                    const imgDiv = document.createElement('div');
-                    imgDiv.className = 'nc-embedded-image';
-                    imgDiv.style.width = '100%';
-                    imgDiv.style.marginTop = '12px';
-                    imgDiv.style.boxSizing = 'border-box';
-                    imgDiv.style.border = `1px solid ${data.border_color || '#000'}`;
-                    imgDiv.style.padding = '4px';
-                    imgDiv.style.background = 'var(--bg-color, #F5F1E8)';
-                    
-                    const colW = W_col;
-                    const imgH = Math.min(600, colW / aspect2);
-                    
-                    imgDiv.innerHTML = `
-                        <img src="${urls[2]}" style="width: 100%; height: ${imgH}px; object-fit: contain; display: block;" />
-                        ${captions[2] ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${captions[2]}</div>` : ''}
-                    `;
-                    
-                    activeRegion.rBox.appendChild(imgDiv);
-                    
-                    if (activeRegion.rBox.scrollHeight > activeRegion.height) {
-                        activeRegion.rBox.removeChild(imgDiv);
-                        if (currentRegionIdx < regions.length - 1) {
-                            currentRegionIdx++;
-                            activeRegion = regions[currentRegionIdx];
-                            activeRegion.rBox.appendChild(imgDiv);
-                            if (!isFinal && activeRegion.rBox.scrollHeight > activeRegion.height) {
-                                return false;
-                            }
-                        } else {
-                            if (!isFinal) return false;
-                        }
-                    }
-                }
+                // Third image is now handled as an absolute obstacle at bottom-right
                 
                 if (isFinal) {
                     let maxY = 0;
@@ -780,7 +764,7 @@ class RenderService:
                 
                 const imgHeightPx = Math.round(0.58 * W_canvas);
                 let S_img = S || 1.0;
-                const obstacles = getObstacles(W_canvas, S_img, imgHeightPx);
+                const obstacles = getObstacles(W_canvas, S_img, imgHeightPx, H_avail);
                 
                 let maxObstacleY = 0;
                 obstacles.forEach(obs => {
