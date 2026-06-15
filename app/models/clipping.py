@@ -29,6 +29,7 @@ class Clipping(Base):
     image_urls = Column(JSON, default=list)  # Multiple images list
     layout_columns = Column(Integer, default=3)
     font_family = Column(String, default="playfair")
+    show_watermark = Column(Boolean, default=True)  # Toggle watermark/logo overlay
 
     # Custom Editor Layout Data
     custom_layout = Column(JSON, nullable=True)

@@ -40,6 +40,7 @@ class ClippingBase(BaseModel):
     publication_date: str = Field(alias="publicationDate")
     layout_columns: int = Field(3, alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
+    show_watermark: bool = Field(True, alias="showWatermark")
 
     class Config:
         populate_by_name = True

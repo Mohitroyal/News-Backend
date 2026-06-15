@@ -197,6 +197,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "font_family": clipping.font_family or "playfair",
                     "logo_id": clipping.logo_id or clipping.template_id,
                     "is_premium": is_premium,
+                    "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
                 }
 
                 if clipping.template_id == "custom":
@@ -492,6 +493,7 @@ async def create_clipping(
         publication_date=clipping_in.publication_date,
         layout_columns=clipping_in.layout_columns,
         font_family=clipping_in.font_family or "playfair",
+        show_watermark=clipping_in.show_watermark,
         status="processing"
     )
     db.add(clipping)
