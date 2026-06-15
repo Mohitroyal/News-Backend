@@ -767,7 +767,8 @@ class RenderService:
                 const obstacles = getObstacles(W_canvas, S_img, imgHeightPx, H_avail);
                 
                 let maxObstacleY = 0;
-                obstacles.forEach(obs => {
+                // Only consider the first two (fixed) obstacles for the page height floor limit
+                obstacles.slice(0, 2).forEach(obs => {
                     maxObstacleY = Math.max(maxObstacleY, obs.y + obs.h);
                 });
                 
