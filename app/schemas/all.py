@@ -1,5 +1,5 @@
 from typing import List, Optional, Any
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from uuid import UUID
 from datetime import datetime
 
@@ -41,6 +41,34 @@ class ClippingBase(BaseModel):
     layout_columns: int = Field(3, alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
     show_watermark: bool = Field(True, alias="showWatermark")
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_show_watermark(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Check all possible alias keys for watermark / logo mode toggles
+            keys_to_check = [
+                "showWatermark",
+                "show_watermark",
+                "logoMode",
+                "logo_mode",
+                "showLogo",
+                "show_logo"
+            ]
+            for key in keys_to_check:
+                if key in data:
+                    val = data[key]
+                    if isinstance(val, str):
+                        if val.lower() in ("false", "0", "off", "no"):
+                            data["show_watermark"] = False
+                            break
+                        elif val.lower() in ("true", "1", "on", "yes"):
+                            data["show_watermark"] = True
+                            break
+                    elif isinstance(val, bool):
+                        data["show_watermark"] = val
+                        break
+        return data
 
     class Config:
         populate_by_name = True
