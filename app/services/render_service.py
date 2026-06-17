@@ -258,31 +258,45 @@ class RenderService:
             # Generate absolute local file paths for the fonts to bypass network/CORS issues
             font_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static", "fonts")).replace("\\", "/")
             
+            # Map lang_code to the font family names and file prefixes
+            font_file_mapping = {
+                "hi": [("Noto Sans Devanagari", "NotoSansDevanagari"), ("Noto Serif Devanagari", "NotoSerifDevanagari")],
+                "mr": [("Noto Sans Devanagari", "NotoSansDevanagari"), ("Noto Serif Devanagari", "NotoSerifDevanagari")],
+                "kn": [("Noto Sans Kannada", "NotoSansKannada"), ("Noto Serif Kannada", "NotoSerifKannada")],
+                "ml": [("Noto Sans Malayalam", "NotoSansMalayalam"), ("Noto Serif Malayalam", "NotoSerifMalayalam")],
+                "te": [("Noto Sans Telugu", "NotoSansTelugu"), ("Noto Serif Telugu", "NotoSerifTelugu")],
+                "ta": [("Noto Sans Tamil", "NotoSansTamil"), ("Noto Serif Tamil", "NotoSerifTamil")],
+                "bn": [("Noto Sans Bengali", "NotoSansBengali"), ("Noto Serif Bengali", "NotoSerifBengali")],
+                "gu": [("Noto Sans Gujarati", "NotoSansGujarati"), ("Noto Serif Gujarati", "NotoSerifGujarati")],
+                "pa": [("Noto Sans Gurmukhi", "NotoSansGurmukhi"), ("Noto Serif Gurmukhi", "NotoSerifGurmukhi")],
+                "or": [("Noto Sans Oriya", "NotoSansOriya"), ("Noto Serif Oriya", "NotoSerifOriya")],
+            }
+            
+            fonts_to_load = font_file_mapping.get(lang_code, [])
+            font_faces = []
+            for family_name, file_prefix in fonts_to_load:
+                font_faces.append(f"""
+                @font-face {{
+                    font-family: '{family_name}'; font-style: normal; font-weight: 400;
+                    src: url('file://{font_dir}/{file_prefix}-Regular.ttf') format('truetype');
+                }}
+                @font-face {{
+                    font-family: '{family_name}'; font-style: normal; font-weight: 700;
+                    src: url('file://{font_dir}/{file_prefix}-Bold.ttf') format('truetype');
+                }}
+                """)
+            
             local_fonts_css = f"""
             <style id="local-fonts-enforcer">
-                @font-face {{
-                    font-family: 'Noto Sans Telugu'; font-style: normal; font-weight: 400;
-                    src: url('file://{font_dir}/NotoSansTelugu-Regular.ttf') format('truetype');
-                }}
-                @font-face {{
-                    font-family: 'Noto Sans Telugu'; font-style: normal; font-weight: 700;
-                    src: url('file://{font_dir}/NotoSansTelugu-Bold.ttf') format('truetype');
-                }}
-                @font-face {{
-                    font-family: 'Noto Serif Telugu'; font-style: normal; font-weight: 400;
-                    src: url('file://{font_dir}/NotoSerifTelugu-Regular.ttf') format('truetype');
-                }}
-                @font-face {{
-                    font-family: 'Noto Serif Telugu'; font-style: normal; font-weight: 700;
-                    src: url('file://{font_dir}/NotoSerifTelugu-Bold.ttf') format('truetype');
-                }}
+                {''.join(font_faces)}
             </style>
             """
+            
             override_css = f"""
             {local_fonts_css}
             <style id="indic-font-enforcer">
                 /* Force Indic font first, fallback to Latin */
-                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .dateline, .image-caption {{
+                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption {{
                     font-family: {indic_font_override}, 'Playfair Display', 'Merriweather', serif !important;
                 }}
             </style>
@@ -292,21 +306,26 @@ class RenderService:
             else:
                 html = f"{override_css}\n{html}"
                 
+        custom_border_css = ""
+        if data.get('border_color') or data.get('heading_bg'):
+            custom_border_css = f"""
+            .headline-section, .headline-block {{
+                {f"border-color: {data.get('border_color')} !important;" if data.get('border_color') else ""}
+                {f"background-color: {data.get('heading_bg')} !important;" if data.get('heading_bg') else ""}
+            }}
+            """
+
         dynamic_css = f"""
         <style id="dynamic-theme-override">
             :root {{
                 --primary-color: {data.get('primary_color') or '#1d70b8'};
                 --border-color: {data.get('border_color') or '#111111'};
-                --heading-bg: {data.get('heading_bg') or 'transparent'};
             }}
             .headline {{
                 color: var(--primary-color) !important;
                 text-shadow: 0 1px 0 rgba(0,0,0,0.08);
             }}
-            .headline-section, .headline-block {{
-                border-color: var(--border-color) !important;
-                background-color: var(--heading-bg) !important;
-            }}
+            {custom_border_css}
             .article-content, .paragraph {{
                 text-align: left !important;
             }}
@@ -317,23 +336,7 @@ class RenderService:
         else:
             html = f"{html}\n{dynamic_css}"
 
-        # Headline breaking news style override
-        headline_style_override = """
-        <style id="headline-style-override">
-            .headline {
-                color: #D60000 !important;
-                font-weight: 900 !important;
-                text-shadow: 0 1px 0 rgba(0,0,0,0.08) !important;
-            }
-            .headline-section {
-                border-left-color: #D60000 !important;
-            }
-        </style>
-        """
-        if "</head>" in html:
-            html = html.replace("</head>", f"{headline_style_override}\n</head>")
-        else:
-            html = f"{headline_style_override}\n{html}"
+
                 
 
         # Single-Page Dynamic Compression Engine Injection
