@@ -73,6 +73,29 @@ class ClippingBase(BaseModel):
                         break
         return data
 
+    @model_validator(mode="before")
+    @classmethod
+    def extract_custom_layout(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # If the frontend passes these fields nested under customLayout or custom_layout
+            custom = data.get("customLayout") or data.get("custom_layout")
+            if isinstance(custom, dict):
+                if "imageLayout" in custom and "image_layout" not in data and "imageLayout" not in data:
+                    data["imageLayout"] = custom["imageLayout"]
+                elif "image_layout" in custom and "image_layout" not in data and "imageLayout" not in data:
+                    data["image_layout"] = custom["image_layout"]
+                    
+                if "headingBg" in custom and "heading_bg" not in data and "headingBg" not in data:
+                    data["headingBg"] = custom["headingBg"]
+                elif "heading_bg" in custom and "heading_bg" not in data and "headingBg" not in data:
+                    data["heading_bg"] = custom["heading_bg"]
+                    
+                if "borderColor" in custom and "border_color" not in data and "borderColor" not in data:
+                    data["borderColor"] = custom["borderColor"]
+                elif "border_color" in custom and "border_color" not in data and "borderColor" not in data:
+                    data["border_color"] = custom["border_color"]
+        return data
+
     class Config:
         populate_by_name = True
 
