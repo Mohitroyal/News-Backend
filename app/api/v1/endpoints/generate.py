@@ -198,6 +198,9 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "logo_id": clipping.logo_id or clipping.template_id,
                     "is_premium": is_premium,
                     "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
+                    "image_layout": getattr(clipping, "image_layout", "default"),
+                    "heading_bg": getattr(clipping, "heading_bg", None),
+                    "border_color": getattr(clipping, "border_color", None),
                 }
 
                 if clipping.template_id == "custom":

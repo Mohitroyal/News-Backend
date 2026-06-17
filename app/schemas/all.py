@@ -41,6 +41,9 @@ class ClippingBase(BaseModel):
     layout_columns: int = Field(3, alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
     show_watermark: bool = Field(True, alias="showWatermark")
+    image_layout: Optional[str] = Field("default", alias="imageLayout")
+    heading_bg: Optional[str] = Field(None, alias="headingBg")
+    border_color: Optional[str] = Field(None, alias="borderColor")
 
     @model_validator(mode="before")
     @classmethod

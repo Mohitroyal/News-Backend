@@ -267,6 +267,28 @@ class RenderService:
                 html = html.replace("</head>", f"{override_css}\n</head>")
             else:
                 html = f"{override_css}\n{html}"
+                
+        dynamic_css = f"""
+        <style id="dynamic-theme-override">
+            :root {{
+                --primary-color: {data.get('primary_color', '#1d70b8')};
+                --border-color: {data.get('border_color', '#111111')};
+                --heading-bg: {data.get('heading_bg', 'transparent')};
+            }}
+            .headline {{
+                color: var(--primary-color) !important;
+                text-shadow: 0 1px 0 rgba(0,0,0,0.08);
+            }}
+            .headline-section, .headline-block {{
+                border-color: var(--border-color) !important;
+                background-color: var(--heading-bg) !important;
+            }}
+        </style>
+        """
+        if "</body>" in html:
+            html = html.replace("</body>", f"{dynamic_css}\n</body>")
+        else:
+            html = f"{html}\n{dynamic_css}"
 
         # Headline breaking news style override
         headline_style_override = """
@@ -439,15 +461,32 @@ class RenderService:
                         gap = 30;
                     }
                     
+                    const isPatternB = (data.image_layout === 'pattern_b');
+                    
                     const aspect0 = aspectRatios[0] || 1.2;
                     let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
+                    
+                    if (isPatternB) {
+                        w0 = W_canvas;
+                    }
+                    
                     let h0 = w0 / aspect0;
-                    h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                    if (!isPatternB) {
+                        h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                    }
+                    
+                    let imgX = Math.round(W_canvas - w0);
+                    let imgY = 0;
+                    
+                    if (isPatternB) {
+                        imgX = 0;
+                    }
+                    
                     obstacles.push({
                         url: urls[0],
                         caption: captions[0] || '',
-                        x: Math.round(W_canvas - w0), // Always align top-right
-                        y: 0,
+                        x: imgX,
+                        y: imgY,
                         w: Math.round(w0),
                         h: Math.round(h0)
                     });
