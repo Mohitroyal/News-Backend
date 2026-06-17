@@ -296,7 +296,7 @@ class RenderService:
             {local_fonts_css}
             <style id="indic-font-enforcer">
                 /* Force Indic font first, fallback to Latin */
-                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption {{
+                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption, .nc-image-caption, .byline-section, .byline {{
                     font-family: {indic_font_override}, 'Playfair Display', 'Merriweather', serif !important;
                 }}
             </style>
@@ -605,7 +605,7 @@ class RenderService:
                         
                         imgEl.innerHTML = `
                             <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
-                            ${obs.caption ? `<div style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
+                            ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
                         `;
                         canvas.appendChild(imgEl);
                     });

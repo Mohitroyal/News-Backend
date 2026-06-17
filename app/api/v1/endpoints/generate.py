@@ -172,6 +172,15 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
                 template_id = clipping.template_id or "classic"
+                
+                # Map missing frontend templates to rti_express styling with pattern_b layout
+                if template_id in ["pattern_b", "single_image_pattern_b", "hero-image", "hero_image"]:
+                    clipping.template_id = "rti_express"
+                    custom = dict(clipping.custom_layout or {})
+                    custom["image_layout"] = "pattern_b"
+                    clipping.custom_layout = custom
+                    template_id = "rti_express"
+                
                 print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
 
                 # --- [7] HTML Generation & [6] Layout Rendering ---
