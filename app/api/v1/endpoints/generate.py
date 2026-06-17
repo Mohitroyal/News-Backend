@@ -202,6 +202,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "image_layout": custom.get("image_layout", "default"),
                     "heading_bg": custom.get("heading_bg", None),
                     "border_color": custom.get("border_color", None),
+                    "primary_color": custom.get("primary_color", None),
                 }
 
                 if clipping.template_id == "custom":
@@ -501,7 +502,8 @@ async def create_clipping(
         custom_layout={
             "image_layout": clipping_in.image_layout,
             "heading_bg": clipping_in.heading_bg,
-            "border_color": clipping_in.border_color
+            "border_color": clipping_in.border_color,
+            "primary_color": getattr(clipping_in, "primary_color", None)
         },
         status="processing"
     )

@@ -44,6 +44,7 @@ class ClippingBase(BaseModel):
     image_layout: Optional[str] = Field("default", alias="imageLayout")
     heading_bg: Optional[str] = Field(None, alias="headingBg")
     border_color: Optional[str] = Field(None, alias="borderColor")
+    primary_color: Optional[str] = Field(None, alias="primaryColor")
 
     @model_validator(mode="before")
     @classmethod
@@ -94,6 +95,58 @@ class ClippingBase(BaseModel):
                     data["borderColor"] = custom["borderColor"]
                 elif "border_color" in custom and "border_color" not in data and "borderColor" not in data:
                     data["border_color"] = custom["border_color"]
+                    
+                if "primaryColor" in custom and "primary_color" not in data and "primaryColor" not in data:
+                    data["primaryColor"] = custom["primaryColor"]
+                elif "primary_color" in custom and "primary_color" not in data and "primaryColor" not in data:
+                    data["primary_color"] = custom["primary_color"]
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def clean_human_readable_inputs(cls, data: Any) -> Any:
+        import re
+        if isinstance(data, dict):
+            # Extract Hex codes from color strings (e.g., "Classic Red #CC2222")
+            def extract_hex(val: Any) -> Any:
+                if isinstance(val, str):
+                    match = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}', val)
+                    if match:
+                        return match.group(0)
+                return val
+
+            # Normalize template/logo strings to snake_case (e.g., "Bharath Reporter" -> "bharath_reporter")
+            def normalize_slug(val: Any) -> Any:
+                if isinstance(val, str):
+                    if " " in val or val != val.lower():
+                        return val.lower().replace(" ", "_")
+                return val
+
+            if "headingBg" in data:
+                data["headingBg"] = extract_hex(data["headingBg"])
+            if "heading_bg" in data:
+                data["heading_bg"] = extract_hex(data["heading_bg"])
+                
+            if "borderColor" in data:
+                data["borderColor"] = extract_hex(data["borderColor"])
+            if "border_color" in data:
+                data["border_color"] = extract_hex(data["border_color"])
+
+            if "primaryColor" in data:
+                data["primaryColor"] = extract_hex(data["primaryColor"])
+            if "primary_color" in data:
+                data["primary_color"] = extract_hex(data["primary_color"])
+
+            if "templateId" in data:
+                data["templateId"] = normalize_slug(data["templateId"])
+            if "template_id" in data:
+                data["template_id"] = normalize_slug(data["template_id"])
+
+            if "logoId" in data:
+                data["logoId"] = normalize_slug(data["logoId"])
+            if "logo_id" in data:
+                data["logo_id"] = normalize_slug(data["logo_id"])
+
         return data
 
     class Config:

@@ -255,25 +255,26 @@ class RenderService:
             indic_font_override = "'Noto Serif Oriya', 'Noto Sans Oriya'"
 
         if indic_font_override:
-            # We must inject @font-face rules directly into the HTML to ensure
-            # Playwright finds the local fonts (to avoid CORS/Network issues with Google Fonts)
+            # Generate absolute local file paths for the fonts to bypass network/CORS issues
+            font_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static", "fonts")).replace("\\", "/")
+            
             local_fonts_css = f"""
             <style id="local-fonts-enforcer">
                 @font-face {{
                     font-family: 'Noto Sans Telugu'; font-style: normal; font-weight: 400;
-                    src: url('{service_url}/static/fonts/NotoSansTelugu-Regular.ttf') format('truetype');
+                    src: url('file://{font_dir}/NotoSansTelugu-Regular.ttf') format('truetype');
                 }}
                 @font-face {{
                     font-family: 'Noto Sans Telugu'; font-style: normal; font-weight: 700;
-                    src: url('{service_url}/static/fonts/NotoSansTelugu-Bold.ttf') format('truetype');
+                    src: url('file://{font_dir}/NotoSansTelugu-Bold.ttf') format('truetype');
                 }}
                 @font-face {{
                     font-family: 'Noto Serif Telugu'; font-style: normal; font-weight: 400;
-                    src: url('{service_url}/static/fonts/NotoSerifTelugu-Regular.ttf') format('truetype');
+                    src: url('file://{font_dir}/NotoSerifTelugu-Regular.ttf') format('truetype');
                 }}
                 @font-face {{
                     font-family: 'Noto Serif Telugu'; font-style: normal; font-weight: 700;
-                    src: url('{service_url}/static/fonts/NotoSerifTelugu-Bold.ttf') format('truetype');
+                    src: url('file://{font_dir}/NotoSerifTelugu-Bold.ttf') format('truetype');
                 }}
             </style>
             """
@@ -305,6 +306,9 @@ class RenderService:
             .headline-section, .headline-block {{
                 border-color: var(--border-color) !important;
                 background-color: var(--heading-bg) !important;
+            }}
+            .article-content, .paragraph {{
+                text-align: left !important;
             }}
         </style>
         """
