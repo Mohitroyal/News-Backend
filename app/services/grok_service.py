@@ -96,12 +96,25 @@ class GrokService:
         sections = [p.strip() for p in content.split("\n\n") if p.strip()]
         if not sections:
             sections = [content]
+            
         headline_fallback = sections[0][:60] + "..." if len(sections[0]) > 60 else sections[0]
+        subheadline_fallback = ""
+        body_sections = sections
+        
+        # Smart fallback: if there are multiple paragraphs, treat the first as headline, second as subheadline
+        if len(sections) > 1 and len(sections[0]) < 150:
+            headline_fallback = sections[0]
+            if len(sections) > 2 and len(sections[1]) < 200:
+                subheadline_fallback = sections[1]
+                body_sections = sections[2:]
+            else:
+                body_sections = sections[1:]
+                
         return {
             "headline": headline_fallback,
-            "subheadline": "",
-            "sections": sections,
-            "dateline": "NEW DELHI",
+            "subheadline": subheadline_fallback,
+            "sections": body_sections,
+            "dateline": "",
             "byline": "",
             "image_captions": ["Photo capturing the key moment of the event.", "Additional perspective on the recent development."]
         }
