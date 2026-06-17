@@ -294,9 +294,9 @@ class RenderService:
         dynamic_css = f"""
         <style id="dynamic-theme-override">
             :root {{
-                --primary-color: {data.get('primary_color', '#1d70b8')};
-                --border-color: {data.get('border_color', '#111111')};
-                --heading-bg: {data.get('heading_bg', 'transparent')};
+                --primary-color: {data.get('primary_color') or '#1d70b8'};
+                --border-color: {data.get('border_color') or '#111111'};
+                --heading-bg: {data.get('heading_bg') or 'transparent'};
             }}
             .headline {{
                 color: var(--primary-color) !important;
@@ -484,8 +484,9 @@ class RenderService:
                         S_scale = S_img * scaleFactor;
                         gap = 30;
                     }
-                    
-                    const isPatternB = (data.image_layout === 'pattern_b');
+                    // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
+                    const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                    const isPatternB = (rawLayout === 'patternb');
                     
                     const aspect0 = aspectRatios[0] || 1.2;
                     let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
