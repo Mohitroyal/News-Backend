@@ -255,7 +255,30 @@ class RenderService:
             indic_font_override = "'Noto Serif Oriya', 'Noto Sans Oriya'"
 
         if indic_font_override:
+            # We must inject @font-face rules directly into the HTML to ensure
+            # Playwright finds the local fonts (to avoid CORS/Network issues with Google Fonts)
+            local_fonts_css = f"""
+            <style id="local-fonts-enforcer">
+                @font-face {{
+                    font-family: 'Noto Sans Telugu'; font-style: normal; font-weight: 400;
+                    src: url('{service_url}/static/fonts/NotoSansTelugu-Regular.ttf') format('truetype');
+                }}
+                @font-face {{
+                    font-family: 'Noto Sans Telugu'; font-style: normal; font-weight: 700;
+                    src: url('{service_url}/static/fonts/NotoSansTelugu-Bold.ttf') format('truetype');
+                }}
+                @font-face {{
+                    font-family: 'Noto Serif Telugu'; font-style: normal; font-weight: 400;
+                    src: url('{service_url}/static/fonts/NotoSerifTelugu-Regular.ttf') format('truetype');
+                }}
+                @font-face {{
+                    font-family: 'Noto Serif Telugu'; font-style: normal; font-weight: 700;
+                    src: url('{service_url}/static/fonts/NotoSerifTelugu-Bold.ttf') format('truetype');
+                }}
+            </style>
+            """
             override_css = f"""
+            {local_fonts_css}
             <style id="indic-font-enforcer">
                 /* Force Indic font first, fallback to Latin */
                 .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .dateline, .image-caption {{
@@ -330,7 +353,8 @@ class RenderService:
             "layout_columns": data.get("layout_columns", 3),
             "sections": data.get("sections", []),
             "image_urls": data.get("image_urls", []),
-            "image_captions": data.get("image_captions", [])
+            "image_captions": data.get("image_captions", []),
+            "image_layout": data.get("image_layout", "default")
         }
         # ── BULLETPROOF JSON INJECTION ───────────────────────────────────────
         # Using <script type="application/json"> isolates the JSON payload
