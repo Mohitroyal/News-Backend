@@ -76,6 +76,20 @@ async def run_test():
                 "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
             ],
             "template_id": "bharath_reporter"
+        },
+        {
+            "name": "Telugu - Pattern B Layout (RTI Express Fallback)",
+            "lang": "te",
+            "headline": "కూటమి పాలనలో పరిష్కారం దొరికేనా...?",
+            "subheadline": "ఈ సమస్య ఎక్కువుగా వి. పి అగ్రహారం కూడలి, కొత్త పేట",
+            "publication_name": "ఆర్టిఐ ఎక్స్ ప్రెస్ న్యూస్",
+            "dateline": "శ్రీకాళహస్తి నియోజకవర్గం, 14.06.2026",
+            "byline": "స్థానిక విలేకరి",
+            "sections": telugu_content * 4,
+            "image_urls": [
+                "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80"
+            ],
+            "template_id": "single_image_pattern_b"
         }
     ]
 
@@ -84,6 +98,11 @@ async def run_test():
         print(f"RUNNING TEST CASE: {tc['name']}")
         print(f"==========================================")
         
+        # Mimic generate.py fallback logic
+        actual_template_id = tc["template_id"]
+        if actual_template_id in ["pattern_b", "single_image_pattern_b", "hero-image", "hero_image"]:
+            actual_template_id = "rti_express"
+
         # Mock rendering data
         render_data = {
             "headline": tc.get("headline", f"TEST: {tc['name']}"),
@@ -95,7 +114,7 @@ async def run_test():
             "language": tc["lang"],
             "layout_columns": 3,
             "font_family": "playfair",
-            "logo_id": tc["template_id"],
+            "logo_id": actual_template_id,
             "is_premium": False,
             "sections": tc["sections"],
             "dateline": tc.get("dateline", "HYDERABAD"),
@@ -104,7 +123,7 @@ async def run_test():
 
         # 1. Render HTML
         print("[1/3] Rendering HTML...")
-        html = await render_service.render_html(render_data, f"{tc['template_id']}.html")
+        html = await render_service.render_html(render_data, f"{actual_template_id}.html")
         print(f"HTML rendered successfully. Size: {len(html)} chars")
 
         # Save HTML for visual inspection
