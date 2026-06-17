@@ -184,6 +184,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 safe_image_url = _rewrite_to_absolute(safe_image_url)
                 safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
 
+                custom = clipping.custom_layout or {}
                 render_data = {
                     **formatted,
                     "id": str(clipping_id),
@@ -198,9 +199,9 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "logo_id": clipping.logo_id or clipping.template_id,
                     "is_premium": is_premium,
                     "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
-                    "image_layout": getattr(clipping, "image_layout", "default"),
-                    "heading_bg": getattr(clipping, "heading_bg", None),
-                    "border_color": getattr(clipping, "border_color", None),
+                    "image_layout": custom.get("image_layout", "default"),
+                    "heading_bg": custom.get("heading_bg", None),
+                    "border_color": custom.get("border_color", None),
                 }
 
                 if clipping.template_id == "custom":
@@ -497,6 +498,11 @@ async def create_clipping(
         layout_columns=clipping_in.layout_columns,
         font_family=clipping_in.font_family or "playfair",
         show_watermark=clipping_in.show_watermark,
+        custom_layout={
+            "image_layout": clipping_in.image_layout,
+            "heading_bg": clipping_in.heading_bg,
+            "border_color": clipping_in.border_color
+        },
         status="processing"
     )
     db.add(clipping)
