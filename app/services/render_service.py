@@ -1020,7 +1020,7 @@ class RenderService:
         chrome_path = _get_chromium_executable()
         launch_kwargs = {
             "headless": True,
-            "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--js-flags=--max-old-space-size=256"],
+            "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--allow-file-access-from-files", "--js-flags=--max-old-space-size=256"],
         }
         if chrome_path: launch_kwargs["executable_path"] = chrome_path
 
