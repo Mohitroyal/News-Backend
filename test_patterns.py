@@ -28,6 +28,7 @@ async def test():
     print("Testing Pattern B...")
     data_b = data_base.copy()
     data_b["image_layout"] = "pattern_b"
+    data_b["subheadline"] = ""
     html_b = await render_service.render_html(data_b)
     await render_service.generate_png(html_b, "test_output_pattern_b.png")
     print("Generated test_output_pattern_b.png")

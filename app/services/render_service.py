@@ -494,6 +494,74 @@ class RenderService:
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                     const isPatternB = rawLayout.includes('patternb');
+                    const isPatternA = rawLayout.includes('patterna');
+
+                    if (isPatternA && urls.length === 2) {
+                        let w_half = (W_canvas - 24) / 2;
+                        let aspect0 = aspectRatios[0] || 1.2;
+                        let aspect1 = aspectRatios[1] || 1.2;
+                        
+                        let h0 = Math.min(w_half / aspect0, TARGET_MAX_HEIGHT * 0.3);
+                        let h1 = Math.min(w_half / aspect1, TARGET_MAX_HEIGHT * 0.3);
+                        
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: 0,
+                            y: 0,
+                            w: Math.round(w_half),
+                            h: Math.round(h0),
+                            isCentered: false,
+                            visW: Math.round(w_half)
+                        });
+                        
+                        obstacles.push({
+                            url: urls[1],
+                            caption: captions[1] || '',
+                            x: Math.round(w_half + 24),
+                            y: 0,
+                            w: Math.round(w_half),
+                            h: Math.round(h1),
+                            isCentered: false,
+                            visW: Math.round(w_half)
+                        });
+                        
+                        return obstacles;
+                    }
+
+                    if (isPatternB && urls.length === 2) {
+                        let w_left = Math.round((W_canvas - 24) * 0.65);
+                        let w_right = Math.round((W_canvas - 24) * 0.35);
+                        let aspect0 = aspectRatios[0] || 1.5;
+                        let aspect1 = aspectRatios[1] || 1.0;
+                        
+                        let h0 = Math.min(w_left / aspect0, TARGET_MAX_HEIGHT * 0.4);
+                        let h1 = Math.min(w_right / aspect1, TARGET_MAX_HEIGHT * 0.4);
+                        
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: 0,
+                            y: 0,
+                            w: Math.round(w_left),
+                            h: Math.round(h0),
+                            isCentered: false,
+                            visW: Math.round(w_left)
+                        });
+                        
+                        obstacles.push({
+                            url: urls[1],
+                            caption: captions[1] || '',
+                            x: Math.round(w_left + 24),
+                            y: 0,
+                            w: Math.round(w_right),
+                            h: Math.round(h1),
+                            isCentered: false,
+                            visW: Math.round(w_right)
+                        });
+                        
+                        return obstacles;
+                    }
 
                     
                     const aspect0 = aspectRatios[0] || 1.2;
