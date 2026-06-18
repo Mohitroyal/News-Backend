@@ -508,8 +508,8 @@ class RenderService:
                         w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
                         imgX = 0;
                         imgY = 0; // Image must appear immediately before the article text
-                        imgVisW = W_canvas * 0.45; // Approximately 30-50% of content width
-                        h0 = imgVisW / aspect0;
+                        imgVisW = W_canvas; // 100% of content width
+                        h0 = Math.min(imgVisW / aspect0, W_canvas * 0.65); // Cap height to 65% of width
                         isPatternB_centered = true;
                     } else {
                         h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
@@ -609,6 +609,7 @@ class RenderService:
                         const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
                         
                         if (obs.isCentered) {
+                            const isFullBleed = (obs.visW >= obs.w);
                             imgEl.style.display = 'flex';
                             imgEl.style.flexDirection = 'column';
                             imgEl.style.alignItems = 'center';
@@ -616,8 +617,12 @@ class RenderService:
                             imgEl.style.background = 'transparent';
                             imgEl.style.padding = '0';
                             
+                            const innerStyle = isFullBleed 
+                                ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
+                                : `width: ${obs.visW}px; border: 1px solid ${data.border_color || '#000'}; padding: 4px; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
+
                             imgEl.innerHTML = `
-                                <div style="width: ${obs.visW}px; border: 1px solid ${data.border_color || '#000'}; padding: 4px; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;">
+                                <div style="${innerStyle}">
                                     <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
                                     ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${obs.caption}</div>` : ''}
                                 </div>
