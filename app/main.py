@@ -20,8 +20,8 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. Environment Variable Validation Logs
-    print("\n" + "="*60)
-    print("=== NEWSFLOW BACKEND — ENVIRONMENT VARIABLE VALIDATION LOGS ===")
+    print("\n" + "="*60, flush=True)
+    print("=== NEWSFLOW BACKEND — ENVIRONMENT VARIABLE VALIDATION LOGS ===", flush=True)
     required_vars = [
         "SECRET_KEY", "DATABASE_URL", "SUPABASE_URL", 
         "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "GROK_API_KEY"
@@ -31,57 +31,45 @@ async def lifespan(app: FastAPI):
         val = getattr(settings, var, None)
         if val:
             masked = val[:6] + "..." + val[-4:] if len(val) > 10 else "***"
-            print(f"  [OK]      {var:<28}: PRESENT (length: {len(val)}, masked: {masked})")
+            print(f"  [OK]      {var:<28}: PRESENT (length: {len(val)}, masked: {masked})", flush=True)
         else:
-            print(f"  [MISSING] {var:<28}: MISSING ❌")
+            print(f"  [MISSING] {var:<28}: MISSING ❌", flush=True)
             missing_vars.append(var)
     
     if missing_vars:
-        print(f"\n  [WARNING] The following required variables are missing: {', '.join(missing_vars)}")
-        print("  [WARNING] Application may run with degraded functionality.")
+        print(f"\n  [WARNING] The following required variables are missing: {', '.join(missing_vars)}", flush=True)
+        print("  [WARNING] Application may run with degraded functionality.", flush=True)
     else:
-        print("\n  [SUCCESS] All required environment variables are verified and loaded.")
-    print("="*60 + "\n")
+        print("\n  [SUCCESS] All required environment variables are verified and loaded.", flush=True)
+    print("="*60 + "\n", flush=True)
 
-    # 2. Database Connection Success/Failure Logs
-    print("\n" + "="*60)
-    print("=== NEWSFLOW BACKEND — DATABASE CONNECTION CHECK ===")
-    try:
-        from app.db.session import engine, db_url
-        from sqlalchemy import text
-        print(f"  [INFO] Target database type: {'SQLite (fallback)' if 'sqlite' in db_url else 'PostgreSQL (Supabase)'}")
-        print("  [INFO] Testing database connectivity...")
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT 1")).scalar()
-            if result == 1:
-                print("  [SUCCESS] Successfully executed test query on the database engine.")
-            else:
-                print(f"  [WARNING] Test query returned unexpected result: {result}")
-    except Exception as e:
-        print(f"  [ERROR] Database connection check FAILED: {e}")
-    print("="*60 + "\n")
+    # 2. Database Connection Success/Failure Logs (Removed blocking check)
+    print("\n" + "="*60, flush=True)
+    print("=== NEWSFLOW BACKEND — DATABASE CONNECTION CHECK ===", flush=True)
+    print("  [INFO] Skipping synchronous DB connect check during startup to prevent Render deployment timeouts.", flush=True)
+    print("="*60 + "\n", flush=True)
 
     # 3. Telugu Fonts Check and Auto-Download Failsafe
-    print("\n" + "="*60)
-    print("=== TELUGU FONTS AUTO-DOWNLOAD CHECK ===")
+    print("\n" + "="*60, flush=True)
+    print("=== TELUGU FONTS AUTO-DOWNLOAD CHECK ===", flush=True)
     try:
         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from download_fonts import download_fonts
         download_fonts()
-        print("  [SUCCESS] Telugu fonts check and auto-download completed successfully.")
+        print("  [SUCCESS] Telugu fonts check and auto-download completed successfully.", flush=True)
     except Exception as fe:
-        print(f"  [WARNING] Telugu fonts auto-download failed or skipped: {fe}")
-    print("="*60 + "\n")
+        print(f"  [WARNING] Telugu fonts auto-download failed or skipped: {fe}", flush=True)
+    print("="*60 + "\n", flush=True)
 
     # 4. Startup Success Log
-    print("\n" + "="*60)
-    print(f"=== {settings.PROJECT_NAME.upper()} STARTUP SUCCESSFUL ===")
-    print("  Application startup sequence complete.")
-    print("  Swagger documentation is served at /docs")
-    print(f"  Backend Environment: {settings.ENVIRONMENT}")
-    print(f"  Active Allowed Origins: {origins}")
-    print("  Server Startup Confirmed!")
-    print("="*60 + "\n")
+    print("\n" + "="*60, flush=True)
+    print(f"=== {settings.PROJECT_NAME.upper()} STARTUP SUCCESSFUL ===", flush=True)
+    print("  Application startup sequence complete.", flush=True)
+    print("  Swagger documentation is served at /docs", flush=True)
+    print(f"  Backend Environment: {settings.ENVIRONMENT}", flush=True)
+    print(f"  Active Allowed Origins: {origins}", flush=True)
+    print("  Server Startup Confirmed!", flush=True)
+    print("="*60 + "\n", flush=True)
 
     yield
 
