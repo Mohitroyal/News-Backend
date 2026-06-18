@@ -501,6 +501,7 @@ class RenderService:
                     
                     let isPatternB_centered = false;
                     let imgVisW = w0;
+                    let h0 = w0 / aspect0;
                     let imgX = Math.round(W_canvas - w0);
                     let imgY = 0;
                     
