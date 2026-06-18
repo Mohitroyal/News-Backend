@@ -174,10 +174,11 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 template_id = clipping.template_id or "classic"
                 
                 original_template_id = str(clipping.template_id or "classic").strip()
-                normalized_id = original_template_id.lower().replace(" ", "_")
+                normalized_id = original_template_id.lower().replace(" ", "").replace("_", "").replace("-", "")
 
                 # Map missing frontend templates or layout-name mixups back to the correct template
-                if normalized_id in ["pattern_a", "single_image_pattern_a", "pattern_b", "single_image_pattern_b", "hero-image", "hero_image", "hero_image_pattern"]:
+                # Catch ALL variations like 'patternb', 'patternB', 'Pattern B', 'singleimagepatternb', etc.
+                if "patterna" in normalized_id or "patternb" in normalized_id or "singleimage" in normalized_id or "hero" in normalized_id:
                     # The frontend overwrote template_id with the layout pattern name.
                     # We can recover the intended template from the logo_id, or fallback to rti_express.
                     intended_template = clipping.logo_id if clipping.logo_id else "rti_express"
@@ -188,7 +189,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     if not clipping.custom_layout:
                         clipping.custom_layout = {}
                         
-                    if "pattern_a" in normalized_id:
+                    if "patterna" in normalized_id:
                         clipping.custom_layout["image_layout"] = "pattern_a"
                     else:
                         clipping.custom_layout["image_layout"] = "pattern_b"
