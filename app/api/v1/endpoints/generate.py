@@ -176,26 +176,27 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 original_template_id = str(clipping.template_id or "classic").strip()
                 normalized_id = original_template_id.lower().replace(" ", "").replace("_", "").replace("-", "")
 
-                valid_template_folders = ["rtiexpress", "bharathreporter", "nationalnews"]
-
-                # If the frontend sent something that isn't a valid template folder (e.g. "Pattern B", "2_image_layout", "classic")
-                if normalized_id not in valid_template_folders:
-                    # Recover the intended newspaper format from the logo_id
+                # Map missing frontend templates or layout-name mixups back to the correct template
+                valid_templates = ["classic", "rti_express", "bharath_reporter", "national_news", "hero-image", "hero_image", "modern"]
+                
+                # If it's NOT a valid template folder, the frontend definitely sent a layout name or ID by mistake
+                if original_template_id not in valid_templates and normalized_id not in valid_templates:
                     intended_template = clipping.logo_id if clipping.logo_id else "rti_express"
                     clipping.template_id = intended_template
                     template_id = intended_template
                     
+                    # Ensure the layout choice is correctly passed to JS
                     if not clipping.custom_layout:
                         clipping.custom_layout = {}
                         
-                    # Try to infer the layout pattern from the invalid template string
-                    if "patterna" in normalized_id or "1image" in normalized_id or "single" in normalized_id:
+                    if "patterna" in normalized_id:
                         clipping.custom_layout["image_layout"] = "pattern_a"
-                    elif "patternb" in normalized_id or "2image" in normalized_id or "3image" in normalized_id or "hero" in normalized_id:
+                    elif "patternb" in normalized_id:
                         clipping.custom_layout["image_layout"] = "pattern_b"
-                    elif "classic" in normalized_id and not clipping.custom_layout.get("image_layout"):
-                        # If it just sent classic but we know they want a pattern, default to pattern_b so they see it works
-                        clipping.custom_layout["image_layout"] = "pattern_b"
+                    elif "single" in normalized_id or "hero" in normalized_id:
+                        clipping.custom_layout["image_layout"] = "single_image"
+                    else:
+                        clipping.custom_layout["image_layout"] = "pattern_b" # default fallback for weird layout strings
                 
                 print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
 
