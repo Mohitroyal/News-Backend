@@ -173,16 +173,25 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
                 template_id = clipping.template_id or "classic"
                 
-                # Map missing frontend templates to rti_express styling
-                original_template_id = clipping.template_id or "classic"
-                if original_template_id in ["pattern_b", "single_image_pattern_b", "hero-image", "hero_image"]:
-                    clipping.template_id = "rti_express"
-                    template_id = "rti_express"
+                original_template_id = str(clipping.template_id or "classic").strip()
+                normalized_id = original_template_id.lower().replace(" ", "_")
+
+                # Map missing frontend templates or layout-name mixups back to the correct template
+                if normalized_id in ["pattern_a", "single_image_pattern_a", "pattern_b", "single_image_pattern_b", "hero-image", "hero_image", "hero_image_pattern"]:
+                    # The frontend overwrote template_id with the layout pattern name.
+                    # We can recover the intended template from the logo_id, or fallback to rti_express.
+                    intended_template = clipping.logo_id if clipping.logo_id else "rti_express"
+                    clipping.template_id = intended_template
+                    template_id = intended_template
                     
-                    # Ensure the layout choice is passed to JS
+                    # Ensure the layout choice is correctly passed to JS
                     if not clipping.custom_layout:
                         clipping.custom_layout = {}
-                    clipping.custom_layout["image_layout"] = original_template_id
+                        
+                    if "pattern_a" in normalized_id:
+                        clipping.custom_layout["image_layout"] = "pattern_a"
+                    else:
+                        clipping.custom_layout["image_layout"] = "pattern_b"
                 
                 print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
 
