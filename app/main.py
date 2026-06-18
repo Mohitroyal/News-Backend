@@ -127,7 +127,7 @@ def root():
 @app.get("/health")
 def health_check():
     """Render health-check endpoint."""
-    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v3_schema_sync"}
+    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v4_bulletproof"}
 
 
 @app.get("/health/generator")
