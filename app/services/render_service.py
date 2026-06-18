@@ -494,77 +494,6 @@ class RenderService:
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                     const isPatternB = rawLayout.includes('patternb');
-                    const isPatternA = rawLayout.includes('patterna');
-
-                    if (isPatternA && urls.length === 2) {
-                        let w_half = (W_canvas - 24) / 2;
-                        let aspect0 = aspectRatios[0] || 1.2;
-                        let aspect1 = aspectRatios[1] || 1.2;
-                        
-                        let h0 = Math.min(w_half / aspect0, TARGET_MAX_HEIGHT * 0.3);
-                        let h1 = Math.min(w_half / aspect1, TARGET_MAX_HEIGHT * 0.3);
-                        
-                        obstacles.push({
-                            url: urls[0],
-                            caption: captions[0] || '',
-                            x: 0,
-                            y: 0,
-                            w: Math.round(w_half),
-                            h: Math.round(h0),
-                            isCentered: false,
-                            visW: Math.round(w_half)
-                        });
-                        
-                        obstacles.push({
-                            url: urls[1],
-                            caption: captions[1] || '',
-                            x: Math.round(w_half + 24),
-                            y: 0,
-                            w: Math.round(w_half),
-                            h: Math.round(h1),
-                            isCentered: false,
-                            visW: Math.round(w_half)
-                        });
-                        
-                        return obstacles;
-                    }
-
-                    if (isPatternB && urls.length === 2) {
-                        let S_scale = S_img;
-                        let gap = 60;
-                        const aspect0 = aspectRatios[0] || 1.2;
-                        const aspect1 = aspectRatios[1] || 1.0;
-                        
-                        let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
-                        let h0 = Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
-                        
-                        let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
-                        let h1 = Math.min(w1 / aspect1, imgHeightPx);
-                        
-                        obstacles.push({
-                            url: urls[0],
-                            caption: captions[0] || '',
-                            x: Math.round(W_canvas - w0),
-                            y: 0,
-                            w: Math.round(w0),
-                            h: Math.round(h0),
-                            isCentered: false,
-                            visW: Math.round(w0)
-                        });
-                        
-                        obstacles.push({
-                            url: urls[1],
-                            caption: captions[1] || '',
-                            x: 0,
-                            y: Math.round(h0 + gap),
-                            w: Math.round(w1),
-                            h: Math.round(h1),
-                            isCentered: false,
-                            visW: Math.round(w1)
-                        });
-                        
-                        return obstacles;
-                    }
 
                     
                     const aspect0 = aspectRatios[0] || 1.2;
@@ -1020,7 +949,7 @@ class RenderService:
         chrome_path = _get_chromium_executable()
         launch_kwargs = {
             "headless": True,
-            "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--allow-file-access-from-files", "--js-flags=--max-old-space-size=256"],
+            "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--js-flags=--max-old-space-size=256"],
         }
         if chrome_path: launch_kwargs["executable_path"] = chrome_path
 

@@ -142,7 +142,7 @@ async def health_generator():
         from app.services.render_service import _get_chromium_executable
         async with async_playwright() as p:
             executable_path = _get_chromium_executable()
-            browser = await p.chromium.launch(headless=True, executable_path=executable_path, args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--allow-file-access-from-files", "--js-flags=--max-old-space-size=256"])
+            browser = await p.chromium.launch(headless=True, executable_path=executable_path)
             await browser.close()
     except Exception as e:
         playwright_status = f"failed: {e}"
