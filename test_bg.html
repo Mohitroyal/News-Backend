@@ -227,10 +227,11 @@
             function getObstacles(W_canvas, S_img, imgHeightPx, H_canvas) {
                 H_canvas = H_canvas || 1200;
                 const obstacles = [];
-                let headlineHeight = 0;
+                    const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                    const isPatternB = rawLayout.includes('patternb');
+                    const isPatternA = rawLayout.includes('patterna');
 
-                if (isPatternA) {
-                    if (urls.length === 2) {
+                    if (isPatternA && urls.length === 2) {
                         let w_half = (W_canvas - 24) / 2;
                         let aspect0 = aspectRatios[0] || 1.2;
                         let aspect1 = aspectRatios[1] || 1.2;
@@ -262,21 +263,24 @@
                     }
 
                     if (isPatternB && urls.length === 2) {
-                        let w_left = Math.round((W_canvas - 24) * 0.65);
-                        let w_right = Math.round((W_canvas - 24) * 0.35);
-                        let aspect0 = aspectRatios[0] || 1.5;
-                        let aspect1 = aspectRatios[1] || 1.0;
+                        let S_scale = S_img;
+                        let gap = 60;
+                        const aspect0 = aspectRatios[0] || 1.2;
+                        const aspect1 = aspectRatios[1] || 1.0;
                         
-                        let h0 = Math.min(w_left / aspect0, TARGET_MAX_HEIGHT * 0.4);
-                        let h1 = Math.min(w_right / aspect1, TARGET_MAX_HEIGHT * 0.4);
+                        let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
+                        let h0 = Math.min(w0 / aspect0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx);
+                        
+                        let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
+                        let h1 = Math.min(w1 / aspect1, imgHeightPx);
                         
                         obstacles.push({
                             type: 'image',
                             url: urls[0],
                             caption: captions[0] || '',
-                            x: 0,
+                            x: Math.round(W_canvas - w0),
                             y: 0,
-                            w: Math.round(w_left),
+                            w: Math.round(w0),
                             h: Math.round(h0)
                         });
                         
@@ -284,14 +288,16 @@
                             type: 'image',
                             url: urls[1],
                             caption: captions[1] || '',
-                            x: Math.round(w_left + 24),
-                            y: 0,
-                            w: Math.round(w_right),
+                            x: 0,
+                            y: Math.round(h0 + gap),
+                            w: Math.round(w1),
                             h: Math.round(h1)
                         });
                         
                         return obstacles;
-                    } else if (isPatternA) {
+                    }
+                    
+                    if (isPatternA) {
                         // Headline Box on top left
                         let w_headline = Math.round(W_canvas * 0.40); // 40% width for headline box
                         headlineHeight = 220; // fixed height for box
@@ -303,7 +309,6 @@
                             h: headlineHeight
                         });
                     }
-                }
 
                 if (urls.length > 0) {
                     let S_scale = S_img;
