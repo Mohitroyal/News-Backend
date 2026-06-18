@@ -493,25 +493,26 @@ class RenderService:
                     }
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                    const isPatternB = (rawLayout === 'patternb');
+                    const isPatternB = rawLayout.includes('patternb');
+
                     
                     const aspect0 = aspectRatios[0] || 1.2;
                     let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
                     
-                    if (isPatternB) {
-                        w0 = W_canvas;
-                    }
-                    
-                    let h0 = w0 / aspect0;
-                    if (!isPatternB) {
-                        h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
-                    }
-                    
+                    let isPatternB_centered = false;
+                    let imgVisW = w0;
                     let imgX = Math.round(W_canvas - w0);
                     let imgY = 0;
                     
                     if (isPatternB) {
+                        w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
                         imgX = 0;
+                        imgY = 0; // Image must appear immediately before the article text
+                        imgVisW = W_canvas * 0.45; // Approximately 30-50% of content width
+                        h0 = imgVisW / aspect0;
+                        isPatternB_centered = true;
+                    } else {
+                        h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
                     }
                     
                     obstacles.push({
@@ -520,7 +521,9 @@ class RenderService:
                         x: imgX,
                         y: imgY,
                         w: Math.round(w0),
-                        h: Math.round(h0)
+                        h: Math.round(h0),
+                        isCentered: isPatternB_centered,
+                        visW: Math.round(imgVisW)
                     });
                     
                     if (urls.length > 1) {
@@ -568,7 +571,8 @@ class RenderService:
                 const W_canvas = canvas.offsetWidth || 1060;
                 
                 // Calculate columns
-                const N = parseInt(data.layout_columns) || 3;
+                let N = parseInt(data.layout_columns) || 3;
+                
                 const G = 24; // Column gap in pixels
                 const W_col = (W_canvas - (N - 1) * G) / N;
                 
@@ -597,16 +601,33 @@ class RenderService:
                         
                         let captionHeight = 0;
                         if (obs.caption) {
-                            const charsPerLine = Math.max(1, Math.floor(obs.w / 6.5));
+                            const wrapW = obs.isCentered ? obs.visW : obs.w;
+                            const charsPerLine = Math.max(1, Math.floor(wrapW / 6.5));
                             const lines = Math.ceil(obs.caption.length / charsPerLine);
                             captionHeight = lines * 15;
                         }
                         const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
                         
-                        imgEl.innerHTML = `
-                            <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
-                            ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
-                        `;
+                        if (obs.isCentered) {
+                            imgEl.style.display = 'flex';
+                            imgEl.style.flexDirection = 'column';
+                            imgEl.style.alignItems = 'center';
+                            imgEl.style.border = 'none';
+                            imgEl.style.background = 'transparent';
+                            imgEl.style.padding = '0';
+                            
+                            imgEl.innerHTML = `
+                                <div style="width: ${obs.visW}px; border: 1px solid ${data.border_color || '#000'}; padding: 4px; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;">
+                                    <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                                    ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${obs.caption}</div>` : ''}
+                                </div>
+                            `;
+                        } else {
+                            imgEl.innerHTML = `
+                                <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                                ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
+                            `;
+                        }
                         canvas.appendChild(imgEl);
                     });
                 }

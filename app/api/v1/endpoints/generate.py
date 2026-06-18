@@ -174,9 +174,15 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 template_id = clipping.template_id or "classic"
                 
                 # Map missing frontend templates to rti_express styling
-                if template_id in ["pattern_b", "single_image_pattern_b", "hero-image", "hero_image"]:
+                original_template_id = clipping.template_id or "classic"
+                if original_template_id in ["pattern_b", "single_image_pattern_b", "hero-image", "hero_image"]:
                     clipping.template_id = "rti_express"
                     template_id = "rti_express"
+                    
+                    # Ensure the layout choice is passed to JS
+                    if not clipping.custom_layout:
+                        clipping.custom_layout = {}
+                    clipping.custom_layout["image_layout"] = original_template_id
                 
                 print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
 
@@ -695,7 +701,7 @@ def update_clipping_layout(
     clipping.status = "rendering"
     db.commit()
 
-    background_tasks.add_task(process_clipping_task, clipping.id)
+    background_tasks.add_task(_background_process_clipping, clipping.id)
 
     return jsonable_encoder({
         "success": True,
