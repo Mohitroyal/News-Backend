@@ -494,6 +494,7 @@ class RenderService:
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                     const isPatternB = rawLayout.includes('patternb');
+                    const isDoublePatternB = isPatternB && urls.length === 2;
 
                     
                     const aspect0 = aspectRatios[0] || 1.2;
@@ -505,7 +506,14 @@ class RenderService:
                     let imgX = Math.round(W_canvas - w0);
                     let imgY = 0;
                     
-                    if (isPatternB) {
+                    if (isDoublePatternB) {
+                        w0 = (W_canvas - 24) / 2; // 24px gap in the middle
+                        imgX = 0;
+                        imgY = 0; // Both images at the top
+                        imgVisW = w0;
+                        h0 = w0 / aspect0;
+                        isPatternB_centered = false;
+                    } else if (isPatternB) {
                         w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
                         imgX = 0;
                         imgY = 0; // Image must appear immediately before the article text
@@ -528,20 +536,35 @@ class RenderService:
                     });
                     
                     if (urls.length > 1) {
-                        const aspect1 = aspectRatios[1] || 1.0;
-                        let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
-                        let h1 = w1 / aspect1;
-                        h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
-                        let y1 = h0 + gap; // Spacing below Hero
-                        
-                        obstacles.push({
-                            url: urls[1],
-                            caption: captions[1] || '',
-                            x: 0,
-                            y: Math.round(y1),
-                            w: Math.round(w1),
-                            h: Math.round(h1)
-                        });
+                        if (isDoublePatternB) {
+                            let w1 = w0; // Match width of first image
+                            let h1 = h0; // Match height to keep them aligned as boxes
+                            let x1 = W_canvas - w1; // Right aligned
+                            let y1 = 0; // Top aligned
+                            obstacles.push({
+                                url: urls[1],
+                                caption: captions[1] || '',
+                                x: Math.round(x1),
+                                y: Math.round(y1),
+                                w: Math.round(w1),
+                                h: Math.round(h1)
+                            });
+                        } else {
+                            const aspect1 = aspectRatios[1] || 1.0;
+                            let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
+                            let h1 = w1 / aspect1;
+                            h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                            let y1 = h0 + gap; // Spacing below Hero
+                            
+                            obstacles.push({
+                                url: urls[1],
+                                caption: captions[1] || '',
+                                x: 0,
+                                y: Math.round(y1),
+                                w: Math.round(w1),
+                                h: Math.round(h1)
+                            });
+                        }
                     }
 
                     if (urls.length > 2) {
