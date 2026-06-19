@@ -86,20 +86,20 @@ class ClippingBase(BaseModel):
                 elif "image_layout" in custom and "image_layout" not in data and "imageLayout" not in data:
                     data["image_layout"] = custom["image_layout"]
                     
-                if "headingBg" in custom and "heading_bg" not in data and "headingBg" not in data:
+                if "headingBg" in custom and "headingBg" not in data and "heading_bg" not in data:
                     data["headingBg"] = custom["headingBg"]
-                elif "heading_bg" in custom and "heading_bg" not in data and "headingBg" not in data:
-                    data["heading_bg"] = custom["heading_bg"]
+                elif "heading_bg" in custom and "headingBg" not in data and "heading_bg" not in data:
+                    data["headingBg"] = custom["heading_bg"]
                     
-                if "borderColor" in custom and "border_color" not in data and "borderColor" not in data:
+                if "borderColor" in custom and "borderColor" not in data and "border_color" not in data:
                     data["borderColor"] = custom["borderColor"]
-                elif "border_color" in custom and "border_color" not in data and "borderColor" not in data:
-                    data["border_color"] = custom["border_color"]
+                elif "border_color" in custom and "borderColor" not in data and "border_color" not in data:
+                    data["borderColor"] = custom["border_color"]
                     
-                if "primaryColor" in custom and "primary_color" not in data and "primaryColor" not in data:
+                if "primaryColor" in custom and "primaryColor" not in data and "primary_color" not in data:
                     data["primaryColor"] = custom["primaryColor"]
-                elif "primary_color" in custom and "primary_color" not in data and "primaryColor" not in data:
-                    data["primary_color"] = custom["primary_color"]
+                elif "primary_color" in custom and "primaryColor" not in data and "primary_color" not in data:
+                    data["primaryColor"] = custom["primary_color"]
         return data
 
     @model_validator(mode="before")
@@ -124,18 +124,18 @@ class ClippingBase(BaseModel):
 
             if "headingBg" in data:
                 data["headingBg"] = extract_hex(data["headingBg"])
-            if "heading_bg" in data:
-                data["heading_bg"] = extract_hex(data["heading_bg"])
+            elif "heading_bg" in data:
+                data["headingBg"] = extract_hex(data["heading_bg"])
                 
             if "borderColor" in data:
                 data["borderColor"] = extract_hex(data["borderColor"])
-            if "border_color" in data:
-                data["border_color"] = extract_hex(data["border_color"])
+            elif "border_color" in data:
+                data["borderColor"] = extract_hex(data["border_color"])
 
             if "primaryColor" in data:
                 data["primaryColor"] = extract_hex(data["primaryColor"])
-            if "primary_color" in data:
-                data["primary_color"] = extract_hex(data["primary_color"])
+            elif "primary_color" in data:
+                data["primaryColor"] = extract_hex(data["primary_color"])
 
             if "templateId" in data:
                 data["templateId"] = normalize_slug(data["templateId"])
