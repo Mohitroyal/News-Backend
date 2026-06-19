@@ -968,7 +968,11 @@ class RenderService:
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
                     page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3)
-                    page.on("console", lambda msg: print(f"[BROWSER] {msg.type.upper()}: {msg.text}"))
+                    def handle_console(msg):
+                        if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
+                            return
+                        print(f"[BROWSER] {msg.type.upper()}: {msg.text}")
+                    page.on("console", handle_console)
                     page.set_default_timeout(300000)
 
                     if html_content.startswith("http"): await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
