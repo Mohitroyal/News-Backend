@@ -665,7 +665,7 @@ class RenderService:
                     });
                 }
                 
-                const inflatedObstacles = obstacles.map(obs => {
+                let inflatedObstacles = obstacles.map(obs => {
                     return {
                         x: obs.x - 12,
                         y: obs.y - 12,
@@ -673,6 +673,24 @@ class RenderService:
                         h: obs.h + 24
                     };
                 });
+                
+                const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                if (rawLayoutStr.includes('patternb') && urls.length === 2) {
+                    let maxH = 0;
+                    obstacles.forEach(o => {
+                        if (o.y === 0 && o.h > maxH) {
+                            maxH = o.h;
+                        }
+                    });
+                    if (maxH > 0) {
+                        inflatedObstacles.push({
+                            x: -12,
+                            y: -12,
+                            w: W_canvas + 24,
+                            h: maxH + 24
+                        });
+                    }
+                }
 
                 // Flow layout function
                 const regions = [];
@@ -710,28 +728,34 @@ class RenderService:
                                 });
                             }
                             
-                            const obsLeftRel = obs.x - L_c;
-                            const obsRightRel = obs.x + obs.w - L_c;
+                            const intStart = int.xOffset;
+                            const intEnd = int.xOffset + int.w;
                             
-                            if (obsLeftRel <= 0) {
-                                if (obsRightRel < W_col) {
-                                    const wRem = W_col - obsRightRel;
-                                    if (wRem >= 40) {
-                                        nextIntervals.push({
-                                            yStart: yIntersectStart,
-                                            yEnd: yIntersectEnd,
-                                            xOffset: obsRightRel,
-                                            w: wRem
-                                        });
-                                    }
-                                }
-                            } else if (obsRightRel >= W_col) {
-                                const wRem = obsLeftRel;
+                            const obsStart = obs.x - L_c;
+                            const obsEnd = obs.x + obs.w - L_c;
+                            
+                            // Left piece
+                            if (intStart < obsStart) {
+                                const wRem = Math.min(intEnd, obsStart) - intStart;
                                 if (wRem >= 40) {
                                     nextIntervals.push({
                                         yStart: yIntersectStart,
                                         yEnd: yIntersectEnd,
-                                        xOffset: 0,
+                                        xOffset: intStart,
+                                        w: wRem
+                                    });
+                                }
+                            }
+                            
+                            // Right piece
+                            if (intEnd > obsEnd) {
+                                const newStart = Math.max(intStart, obsEnd);
+                                const wRem = intEnd - newStart;
+                                if (wRem >= 40) {
+                                    nextIntervals.push({
+                                        yStart: yIntersectStart,
+                                        yEnd: yIntersectEnd,
+                                        xOffset: newStart,
                                         w: wRem
                                     });
                                 }
