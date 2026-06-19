@@ -189,14 +189,16 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     if not clipping.custom_layout:
                         clipping.custom_layout = {}
                         
-                    if "patterna" in normalized_id:
-                        clipping.custom_layout["image_layout"] = "pattern_a"
-                    elif "patternb" in normalized_id:
-                        clipping.custom_layout["image_layout"] = "pattern_b"
-                    elif "single" in normalized_id or "hero" in normalized_id:
-                        clipping.custom_layout["image_layout"] = "single_image"
-                    else:
-                        clipping.custom_layout["image_layout"] = "pattern_b" # default fallback for weird layout strings
+                    # Only fallback if the frontend didn't explicitly send the layout
+                    if not clipping.custom_layout.get("image_layout") or clipping.custom_layout.get("image_layout") == "default":
+                        if "patterna" in normalized_id or normalized_id.endswith("a"):
+                            clipping.custom_layout["image_layout"] = "pattern_a"
+                        elif "patternb" in normalized_id or normalized_id.endswith("b"):
+                            clipping.custom_layout["image_layout"] = "pattern_b"
+                        elif "single" in normalized_id or "hero" in normalized_id:
+                            clipping.custom_layout["image_layout"] = "single_image"
+                        else:
+                            clipping.custom_layout["image_layout"] = "pattern_b" # default fallback for weird layout strings
                 
                 print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
 
