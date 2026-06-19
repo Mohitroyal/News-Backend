@@ -307,11 +307,11 @@ class RenderService:
                 html = f"{override_css}\n{html}"
                 
         custom_border_css = ""
-        if data.get('border_color') or data.get('heading_bg'):
+        custom_border_css = ""
+        if data.get('border_color'):
             custom_border_css = f"""
             .headline-section, .headline-block {{
-                {f"border-color: {data.get('border_color')} !important;" if data.get('border_color') else ""}
-                {f"background-color: {data.get('heading_bg')} !important;" if data.get('heading_bg') else ""}
+                border-color: {data.get('border_color')} !important;
             }}
             """
 
@@ -324,6 +324,7 @@ class RenderService:
             .headline {{
                 color: var(--primary-color) !important;
                 text-shadow: 0 1px 0 rgba(0,0,0,0.08);
+                {f"background-color: {data.get('heading_bg')} !important;" if data.get('heading_bg') else ""}
             }}
             {custom_border_css}
             .article-content, .paragraph {{
