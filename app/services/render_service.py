@@ -491,27 +491,27 @@ class RenderService:
                         S_scale = S_img * scaleFactor;
                         gap = 30;
                     }
-                    // Bulletproof pattern matching: handles "Pattern A", "pattern_a", "patternA", etc.
+                    // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                    const isPatternA = rawLayout.includes('patterna');
+                    const isPatternB = rawLayout.includes('patternb');
 
                     
                     const aspect0 = aspectRatios[0] || 1.2;
                     let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
                     
-                    let isPatternA_centered = false;
+                    let isPatternB_centered = false;
                     let imgVisW = w0;
                     let h0 = w0 / aspect0;
                     let imgX = Math.round(W_canvas - w0);
                     let imgY = 0;
                     
-                    if (isPatternA) {
+                    if (isPatternB) {
                         w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
                         imgX = 0;
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width
                         h0 = Math.min(imgVisW / aspect0, W_canvas * 0.65); // Cap height to 65% of width
-                        isPatternA_centered = true;
+                        isPatternB_centered = true;
                     } else {
                         h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
                     }
@@ -523,7 +523,7 @@ class RenderService:
                         y: imgY,
                         w: Math.round(w0),
                         h: Math.round(h0),
-                        isCentered: isPatternA_centered,
+                        isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW)
                     });
                     
