@@ -519,7 +519,10 @@ class RenderService:
                     }
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                    const isPatternB = rawLayout.includes('patternb');
+                    let isPatternB = rawLayout.includes('patternb');
+                    if (rawLayout === "default" || rawLayout === "") {
+                        isPatternB = true;
+                    }
                     const isDoublePatternB = isPatternB && urls.length === 2;
                     const isTriplePatternB = isPatternB && urls.length >= 3;
 
