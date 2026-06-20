@@ -122,6 +122,7 @@ class ClippingBase(BaseModel):
                         return val.lower().replace(" ", "_")
                 return val
 
+            # Clean top-level fields
             if "headingBg" in data:
                 data["headingBg"] = extract_hex(data["headingBg"])
             elif "heading_bg" in data:
@@ -146,6 +147,22 @@ class ClippingBase(BaseModel):
                 data["logoId"] = normalize_slug(data["logoId"])
             if "logo_id" in data:
                 data["logo_id"] = normalize_slug(data["logo_id"])
+
+            # Also clean inside customLayout if present (to avoid decorator order bugs)
+            custom = data.get("customLayout") or data.get("custom_layout")
+            if isinstance(custom, dict):
+                if "headingBg" in custom:
+                    custom["headingBg"] = extract_hex(custom["headingBg"])
+                elif "heading_bg" in custom:
+                    custom["heading_bg"] = extract_hex(custom["heading_bg"])
+                if "borderColor" in custom:
+                    custom["borderColor"] = extract_hex(custom["borderColor"])
+                elif "border_color" in custom:
+                    custom["border_color"] = extract_hex(custom["border_color"])
+                if "primaryColor" in custom:
+                    custom["primaryColor"] = extract_hex(custom["primaryColor"])
+                elif "primary_color" in custom:
+                    custom["primary_color"] = extract_hex(custom["primary_color"])
 
         return data
 
