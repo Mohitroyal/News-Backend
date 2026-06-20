@@ -122,47 +122,58 @@ class ClippingBase(BaseModel):
                         return val.lower().replace(" ", "_")
                 return val
 
-            # Clean top-level fields
-            if "headingBg" in data:
-                data["headingBg"] = extract_hex(data["headingBg"])
-            elif "heading_bg" in data:
-                data["headingBg"] = extract_hex(data["heading_bg"])
-                
-            if "borderColor" in data:
-                data["borderColor"] = extract_hex(data["borderColor"])
-            elif "border_color" in data:
-                data["borderColor"] = extract_hex(data["border_color"])
+            # Aggressively extract colors from ANY possible key the frontend might be sending
+            heading_keys = ["headingBg", "heading_bg", "headlineBg", "headline_bg", "headingColor", "headlineColor", "bg_color", "bgColor"]
+            for key in heading_keys:
+                if key in data and data[key]:
+                    val = extract_hex(data[key])
+                    data["headingBg"] = val
+                    data["heading_bg"] = val
+                    break
+                    
+            border_keys = ["borderColor", "border_color", "borderBg"]
+            for key in border_keys:
+                if key in data and data[key]:
+                    val = extract_hex(data[key])
+                    data["borderColor"] = val
+                    data["border_color"] = val
+                    break
 
-            if "primaryColor" in data:
-                data["primaryColor"] = extract_hex(data["primaryColor"])
-            elif "primary_color" in data:
-                data["primaryColor"] = extract_hex(data["primary_color"])
+            primary_keys = ["primaryColor", "primary_color", "textColor", "text_color"]
+            for key in primary_keys:
+                if key in data and data[key]:
+                    val = extract_hex(data[key])
+                    data["primaryColor"] = val
+                    data["primary_color"] = val
+                    break
 
-            if "templateId" in data:
-                data["templateId"] = normalize_slug(data["templateId"])
-            if "template_id" in data:
-                data["template_id"] = normalize_slug(data["template_id"])
-
-            if "logoId" in data:
-                data["logoId"] = normalize_slug(data["logoId"])
-            if "logo_id" in data:
-                data["logo_id"] = normalize_slug(data["logo_id"])
-
-            # Also clean inside customLayout if present (to avoid decorator order bugs)
+            # Process customLayout just in case it is nested
             custom = data.get("customLayout") or data.get("custom_layout")
             if isinstance(custom, dict):
-                if "headingBg" in custom:
-                    custom["headingBg"] = extract_hex(custom["headingBg"])
-                elif "heading_bg" in custom:
-                    custom["heading_bg"] = extract_hex(custom["heading_bg"])
-                if "borderColor" in custom:
-                    custom["borderColor"] = extract_hex(custom["borderColor"])
-                elif "border_color" in custom:
-                    custom["border_color"] = extract_hex(custom["border_color"])
-                if "primaryColor" in custom:
-                    custom["primaryColor"] = extract_hex(custom["primaryColor"])
-                elif "primary_color" in custom:
-                    custom["primary_color"] = extract_hex(custom["primary_color"])
+                for key in heading_keys:
+                    if key in custom and custom[key]:
+                        val = extract_hex(custom[key])
+                        custom["headingBg"] = val
+                        custom["heading_bg"] = val
+                        data["headingBg"] = val
+                        data["heading_bg"] = val
+                        break
+                for key in border_keys:
+                    if key in custom and custom[key]:
+                        val = extract_hex(custom[key])
+                        custom["borderColor"] = val
+                        custom["border_color"] = val
+                        data["borderColor"] = val
+                        data["border_color"] = val
+                        break
+                for key in primary_keys:
+                    if key in custom and custom[key]:
+                        val = extract_hex(custom[key])
+                        custom["primaryColor"] = val
+                        custom["primary_color"] = val
+                        data["primaryColor"] = val
+                        data["primary_color"] = val
+                        break
 
         return data
 

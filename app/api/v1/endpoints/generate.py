@@ -724,20 +724,23 @@ def update_clipping_layout(
     # Clean the layout data just like ClippingBase does
     cleaned_layout = dict(layout_in.custom_layout)
     
-    if "headingBg" in cleaned_layout:
-        cleaned_layout["heading_bg"] = extract_hex(cleaned_layout.pop("headingBg"))
-    elif "heading_bg" in cleaned_layout:
-        cleaned_layout["heading_bg"] = extract_hex(cleaned_layout["heading_bg"])
-        
-    if "borderColor" in cleaned_layout:
-        cleaned_layout["border_color"] = extract_hex(cleaned_layout.pop("borderColor"))
-    elif "border_color" in cleaned_layout:
-        cleaned_layout["border_color"] = extract_hex(cleaned_layout["border_color"])
+    heading_keys = ["headingBg", "heading_bg", "headlineBg", "headline_bg", "headingColor", "headlineColor", "bg_color", "bgColor"]
+    for key in heading_keys:
+        if key in cleaned_layout and cleaned_layout[key]:
+            cleaned_layout["heading_bg"] = extract_hex(cleaned_layout.pop(key))
+            break
+            
+    border_keys = ["borderColor", "border_color", "borderBg"]
+    for key in border_keys:
+        if key in cleaned_layout and cleaned_layout[key]:
+            cleaned_layout["border_color"] = extract_hex(cleaned_layout.pop(key))
+            break
 
-    if "primaryColor" in cleaned_layout:
-        cleaned_layout["primary_color"] = extract_hex(cleaned_layout.pop("primaryColor"))
-    elif "primary_color" in cleaned_layout:
-        cleaned_layout["primary_color"] = extract_hex(cleaned_layout["primary_color"])
+    primary_keys = ["primaryColor", "primary_color", "textColor", "text_color"]
+    for key in primary_keys:
+        if key in cleaned_layout and cleaned_layout[key]:
+            cleaned_layout["primary_color"] = extract_hex(cleaned_layout.pop(key))
+            break
         
     if "imageLayout" in cleaned_layout:
         cleaned_layout["image_layout"] = cleaned_layout.pop("imageLayout")
