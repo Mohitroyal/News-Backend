@@ -362,7 +362,8 @@ class RenderService:
             "sections": data.get("sections", []),
             "image_urls": data.get("image_urls", []),
             "image_captions": data.get("image_captions", []),
-            "image_layout": data.get("image_layout", "default")
+            "image_layout": data.get("image_layout", "default"),
+            "heading_bg": data.get("heading_bg", "")
         }
         # ── BULLETPROOF JSON INJECTION ───────────────────────────────────────
         # Using <script type="application/json"> isolates the JSON payload
