@@ -306,7 +306,27 @@ class RenderService:
             else:
                 html = f"{override_css}\n{html}"
                 
-        custom_border_css = ""
+        def is_dark_hex(hex_str: str) -> bool:
+            if not hex_str or not hex_str.startswith('#') or len(hex_str) not in (4, 7):
+                return False
+            h = hex_str.lstrip('#')
+            if len(h) == 3:
+                h = "".join(c+c for c in h)
+            try:
+                r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+                brightness = (r * 299 + g * 587 + b * 114) / 1000
+                return brightness < 128
+            except ValueError:
+                return False
+
+        headline_text_color = "var(--primary-color)"
+        heading_bg = data.get('heading_bg')
+        if heading_bg:
+            if is_dark_hex(heading_bg):
+                headline_text_color = "#FFFFFF" # Use white for dark backgrounds
+            else:
+                headline_text_color = "#111111" # Use dark text for light backgrounds
+
         custom_border_css = ""
         if data.get('border_color'):
             custom_border_css = f"""
@@ -315,16 +335,20 @@ class RenderService:
             }}
             """
 
+        heading_bg_css = f"background-color: {heading_bg} !important;" if heading_bg else ""
+
         dynamic_css = f"""
         <style id="dynamic-theme-override">
             :root {{
                 --primary-color: {data.get('primary_color') or '#1d70b8'};
                 --border-color: {data.get('border_color') or '#111111'};
             }}
+            .headline-section, .headline-block {{
+                {heading_bg_css}
+            }}
             .headline {{
-                color: var(--primary-color) !important;
+                color: {headline_text_color} !important;
                 text-shadow: 0 1px 0 rgba(0,0,0,0.08);
-                {f"background-color: {data.get('heading_bg')} !important;" if data.get('heading_bg') else ""}
             }}
             {custom_border_css}
             .article-content, .paragraph {{
