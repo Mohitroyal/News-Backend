@@ -713,7 +713,46 @@ def update_clipping_layout(
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
 
-    clipping.custom_layout = layout_in.custom_layout
+    import re
+    def extract_hex(val: Any) -> Any:
+        if isinstance(val, str):
+            match = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}', val)
+            if match:
+                return match.group(0)
+        return val
+
+    # Clean the layout data just like ClippingBase does
+    cleaned_layout = dict(layout_in.custom_layout)
+    
+    if "headingBg" in cleaned_layout:
+        cleaned_layout["heading_bg"] = extract_hex(cleaned_layout.pop("headingBg"))
+    elif "heading_bg" in cleaned_layout:
+        cleaned_layout["heading_bg"] = extract_hex(cleaned_layout["heading_bg"])
+        
+    if "borderColor" in cleaned_layout:
+        cleaned_layout["border_color"] = extract_hex(cleaned_layout.pop("borderColor"))
+    elif "border_color" in cleaned_layout:
+        cleaned_layout["border_color"] = extract_hex(cleaned_layout["border_color"])
+
+    if "primaryColor" in cleaned_layout:
+        cleaned_layout["primary_color"] = extract_hex(cleaned_layout.pop("primaryColor"))
+    elif "primary_color" in cleaned_layout:
+        cleaned_layout["primary_color"] = extract_hex(cleaned_layout["primary_color"])
+        
+    if "imageLayout" in cleaned_layout:
+        cleaned_layout["image_layout"] = cleaned_layout.pop("imageLayout")
+        
+    if "templateId" in cleaned_layout:
+        cleaned_layout["template_id"] = cleaned_layout.pop("templateId")
+        
+    if "logoId" in cleaned_layout:
+        cleaned_layout["logo_id"] = cleaned_layout.pop("logoId")
+
+    # Merge with existing layout if it exists to not lose data
+    current_layout = clipping.custom_layout or {}
+    current_layout.update(cleaned_layout)
+
+    clipping.custom_layout = current_layout
     clipping.status = "rendering"
     db.commit()
 
