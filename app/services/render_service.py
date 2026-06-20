@@ -925,6 +925,26 @@ class RenderService:
                 const dims = await Promise.all(urls.map(url => getImageDimensions(url)));
                 aspectRatios = dims.map(d => (d.width && d.height) ? (d.width / d.height) : 1.0);
                 await waitReady();
+                
+                // Force headline to fit on a single line
+                const hl = document.querySelector('.headline');
+                if (hl) {
+                    hl.style.whiteSpace = 'nowrap';
+                    hl.style.overflow = 'visible';
+                    hl.style.display = 'inline-block';
+                    hl.style.width = 'auto';
+                    let fs = 76; // Start slightly larger to fill space if short
+                    hl.style.fontSize = fs + 'px';
+                    const parent = hl.parentElement;
+                    const cs = window.getComputedStyle(parent);
+                    const maxWidth = parent.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0) - 4;
+                    while (hl.offsetWidth > maxWidth && fs > 16) {
+                        fs -= 1;
+                        hl.style.fontSize = fs + 'px';
+                    }
+                    hl.style.display = 'block';
+                    hl.style.width = '100%';
+                }
 
                 // Dynamic scaling factor S based on character count
                 let S = 1.0 - (totalChars - 1400) / 3000;
