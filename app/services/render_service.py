@@ -521,9 +521,25 @@ class RenderService:
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                     const isPatternB = rawLayout.includes('patternb');
                     const isDoublePatternB = isPatternB && urls.length === 2;
+                    const isTriplePatternB = isPatternB && urls.length >= 3;
 
-                    
                     const aspect0 = aspectRatios[0] || 1.2;
+                    
+                    if (isTriplePatternB) {
+                        // Pattern B with 3 images: Large hero on left, two smaller stacked on right
+                        let w0 = W_canvas * 0.66; // 2/3 width
+                        let h0 = Math.min(w0 / aspect0, W_canvas * 0.55); // Height bounded
+                        
+                        let w1 = W_canvas - w0 - 24; // Remaining 1/3 width, minus gap
+                        let h1 = (h0 - 24) / 2; // Split height evenly, minus gap
+                        
+                        obstacles.push({ url: urls[0], caption: captions[0] || '', x: 0, y: 0, w: Math.round(w0), h: Math.round(h0) });
+                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: Math.round(W_canvas - w1), y: 0, w: Math.round(w1), h: Math.round(h1) });
+                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(W_canvas - w1), y: Math.round(h1 + 24), w: Math.round(w1), h: Math.round(h1) });
+                        
+                        return obstacles;
+                    }
+                    
                     let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
                     
                     let isPatternB_centered = false;
