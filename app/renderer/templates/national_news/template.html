@@ -56,8 +56,8 @@
         </div>
 
         <!-- ZONE 3: Headline Zone (Height: Auto, Min-height: 120px) -->
-        <div class="headline-zone" style="min-height: 120px; height: auto; padding: 20px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border-color, #111111); margin-bottom: 15px; width: 100%;">
-            <div class="headline-section" style="margin: 0; padding: 0 0 0 15px; border-left: 5px solid var(--accent-color, #a30000); text-align: left; box-sizing: border-box;">
+        <div class="headline-zone" style="min-height: 120px; height: auto; padding: 20px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border-color, #111111); margin-bottom: 15px; width: 100%; background-color: {{ heading_bg if heading_bg else '#CC2222' }};">
+            <div class="headline-section" style="margin: 0; padding: 0 0 0 15px; border-left: 5px solid {{ border_color if border_color else '#CC2222' }}; text-align: left; box-sizing: border-box;">
                 <h1 class="headline" style="font-size: 40px; margin: 0; line-height: 1.1; text-align: left; width: 100%; box-sizing: border-box;">{{ headline }}</h1>
             </div>
 
