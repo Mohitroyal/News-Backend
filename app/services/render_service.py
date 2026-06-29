@@ -1096,8 +1096,21 @@ class RenderService:
                     await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
 
                     layout_info = await page.evaluate("""() => {
+                        const canvas = document.getElementById('compositor-canvas') || document.querySelector('.newspaper-body');
                         const cont = document.querySelector('.newspaper-container');
-                        return { width: cont ? cont.offsetWidth : 1200, height: cont ? cont.scrollHeight : 1600 };
+                        const canvasTop = (canvas && cont) ? (canvas.getBoundingClientRect().top - cont.getBoundingClientRect().top) : 0;
+                        const canvasH = canvas ? canvas.offsetHeight : 0;
+                        const contW = cont ? cont.offsetWidth : 1200;
+                        
+                        if (cont && canvasH > 0) {
+                            const totalH = Math.round(canvasTop + canvasH + 24);
+                            cont.style.height = totalH + 'px';
+                            cont.style.minHeight = 'unset';
+                            cont.style.overflow = 'hidden';
+                        }
+                        
+                        const finalH = canvasH > 0 ? Math.round(canvasTop + canvasH + 24) : (cont ? cont.scrollHeight : 1600);
+                        return { width: contW, height: finalH };
                     }""")
                     
                     await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 60})
