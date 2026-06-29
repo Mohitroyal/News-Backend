@@ -298,7 +298,7 @@ class RenderService:
             {local_fonts_css}
             <style id="indic-font-enforcer">
                 /* Force Indic font first, fallback to Latin */
-                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption, .nc-image-caption, .byline-section, .byline {{
+                .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption, .nc-image-caption, .byline-section, .byline, .nc-absolute-summary, .nc-absolute-summary h4, .nc-absolute-summary p, .nc-absolute-summary ul, .nc-absolute-summary li {{
                     font-family: {indic_font_override}, 'Playfair Display', 'Merriweather', serif !important;
                 }}
             </style>
@@ -389,7 +389,11 @@ class RenderService:
             "image_urls": data.get("image_urls", []),
             "image_captions": data.get("image_captions", []),
             "image_layout": data.get("image_layout", "default"),
-            "heading_bg": data.get("heading_bg", "")
+            "heading_bg": data.get("heading_bg", ""),
+            "summary": data.get("summary", ""),
+            "bullet_points": data.get("bullet_points", []),
+            "summary_bg": data.get("summary_bg", ""),
+            "bullet_bg": data.get("bullet_bg", "")
         }
         # ── BULLETPROOF JSON INJECTION ───────────────────────────────────────
         # Using <script type="application/json"> isolates the JSON payload
@@ -521,11 +525,12 @@ class RenderService:
                     }
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                    let isPatternB = rawLayout.includes('patternb');
+                    const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
+                    let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || isArticleStyle;
                     if (rawLayout === "default" || rawLayout === "") {
                         isPatternB = true;
                     }
-                    const isDoublePatternB = isPatternB && urls.length === 2;
+                    const isDoublePatternB = (isPatternB && urls.length === 2) && (rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout === "default");
                     const isTriplePatternB = isPatternB && urls.length >= 3;
 
                     const aspect0 = aspectRatios[0] || 1.2;
@@ -633,6 +638,27 @@ class RenderService:
                             h: Math.round(h2)
                         });
                     }
+
+                    if (isArticleStyle) {
+                        let maxY = 0;
+                        obstacles.forEach(o => {
+                            if (o.y + o.h > maxY) maxY = o.y + o.h;
+                        });
+                        
+                        let sumChars = (data.summary || "").length;
+                        let bulChars = (data.bullet_points || []).join(" ").length;
+                        let sumLines = sumChars / ( (W_canvas / 2) / 8 );
+                        let bulLines = bulChars / ( (W_canvas / 2) / 8 ) + (data.bullet_points || []).length * 2.5;
+                        let summaryH = Math.max(120, Math.ceil(Math.max(sumLines, bulLines)) * 22 + 80);
+                        
+                        obstacles.push({
+                            type: 'summary_bullets',
+                            x: 0,
+                            y: maxY > 0 ? maxY + 30 : 0,
+                            w: W_canvas,
+                            h: summaryH
+                        });
+                    }
                 }
                 return obstacles;
             }
@@ -660,6 +686,42 @@ class RenderService:
                 // Render absolute images onto canvas if it's the final pass
                 if (isFinal) {
                     obstacles.forEach(obs => {
+                        if (obs.type === 'summary_bullets') {
+                            const containerEl = document.createElement('div');
+                            containerEl.className = 'nc-absolute-summary';
+                            containerEl.style.position = 'absolute';
+                            containerEl.style.left = `${obs.x}px`;
+                            containerEl.style.top = `${obs.y}px`;
+                            containerEl.style.width = `${obs.w}px`;
+                            containerEl.style.height = `${obs.h}px`;
+                            containerEl.style.boxSizing = 'border-box';
+                            containerEl.style.display = 'flex';
+                            containerEl.style.flexDirection = 'row';
+                            containerEl.style.gap = '24px';
+                            containerEl.style.zIndex = '5';
+                            containerEl.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
+                            
+                            let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                            
+                            let sumBg = data.summary_bg || '#FFF4CC';
+                            let bulBg = data.bullet_bg || '#00A79D';
+                            
+                            containerEl.innerHTML = `
+                                <div style="flex: 1; background-color: ${sumBg}; padding: 24px; border-radius: 12px; border: 1px solid #FFE066; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: #B28600; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Summary</h4>
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #333333;">${data.summary || ''}</p>
+                                </div>
+                                <div style="flex: 1; background-color: ${bulBg}; padding: 24px; border-radius: 12px; border: 1px solid #008C83; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: #CCF2F0; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Key Takeaways</h4>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #FFFFFF;">
+                                        ${bpHtml}
+                                    </ul>
+                                </div>
+                            `;
+                            canvas.appendChild(containerEl);
+                            return;
+                        }
+
                         const imgEl = document.createElement('div');
                         imgEl.className = 'nc-absolute-image';
                         imgEl.style.position = 'absolute';
@@ -724,7 +786,7 @@ class RenderService:
                 if (rawLayoutStr.includes('patternb') && urls.length === 2) {
                     let maxH = 0;
                     obstacles.forEach(o => {
-                        if (o.y === 0 && o.h > maxH) {
+                        if (o.y === 0 && o.h > maxH && o.type !== 'summary_bullets') {
                             maxH = o.h;
                         }
                     });
@@ -929,6 +991,7 @@ class RenderService:
                         }
                     });
                     obstacles.forEach(img => maxY = Math.max(maxY, img.y + img.h));
+                    
                     canvas.style.height = `${Math.max(maxY, 150)}px`;
                     
                     window.__IMAGE_LAYOUT_LOGS__ = {
@@ -1099,24 +1162,25 @@ class RenderService:
                     await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
 
                     layout_info = await page.evaluate("""() => {
-                        const canvas = document.getElementById('compositor-canvas') || document.querySelector('.newspaper-body');
+                        // Use the compositor-canvas height — set precisely by the JS layout engine
+                        // Fallback to newspaper-container if canvas not found
+                        const canvas = document.getElementById('compositor-canvas');
                         const cont = document.querySelector('.newspaper-container');
-                        const canvasTop = (canvas && cont) ? (canvas.getBoundingClientRect().top - cont.getBoundingClientRect().top) : 0;
+                        const canvasTop = canvas ? canvas.offsetTop : 0;
                         const canvasH = canvas ? canvas.offsetHeight : 0;
                         const contW = cont ? cont.offsetWidth : 1200;
-                        
+                        // Shrink container exactly to content to eliminate blank space
                         if (cont && canvasH > 0) {
                             const totalH = Math.round(canvasTop + canvasH + 24);
                             cont.style.height = totalH + 'px';
                             cont.style.minHeight = 'unset';
                             cont.style.overflow = 'hidden';
                         }
-                        
                         const finalH = canvasH > 0 ? Math.round(canvasTop + canvasH + 24) : (cont ? cont.scrollHeight : 1600);
                         return { width: contW, height: finalH };
                     }""")
                     
-                    await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 60})
+                    await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 20})
 
                     if png_path:
                         await page.locator('.newspaper-container').first.screenshot(path=png_path, type="png")
