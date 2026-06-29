@@ -79,6 +79,8 @@ class RenderService:
     def __init__(self):
         template_dir = os.path.join(os.path.dirname(__file__), "..", "renderer", "templates")
         self.env = Environment(loader=FileSystemLoader(template_dir))
+        # Prevent concurrent Chromium instances on a 512MB RAM free tier
+        self.semaphore = asyncio.Semaphore(1)
 
         # Build the static logo base URL from the running service URL
         # On Render: RENDER_EXTERNAL_URL = "https://newsflow-backend.onrender.com"
@@ -1060,8 +1062,9 @@ class RenderService:
 
     async def generate_clipping_assets(self, html_content: str, png_path: str | None = None, pdf_path: str | None = None):
         """Uses Playwright to render HTML and take both a PNG screenshot and/or a PDF print."""
-        _log_memory("generate_clipping_assets: Enter")
-        chrome_path = _get_chromium_executable()
+        async with self.semaphore:
+            _log_memory("generate_clipping_assets: Enter")
+            chrome_path = _get_chromium_executable()
         launch_kwargs = {
             "headless": True,
             "args": [
