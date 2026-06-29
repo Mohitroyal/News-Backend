@@ -1,118 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuthStore, useUIStore, useGenerationStore } from '@/store';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
-
-const translations = {
-  en: {
-    settings: "Settings",
-    manageAcc: "Manage your account preferences",
-    appearance: "Appearance",
-    darkMode: "Dark Mode",
-    darkModeDesc: "Use the dark theme across the application",
-    interfaceLang: "Interface Language",
-    interfaceLangDesc: "Language used for UI labels and prompts",
-    notifications: "Notifications",
-    emailGen: "Email — Generation Complete",
-    emailGenDesc: "Get notified when your newspaper is ready",
-    emailBilling: "Email — Billing Alerts",
-    emailBillingDesc: "Invoices and payment confirmations",
-    emailUpdates: "Email — Product Updates",
-    emailUpdatesDesc: "New features and announcements",
-    browserPush: "Device Push Notifications",
-    browserPushDesc: "Real-time alerts on your device",
-    security: "Security",
-    changePass: "Change Password",
-    changePassDesc: "Update your account password",
-    updateBtn: "Update",
-    tfa: "Two-Factor Authentication",
-    tfaDesc: "Add an extra layer of security",
-    dangerZone: "Danger Zone",
-    deleteAcc: "Delete Account",
-    deleteAccDesc: "Permanently delete your account and all associated data. This cannot be undone.",
-    logout: "Log Out",
-    logoutTitle: "Log Out",
-    logoutMessage: "Are you sure you want to log out of NewsCraft?",
-    logoutCancel: "Cancel",
-    logoutConfirm: "Log Out",
-    logoutSuccess: "Successfully logged out.",
-    logoutError: "Logout failed. Please try again.",
-    logoutDesc: "Sign out of your account on this device",
-  },
-  te: {
-    settings: "సెట్టింగ్‌లు",
-    manageAcc: "మీ ఖాతా ప్రాధాన్యతలను నిర్వహించండి",
-    appearance: "స్వరూపం",
-    darkMode: "డార్క్ మోడ్",
-    darkModeDesc: "అప్లికేషన్ అంతటా డార్క్ థీమ్‌ను ఉపయోగించండి",
-    interfaceLang: "ఇంటర్‌ఫేస్ భాష",
-    interfaceLangDesc: "UI లేబుల్స్ మరియు ప్రాంప్ట్‌ల కోసం ఉపయోగించే భాష",
-    notifications: "నోటిఫికేషన్‌లు",
-    emailGen: "ఇమెయిల్ — జనరేషన్ పూర్తయింది",
-    emailGenDesc: "మీ వార్తాపత్రిక సిద్ధమైనప్పుడు తెలియజేయండి",
-    emailBilling: "ఇమెయిల్ — బిల్లింగ్ హెచ్చరికలు",
-    emailBillingDesc: "ఇన్‌వాయిస్‌లు మరియు చెల్లింపు నిర్ధారణలు",
-    emailUpdates: "ఇమెయిల్ — ఉత్పత్తి నవీకరణలు",
-    emailUpdatesDesc: "కొత్త ఫీచర్లు మరియు ప్రకటనలు",
-    browserPush: "పరికర పుష్ నోటిఫికేషన్‌లు",
-    browserPushDesc: "మీ పరికరంలో రియల్-టైమ్ హెచ్చరికలు",
-    security: "భద్రత",
-    changePass: "పాస్వర్డ్ మార్చండి",
-    changePassDesc: "మీ ఖాతా పాస్‌వర్డ్‌ను నవీకరించండి",
-    updateBtn: "నవీకరించండి",
-    tfa: "టూ-ఫాక్టర్ అథెంటికేషన్",
-    tfaDesc: "భద్రత యొక్క అదనపు పొరను జోడించండి",
-    dangerZone: "డేంజర్ జోన్",
-    deleteAcc: "ఖాతాను తొలగించండి",
-    deleteAccDesc: "మీ ఖాతా మరియు డేటాను శాశ్వతంగా తొలగించండి.",
-    logout: "లాగ్ అవుట్",
-    logoutTitle: "లాగ్ అవుట్",
-    logoutMessage: "మీరు NewsCraft నుండి లాగ్ అవుట్ అవ్వాలనుకుంటున్నారా?",
-    logoutCancel: "రద్దు చేయండి",
-    logoutConfirm: "లాగ్ అవుట్",
-    logoutSuccess: "విజయంగా లాగ్ అవుట్ అయింది.",
-    logoutError: "లాగ్ అవుట్ విఫలమైంది. మళ్ళీ ప్రయత్నించండి.",
-    logoutDesc: "ఈ పరికరంలో మీ ఖాతా నుండి సైన్ అవుట్ అవ్వండి",
-  },
-  hi: {
-    settings: "सेटिंग्स",
-    manageAcc: "अपनी खाता प्राथमिकताएं प्रबंधित करें",
-    appearance: "दिखावट",
-    darkMode: "डार्क मोड",
-    darkModeDesc: "एप्लिकेशन में डार्क थीम का उपयोग करें",
-    interfaceLang: "इंटरफ़ेस भाषा",
-    interfaceLangDesc: "UI लेबल और प्रॉम्प्ट के लिए उपयोग की जाने वाली भाषा",
-    notifications: "सूचनाएं",
-    emailGen: "ईमेल - निर्माण पूर्ण",
-    emailGenDesc: "जब आपका अखबार तैयार हो जाए तो सूचना प्राप्त करें",
-    emailBilling: "ईमेल - बिलिंग अलर्ट",
-    emailBillingDesc: "चालान और भुगतान की पुष्टि",
-    emailUpdates: "ईमेल - उत्पाद अपडेट",
-    emailUpdatesDesc: "नई सुविधाएँ और घोषणाएँ",
-    browserPush: "डिवाइस पुश सूचनाएँ",
-    browserPushDesc: "आपके डिवाइस पर वास्तविक समय अलर्ट",
-    security: "सुरक्षा",
-    changePass: "पासवर्ड बदलें",
-    changePassDesc: "अपना खाता पासवर्ड अपडेट करें",
-    updateBtn: "अपडेट करें",
-    tfa: "दो-कारक प्रमाणीकरण",
-    tfaDesc: "सुरक्षा की एक अतिरिक्त परत जोड़ें",
-    dangerZone: "डेंजर जोन",
-    deleteAcc: "खाता हटाएं",
-    deleteAccDesc: "अपना खाता और डेटा स्थायी रूप से हटाएं।",
-    logout: "लॉग आउट",
-    logoutTitle: "लॉग आउट",
-    logoutMessage: "क्या आप NewsCraft से लॉग आउट करना चाहते हैं?",
-    logoutCancel: "रद्द करें",
-    logoutConfirm: "लॉग आउट",
-    logoutSuccess: "सफलतापूर्वक लॉग आउट किया गया।",
-    logoutError: "लॉगआउट विफल। कृपया पुनः प्रयास करें।",
-    logoutDesc: "इस डिवाइस पर अपने खाते से साइन आउट करें",
-  }
-};
+import { useTranslation } from '@/lib/i18n';
 
 function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
   return (
@@ -180,16 +73,11 @@ export const SettingsScreen = () => {
   const navigate = useNavigate();
 
   // Use persistent UI store
-  const theme = useUIStore((state) => state.theme);
-  const toggleTheme = useUIStore((state) => state.toggleTheme);
-  const language = useUIStore((state) => state.setLanguage);
-  const activeLanguage = useUIStore((state) => state.language);
-  const setLanguage = language;
-  const t = translations[activeLanguage as keyof typeof translations] || translations.en;
+  const logoMode = useUIStore((state) => state.logoMode);
+  const toggleLogoMode = useUIStore((state) => state.toggleLogoMode);
+  const { t, language: activeLanguage } = useTranslation();
+  const setLanguage = useUIStore((state) => state.setLanguage);
 
-  useEffect(() => {
-    // Theme effect moved to App.tsx
-  }, [theme]);
 
   const [notifications, setNotifications] = useState({
     emailGenerations: true,
@@ -326,7 +214,7 @@ export const SettingsScreen = () => {
           <SettingsRow
             label={t.darkMode}
             description={t.darkModeDesc}
-            control={<ToggleSwitch enabled={theme === "dark"} onToggle={() => toggleTheme()} />}
+            control={<ToggleSwitch enabled={logoMode} onToggle={() => toggleLogoMode()} />}
           />
           <SettingsRow
             label={t.interfaceLang}

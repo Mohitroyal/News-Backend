@@ -58,6 +58,9 @@ const defaultConfig: Partial<GenerationConfig> = {
   layoutColumns: 3,
   imageUrls: [],
   fontFamily: "playfair",
+  layoutPattern: "A",
+  borderColour: "#cc2222",
+  headingBgColour: "#fff3f3",
 };
 
 export const useGenerationStore = create<GenerationStore>()(
@@ -102,10 +105,10 @@ export const useGenerationStore = create<GenerationStore>()(
 
 // ─── UI Store ─────────────────────────────────────────────────────────────────
 interface UIStore {
-  theme: "dark" | "light";
+  logoMode: boolean;
   sidebarOpen: boolean;
   language: string;
-  toggleTheme: () => void;
+  toggleLogoMode: () => void;
   setSidebarOpen: (open: boolean) => void;
   setLanguage: (lang: string) => void;
 }
@@ -113,11 +116,11 @@ interface UIStore {
 export const useUIStore = create<UIStore>()(
   persist(
     (set) => ({
-      theme: "dark",
+      logoMode: false,
       sidebarOpen: true,
       language: "en",
-      toggleTheme: () =>
-        set((state) => ({ theme: state.theme === "dark" ? "light" : "dark" })),
+      toggleLogoMode: () =>
+        set((state) => ({ logoMode: !state.logoMode })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setLanguage: (lang) => set({ language: lang }),
     }),

@@ -3,27 +3,27 @@ import type { ApiResponse, Subscription, Plan } from "@/types";
 
 export const subscriptionService = {
   async getPlans(): Promise<ApiResponse<Plan[]>> {
-    const res = await api.get("/subscriptions/plans");
+    const res = await api.get("/api/v1/subscriptions/plans");
     return res.data;
   },
 
   async getCurrentSubscription(): Promise<ApiResponse<Subscription>> {
-    const res = await api.get("/subscriptions/current");
+    const res = await api.get("/api/v1/subscriptions/current");
     return res.data;
   },
 
   async createCheckout(planId: string, billingInterval: "monthly" | "annual"): Promise<ApiResponse<{ checkoutUrl: string }>> {
-    const res = await api.post("/subscriptions/checkout", { planId, billingInterval });
+    const res = await api.post("/api/v1/subscriptions/checkout", { planId, billingInterval });
     return res.data;
   },
 
   async cancelSubscription(): Promise<ApiResponse<Subscription>> {
-    const res = await api.post("/subscriptions/cancel");
+    const res = await api.post("/api/v1/subscriptions/cancel");
     return res.data;
   },
 
   async reactivateSubscription(): Promise<ApiResponse<Subscription>> {
-    const res = await api.post("/subscriptions/reactivate");
+    const res = await api.post("/api/v1/subscriptions/reactivate");
     return res.data;
   },
 };

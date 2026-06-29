@@ -11,9 +11,9 @@
 @variant md (@media (min-width: 768px));
 
 body {
-  @apply dark:bg-ink-black dark:text-alabaster-grey;
+  background-color: #dceef8;
+  color: #0a2540;
 }
-
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
   .pt-safe { padding-top: env(safe-area-inset-top); }

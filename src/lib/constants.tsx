@@ -97,7 +97,7 @@ export const TEMPLATES_LIST = [
     )
   },
   {
-    id: "extra_news" as const,
+    id: "hero-image" as const,
     name: "The Extra News",
     description: "Wrapped Inline Image Style",
     accent: "from-blue-500 to-blue-700",

@@ -8,9 +8,7 @@ set "PROJECT_ROOT=%~dp0"
 
 rem Ensure JAVA_HOME points to a valid JDK (adjust if needed)
 rem You may need to modify this path to your actual JDK installation.
-set "JAVA_HOME=C:\\Program Files\\Java\\jdk-17"
-set "PATH=%JAVA_HOME%\\bin;%PATH%"
-
+set "JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
 rem Verify Java installation
 java -version
 if errorlevel 1 (

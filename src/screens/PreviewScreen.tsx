@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGenerationStore } from '@/store';
-import { ArrowLeft, Download, FileDown, Share2, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Download, FileDown, Share2, MoreHorizontal, FileText } from 'lucide-react';
 import { generationService } from '@/services/generation.service';
 import { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
@@ -55,7 +55,6 @@ export const PreviewScreen = () => {
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
   const [pollAttempt, setPollAttempt]   = useState(0);
   const [elapsedMs,  setElapsedMs]      = useState(0);
-  const [serverWaking, setServerWaking] = useState(false);
   const [liveStage, setLiveStage]       = useState<string>('');
 
   const startTimeRef    = useRef<number>(Date.now());
@@ -75,7 +74,6 @@ export const PreviewScreen = () => {
     consecFailRef.current = 0;
     setPollAttempt(0);
     setElapsedMs(0);
-    setServerWaking(false);
 
     // ── Elapsed-time ticker ──────────────────────────────────────────────────
     elapsedTimerRef.current = setInterval(() => {
@@ -112,7 +110,6 @@ export const PreviewScreen = () => {
         if (generationData && generationData.id) {
           // Successful response — reset consecutive-failure counter
           consecFailRef.current = 0;
-          setServerWaking(false);
 
           // Track live stage for progress bar
           const stage = generationData.stage || generationData.current_stage || liveStage;
@@ -139,7 +136,7 @@ export const PreviewScreen = () => {
         // If server returns 503/502 → likely Render waking up
         const status = e?.response?.status;
         if (status === 503 || status === 502 || status === 0 || !status) {
-          setServerWaking(true);
+          // setServerWaking(true);
         }
 
         if (cf >= MAX_CONSEC_FAIL) {
@@ -338,313 +335,276 @@ export const PreviewScreen = () => {
   };
 
   // ── Derived state for the progress UI ────────────────────────────────────
-  const currentStage    = liveStage || generation.stage || generation.status || 'Processing';
   const progressPercent = generation.progress ?? getProgress(liveStage || generation.stage);
   const timeLeft        = Math.max(0, MAX_POLL_MS - elapsedMs);
 
   return (
-    <div className="h-screen bg-neutral-900 flex flex-col fixed inset-0 z-50">
-      {/* ── Top Bar ──────────────────────────────────────────────────────── */}
-      <div className="h-16 bg-neutral-950/80 border-b border-white/10 flex items-center justify-between px-4 shrink-0">
+    <div className="h-screen bg-[#dceef8] flex flex-col fixed inset-0 z-50 font-sans text-[#0a1a2e]">
+      {/* ── HEADER ──────────────────────────────────────────────────────── */}
+      <div className="h-16 bg-[#0a2540] border-b-[3px] border-[#cc2222] flex items-center px-4 shrink-0 shadow-sm relative z-20">
         <button
-          onClick={() => navigate(-1)}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+          onClick={() => {
+            if (generation.status === 'processing' || generation.status === 'pending') {
+              if (window.confirm("Cancel generation?")) navigate(-1);
+            } else {
+              navigate(-1);
+            }
+          }}
+          className="w-10 h-10 bg-[#cc2222] active:bg-[#a01b1b] rounded-full text-white transition-colors flex items-center justify-center shrink-0 mr-4 shadow-sm"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5 ml-[-2px]" />
         </button>
-        <div className="flex flex-col items-center">
-          <span className="text-white font-semibold">Preview</span>
-          <span className="text-[10px] font-mono text-gray-500">clipping_{generation.id.slice(0, 8)}.png</span>
+        <div className="flex flex-col flex-1 truncate">
+          <span className="text-white font-bold text-[17px] tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>Preview</span>
+          <span className="text-[10px] text-[#a0c4dc] tracking-wider truncate">
+            clipping_{generation.id.slice(0, 8)}.png
+          </span>
         </div>
-        <div className="w-9" />
       </div>
 
       {/* ── Main Content ─────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto bg-neutral-800 p-4 flex items-center justify-center">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center relative z-10">
 
-        {/* ── Completed: show image ─────────────────────────────────────── */}
-        {generation.png_url ? (
-          <img
-            src={generation.png_url}
-            alt="Newspaper Preview"
-            className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
-          />
-
-        /* ── Failed: show full debug card ─────────────────────────────── */
-        ) : generation.status === 'failed' || (generation.status === 'completed' && !generation.png_url) ? (
-          <div className="flex flex-col items-center text-red-400 gap-4 text-center max-w-md w-full px-6 py-8 bg-neutral-950/70 border border-red-500/20 rounded-2xl mx-auto shadow-2xl overflow-y-auto max-h-[75vh]">
-            <span className="font-bold text-xl text-red-500 tracking-wide">Generation Failed</span>
-
-            {/* Stage */}
-            <div className="flex flex-col gap-1 w-full border-t border-white/5 pt-3 text-left">
-              <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Stage</span>
-              <span className="text-sm text-white font-semibold">
-                {(generation.stage || generation.custom_layout?.stage || 'Unknown — check Render logs')
-                  .replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
-              </span>
+        {/* ── STATE 1: GENERATING ────────────────────────────────────────── */}
+        {(!generation.png_url && generation.status !== 'failed') && (
+          <div className="flex flex-col items-center w-full max-w-sm px-4">
+            {/* SPINNER */}
+            <div className="relative w-[120px] h-[120px] flex items-center justify-center mb-6">
+              {/* Outer glowing ring */}
+              <div className="absolute inset-0 rounded-full border-[2px] border-[#cc2222]/20 shadow-[0_0_15px_rgba(204,34,34,0.3)] animate-pulse" style={{ animationDuration: '3s' }} />
+              {/* Inner ring */}
+              <div className="absolute inset-0 rounded-full border-[4px] border-transparent border-t-[#cc2222] border-r-[#cc2222] animate-spin" style={{ animationDuration: '1.8s', animationTimingFunction: 'linear' }} />
+              {/* Orbiting dot */}
+              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '3s', animationTimingFunction: 'linear' }}>
+                <div className="absolute top-0 left-1/2 w-3 h-3 bg-[#cc2222] rounded-full shadow-[0_0_8px_#cc2222] transform -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              {/* Center Icon */}
+              <div className="w-12 h-12 bg-white rounded-[10px] shadow-[0_0_12px_rgba(204,34,34,0.2)] flex items-center justify-center text-[#0a2540] animate-pulse" style={{ animationDuration: '2s' }}>
+                <FileText className="w-6 h-6" />
+              </div>
             </div>
 
-            {/* Exception Type */}
-            {(generation.error_type || generation.custom_layout?.error_type) && (
-              <div className="flex flex-col gap-1 w-full border-t border-white/5 pt-3 text-left">
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Exception Type</span>
-                <span className="text-xs text-yellow-300 font-mono break-words">
-                  {generation.error_type || generation.custom_layout?.error_type}
-                </span>
-              </div>
-            )}
+            {/* STATUS TEXT */}
+            <h2 className="text-[#0a1a2e] font-bold text-[16px] mb-1 text-center" style={{ fontFamily: 'Georgia, serif' }}>Generating Clipping</h2>
+            <p className="text-[#a0c4dc] text-[10px] font-medium mb-3 text-center">Processing newspaper layout</p>
+            <div className="text-[#cc2222] font-bold text-[28px] mb-6 tracking-tight drop-shadow-sm transition-all duration-300 transform scale-105">{progressPercent}%</div>
 
-            {/* Message */}
-            <div className="flex flex-col gap-1 w-full border-t border-white/5 pt-3 text-left">
-              <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Message</span>
-              <span className="text-xs text-red-300 font-mono break-words leading-relaxed">
-                {generation.message || generation.error ||
-                  generation.custom_layout?.message || generation.custom_layout?.error ||
-                  'No message — check Render logs'}
-              </span>
-            </div>
-
-            {/* Technical Details */}
-            {(generation.details || generation.custom_layout?.details) && (
-              <div className="flex flex-col gap-1 w-full border-t border-white/5 pt-3 text-left">
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Technical Details</span>
-                <span className="text-[11px] text-gray-300 font-mono break-all leading-normal max-h-36 overflow-y-auto bg-black/45 p-2 rounded-lg border border-white/5">
-                  {generation.details || generation.custom_layout?.details}
-                </span>
-              </div>
-            )}
-
-            {/* Stack Trace */}
-            {(generation.traceback || generation.custom_layout?.traceback) && (
-              <div className="flex flex-col gap-1 w-full border-t border-white/5 pt-3 text-left">
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Stack Trace</span>
-                <pre className="text-[10px] text-gray-400 font-mono break-all leading-normal max-h-48 overflow-y-auto bg-black/60 p-2 rounded-lg border border-white/5 whitespace-pre-wrap">
-                  {generation.traceback || generation.custom_layout?.traceback}
-                </pre>
-              </div>
-            )}
-
-            {/* Raw dump last resort */}
-            {!generation.stage && !generation.message && !generation.details && generation.custom_layout && (
-              <div className="flex flex-col gap-1 w-full border-t border-white/5 pt-3 text-left">
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Raw Debug Data</span>
-                <pre className="text-[10px] text-gray-400 font-mono break-all leading-normal max-h-48 overflow-y-auto bg-black/60 p-2 rounded-lg border border-white/5 whitespace-pre-wrap">
-                  {JSON.stringify(generation.custom_layout, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-
-        /* ── Processing: live progress card ───────────────────────────── */
-        ) : (
-          <div className="flex flex-col items-center gap-6 w-full max-w-sm px-4">
-
-            {/* Server waking banner */}
-            {serverWaking && (
-              <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-center">
-                <span className="text-amber-300 text-sm font-semibold">⏳ Server is starting up…</span>
-                <p className="text-amber-400/70 text-xs mt-1">Render free instances take ~30s to wake. Please wait.</p>
-              </div>
-            )}
-
-            {/* Animated newspaper icon */}
-            <div className="relative w-20 h-20 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-4 border-white/5" />
-              <div
-                className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 animate-spin"
-                style={{ animationDuration: '1.2s' }}
-              />
-              <span className="text-3xl">📰</span>
-            </div>
-
-            {/* Stage label */}
-            <div className="text-center">
-              <p className="text-white font-semibold text-lg">Generating clipping…</p>
-              <p className="text-blue-300 text-sm mt-1 font-mono">
-                {currentStage.replace(/_/g, ' ')}
-              </p>
-            </div>
-
-            {/* Progress bar */}
-            <div className="w-full">
-              <div className="flex justify-between text-xs text-gray-400 mb-2">
+            {/* PROGRESS BAR */}
+            <div className="w-full mb-6">
+              <div className="flex justify-between text-[9px] uppercase font-bold text-[#a0c4dc] mb-1.5">
                 <span>Progress</span>
-                <span className="font-mono text-white font-bold">{progressPercent}%</span>
+                <span>{progressPercent}/100</span>
               </div>
-              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+              <div className="w-full h-[8px] bg-[#b8d4e8] rounded-[4px] overflow-hidden shadow-inner relative">
+                {/* Liquid / Shimmer Progress Fill */}
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700 ease-out"
-                  style={{ width: `${progressPercent}%` }}
+                  className="absolute top-0 left-0 h-full rounded-[4px] transition-all duration-500 ease-out"
+                  style={{ 
+                    width: `${progressPercent}%`,
+                    background: 'linear-gradient(90deg, #cc2222, #ff6666, #cc2222)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 2s infinite linear'
+                  }}
                 />
               </div>
             </div>
 
-            {/* Stats row */}
-            <div className="flex w-full justify-between text-xs text-gray-500">
-              <span>Poll #{pollAttempt}</span>
-              <span>Elapsed: <span className="text-gray-300 font-mono">{fmtElapsed(elapsedMs)}</span></span>
-              <span>Timeout: <span className="text-gray-300 font-mono">{fmtElapsed(timeLeft)}</span></span>
+            {/* INFO CARD */}
+            <div className="w-full bg-white border border-[#b8d4e8] rounded-lg p-3.5 mb-6 shadow-sm">
+              <div className="flex justify-between items-center mb-2.5 animate-in slide-in-from-right-4 duration-300 fade-in fill-mode-both" style={{ animationDelay: '0ms' }}>
+                <span className="text-[#0a1a2e] text-[10px] font-semibold">Poll #</span>
+                <span className="text-[#0a1a2e] text-[10px] font-mono font-medium">{pollAttempt}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2.5 animate-in slide-in-from-right-4 duration-300 fade-in fill-mode-both" style={{ animationDelay: '100ms' }}>
+                <span className="text-[#0a1a2e] text-[10px] font-semibold">Elapsed</span>
+                <span className="text-[#0a1a2e] text-[10px] font-mono font-medium">{(elapsedMs / 1000).toFixed(1)}s</span>
+              </div>
+              <div className="flex justify-between items-center mb-2.5 animate-in slide-in-from-right-4 duration-300 fade-in fill-mode-both" style={{ animationDelay: '200ms' }}>
+                <span className="text-[#0a1a2e] text-[10px] font-semibold">Timeout in</span>
+                <span className="text-[#0a1a2e] text-[10px] font-mono font-medium">{(timeLeft / 1000).toFixed(1)}s</span>
+              </div>
+              <div className="flex justify-between items-center animate-in slide-in-from-right-4 duration-300 fade-in fill-mode-both" style={{ animationDelay: '300ms' }}>
+                <span className="text-[#0a1a2e] text-[10px] font-semibold">Pattern</span>
+                <span className="text-[#0a1a2e] text-[10px] font-mono font-medium">Pattern {generation.config?.layoutPattern || 'A'}</span>
+              </div>
             </div>
 
-            <p className="text-gray-500 text-xs text-center leading-relaxed">
-              Checking every 3 seconds · Up to 10 minutes · Do not close this screen
-            </p>
+            {/* HINT BAR */}
+            <div className="w-full bg-[#0a2540] rounded-[6px] py-[10px] px-[14px] flex items-center justify-center gap-2 shadow-sm animate-in zoom-in-95 duration-500 fill-mode-both" style={{ animationDelay: '400ms' }}>
+              <div className="w-3.5 h-3.5 rounded-full bg-[#a0c4dc]/20 flex items-center justify-center shrink-0">
+                <span className="text-[#a0c4dc] text-[9px] font-bold font-serif italic">i</span>
+              </div>
+              <span className="text-[#a0c4dc] text-[10px] font-medium tracking-wide">Checking every 3 seconds &middot; Do not close this screen</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── STATE 3: ERROR ─────────────────────────────────────────────── */}
+        {(!generation.png_url && generation.status === 'failed') && (
+           <div className="flex flex-col items-center w-full max-w-sm px-4">
+              <div className="w-[120px] h-[120px] rounded-full bg-[#cc2222] flex items-center justify-center mb-6 shadow-lg animate-in fade-in zoom-in duration-300" style={{ animation: 'shake 0.3s cubic-bezier(.36,.07,.19,.97) both' }}>
+                <span className="text-white text-[60px] font-bold leading-none mt-[-4px]">!</span>
+              </div>
+              <h2 className="text-[#cc2222] font-bold text-[18px] mb-2 text-center" style={{ fontFamily: 'Georgia, serif' }}>Generation Failed</h2>
+              <div className="bg-white border border-[#b8d4e8] p-4 rounded-lg w-full mb-8 shadow-sm">
+                <p className="text-[#0a1a2e] text-[12px] text-center font-medium leading-relaxed">
+                  {generation.message || generation.error || 'An unexpected error occurred during clipping generation.'}
+                </p>
+              </div>
+              
+              <button 
+                onClick={() => navigate(-1)}
+                className="w-full bg-[#cc2222] active:bg-[#a01b1b] text-white py-[14px] rounded-[8px] font-bold text-xs tracking-wider uppercase transition-colors shadow-sm flex justify-center items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Retry</span>
+              </button>
+           </div>
+        )}
+
+        {/* ── STATE 2: COMPLETE ───────────────────────────────────────────── */}
+        {(generation.png_url) && (
+          <div className="flex flex-col items-center w-full h-full relative animate-in fade-in duration-500 pb-2">
+             <div className="flex flex-col items-center mb-4 shrink-0 relative">
+               <div className="absolute inset-0 bg-[#0a2540] rounded-full opacity-0 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.4s' }} />
+               <div className="w-12 h-12 rounded-full bg-[#0a2540] flex items-center justify-center mb-2 shadow-sm animate-in zoom-in duration-500" style={{ animationTimingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)' }}>
+                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" style={{ strokeDasharray: 24, strokeDashoffset: 24, animation: 'draw 0.4s ease-out 0.3s forwards' }} />
+                 </svg>
+               </div>
+               <h2 className="text-[#0a1a2e] font-bold text-[18px] animate-in slide-in-from-bottom-2 duration-300" style={{ fontFamily: 'Georgia, serif' }}>Clipping Ready</h2>
+             </div>
+
+             <div className="flex-1 w-full min-h-0 flex justify-center mb-5 bg-white border-[2px] border-[#cc2222] p-1 shadow-sm relative overflow-hidden group animate-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
+               {/* This box contains the actual clipping. No watermarks inside here! */}
+               <img
+                  src={generation.png_url}
+                  alt="Newspaper Preview"
+                  className="w-full h-full object-contain bg-white transition-transform duration-700 ease-out hover:scale-[1.02]"
+                />
+             </div>
+
+             <div className="w-full shrink-0 flex flex-col gap-2">
+                <div className="flex w-full gap-2">
+                  <button
+                    onClick={() => handleDownload('png')}
+                    disabled={downloading}
+                    className="flex-1 py-[14px] bg-[#cc2222] hover:bg-[#ff3333] active:bg-[#a01b1b] text-white rounded-[8px] font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-[0_4px_12px_rgba(204,34,34,0.3)] animate-in slide-in-from-bottom-2 duration-300 delay-200 fill-mode-both relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:animate-[shimmerSweep_1s_ease-out]" />
+                    <Download className="w-4 h-4 shrink-0" />
+                    <span>Save PNG</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleDownload('pdf')}
+                    disabled={downloading}
+                    className="flex-1 py-[14px] bg-[#0a2540] hover:bg-[#071a2d] active:bg-[#071a2d] text-[#7bbce0] rounded-[8px] font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-[0_4px_12px_rgba(10,37,64,0.3)] animate-in slide-in-from-bottom-2 duration-300 delay-300 fill-mode-both relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:animate-[shimmerSweep_1s_ease-out]" />
+                    <FileDown className="w-4 h-4 shrink-0" />
+                    <span>Save PDF</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setIsShareSheetOpen(true)}
+                  disabled={downloading}
+                  className="w-full py-[14px] bg-[#dceef8] hover:bg-[#b8d4e8] active:bg-[#b8d4e8] text-[#0a2540] border-[1px] border-[#b8d4e8] rounded-[8px] font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md animate-in slide-in-from-bottom-2 duration-300 delay-400 fill-mode-both relative overflow-hidden group"
+                >
+                  <div className="absolute inset-0 bg-white/40 translate-x-[-100%] group-hover:animate-[shimmerSweep_1s_ease-out]" />
+                  <Share2 className="w-4 h-4 shrink-0" />
+                  <span>Share</span>
+                </button>
+             </div>
           </div>
         )}
       </div>
 
-      {/* ── Bottom Action Bar ─────────────────────────────────────────────── */}
-      <div className="h-24 bg-neutral-950/90 border-t border-white/10 flex items-center justify-between px-4 gap-3 shrink-0 pb-safe">
-        <button
-          onClick={() => handleDownload('png')}
-          disabled={downloading || !generation.png_url}
-          className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs tracking-wider uppercase active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-blue-900/30"
-        >
-          <Download className="w-4 h-4" />
-          <span>Save PNG</span>
-        </button>
-
-        <button
-          onClick={() => handleDownload('pdf')}
-          disabled={downloading || !generation.png_url}
-          className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs tracking-wider uppercase active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-indigo-900/30"
-        >
-          <FileDown className="w-4 h-4" />
-          <span>Save PDF</span>
-        </button>
-
-        <button
-          onClick={() => setIsShareSheetOpen(true)}
-          disabled={downloading || !generation.png_url}
-          className="flex-1 py-3.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-2xl font-bold text-xs tracking-wider uppercase active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-black/30 border border-white/5"
-        >
-          <Share2 className="w-4 h-4" />
-          <span>Share</span>
-        </button>
-      </div>
-
-      {/* ── Share Bottom Sheet ───────────────────────────────────────────── */}
+      {/* ── Share Bottom Sheet (styled to match palette) ─────────────────── */}
       {isShareSheetOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300"
+          className="fixed inset-0 bg-[#0a2540]/60 backdrop-blur-sm z-[60] transition-opacity duration-300"
           onClick={() => setIsShareSheetOpen(false)}
         >
           <div 
-            className="fixed bottom-0 left-0 right-0 bg-neutral-950 border-t border-white/10 rounded-t-3xl p-6 pb-10 z-50 transform transition-transform duration-300 shadow-2xl"
+            className="fixed bottom-0 left-0 right-0 bg-white border-t-[3px] border-[#cc2222] rounded-t-[20px] p-6 pb-safe z-[60] transform transition-transform duration-300 shadow-2xl animate-in slide-in-from-bottom-full"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Drag Handle */}
-            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+            <div className="w-12 h-1 bg-[#b8d4e8] rounded-full mx-auto mb-6" />
+            <h3 className="text-[#0a2540] font-bold text-lg mb-6 text-center" style={{ fontFamily: 'Georgia, serif' }}>Share Newspaper Clipping</h3>
             
-            {/* Title */}
-            <h3 className="text-white font-bold text-lg mb-6 text-center">Share Newspaper Clipping</h3>
-            
-            {/* Options Grid */}
-            <div className="grid grid-cols-4 gap-y-6 gap-x-2 justify-items-center">
+            <div className="grid grid-cols-4 gap-y-6 gap-x-2 justify-items-center mb-6">
               {/* WhatsApp */}
-              <button
-                onClick={() => handleShareOptionClick('WhatsApp')}
-                className="flex flex-col items-center gap-2 text-white active:scale-95 transition-transform"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg shadow-[#25D366]/20">
+              <button onClick={() => handleShareOptionClick('WhatsApp')} className="flex flex-col items-center gap-2 text-[#0a1a2e] hover:scale-105 active:scale-95 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-sm">
                   <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.455L0 24zm6.59-11.597c-.279-.314-.555-.262-.773-.272-.2-.008-.428-.008-.656-.008-.228 0-.6-.086-.913-.429-.314-.343-1.198-1.172-1.198-2.859 0-1.687 1.226-3.314 1.398-3.543.171-.228 2.413-3.685 5.845-5.17.816-.353 1.453-.564 1.948-.72.822-.262 1.572-.225 2.164-.137.66.099 2.03.83 2.314 1.632.285.803.285 1.49.201 1.632-.083.14-.308.228-.651.4l-2.102 1.03c-.342.166-.591.248-.846.634-.255.38-.973 1.226-1.195 1.48-.222.254-.443.286-.786.114-.343-.171-1.447-.533-2.755-1.7c-1.018-.908-1.704-2.03-1.902-2.372-.199-.343-.021-.528.15-.699.153-.153.343-.4.514-.6.171-.2.228-.343.343-.571.114-.229.057-.429-.028-.6-.086-.171-.773-1.857-1.059-2.543-.278-.669-.561-.578-.773-.589z"/>
                   </svg>
                 </div>
-                <span className="text-[10px] text-gray-400 font-semibold text-center leading-tight">WhatsApp</span>
+                <span className="text-[10px] font-semibold text-center leading-tight">WhatsApp</span>
               </button>
 
               {/* Facebook */}
-              <button
-                onClick={() => handleShareOptionClick('Facebook')}
-                className="flex flex-col items-center gap-2 text-white active:scale-95 transition-transform"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#1877F2] flex items-center justify-center shadow-lg shadow-[#1877F2]/20">
+              <button onClick={() => handleShareOptionClick('Facebook')} className="flex flex-col items-center gap-2 text-[#0a1a2e] hover:scale-105 active:scale-95 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-[#1877F2] flex items-center justify-center shadow-sm">
                   <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                   </svg>
                 </div>
-                <span className="text-[10px] text-gray-400 font-semibold text-center leading-tight">Facebook</span>
-              </button>
-
-              {/* Instagram */}
-              <button
-                onClick={() => handleShareOptionClick('Instagram')}
-                className="flex flex-col items-center gap-2 text-white active:scale-95 transition-transform"
-              >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 flex items-center justify-center shadow-lg">
-                  <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-                  </svg>
-                </div>
-                <span className="text-[10px] text-gray-400 font-semibold text-center leading-tight">Instagram</span>
+                <span className="text-[10px] font-semibold text-center leading-tight">Facebook</span>
               </button>
 
               {/* X (Twitter) */}
-              <button
-                onClick={() => handleShareOptionClick('X (Twitter)')}
-                className="flex flex-col items-center gap-2 text-white active:scale-95 transition-transform"
-              >
-                <div className="w-12 h-12 rounded-full bg-neutral-900 border border-white/10 flex items-center justify-center shadow-lg">
+              <button onClick={() => handleShareOptionClick('X (Twitter)')} className="flex flex-col items-center gap-2 text-[#0a1a2e] hover:scale-105 active:scale-95 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center shadow-sm">
                   <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                   </svg>
                 </div>
-                <span className="text-[10px] text-gray-400 font-semibold text-center leading-tight">X (Twitter)</span>
-              </button>
-
-              {/* Telegram */}
-              <button
-                onClick={() => handleShareOptionClick('Telegram')}
-                className="flex flex-col items-center gap-2 text-white active:scale-95 transition-transform"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#24A1DE] flex items-center justify-center shadow-lg shadow-[#24A1DE]/20">
-                  <svg className="w-5 h-5 text-white mr-0.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12z" fill="none"/>
-                    <path d="M18.35 6.002a.85.85 0 0 0-.69.043L3.102 11.75c-.65.25-.65.61-.12.77l3.8 1.18 8.8-5.55c.41-.25.8-.12.49.15l-7.12 6.42-.28 3.96c.39 0 .56-.18.78-.39l1.88-1.83 3.9 2.88c.72.4 1.24.2 1.42-.65l2.56-12.06c.26-.95-.36-1.37-1.02-1.17z" fill="currentColor"/>
-                  </svg>
-                </div>
-                <span className="text-[10px] text-gray-400 font-semibold text-center leading-tight">Telegram</span>
-              </button>
-
-              {/* Gmail */}
-              <button
-                onClick={() => handleShareOptionClick('Gmail')}
-                className="flex flex-col items-center gap-2 text-white active:scale-95 transition-transform"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#EA4335] flex items-center justify-center shadow-lg shadow-[#EA4335]/20">
-                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                </div>
-                <span className="text-[10px] text-gray-400 font-semibold text-center leading-tight">Gmail</span>
+                <span className="text-[10px] font-semibold text-center leading-tight">X (Twitter)</span>
               </button>
 
               {/* More Apps */}
-              <button
-                onClick={() => handleShareOptionClick('More Apps')}
-                className="flex flex-col items-center gap-2 text-white active:scale-95 transition-transform"
-              >
-                <div className="w-12 h-12 rounded-full bg-neutral-700 flex items-center justify-center shadow-lg">
-                  <MoreHorizontal className="w-5 h-5 text-white" />
+              <button onClick={() => handleShareOptionClick('More Apps')} className="flex flex-col items-center gap-2 text-[#0a1a2e] hover:scale-105 active:scale-95 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-[#b8d4e8] flex items-center justify-center shadow-sm text-[#0a2540]">
+                  <MoreHorizontal className="w-5 h-5" />
                 </div>
-                <span className="text-[10px] text-gray-400 font-semibold text-center leading-tight">More Apps</span>
+                <span className="text-[10px] font-semibold text-center leading-tight">More Apps</span>
               </button>
             </div>
             
-            {/* Cancel Button */}
             <button
               onClick={() => setIsShareSheetOpen(false)}
-              className="w-full mt-8 py-3.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-2xl text-xs tracking-wider uppercase transition-colors border border-white/5 active:scale-[0.98]"
+              className="w-full py-[14px] bg-[#dceef8] hover:bg-[#b8d4e8] active:bg-[#a0c4dc] text-[#0a2540] font-bold rounded-[8px] text-xs tracking-wider uppercase transition-colors border border-[#b8d4e8]"
             >
               Cancel
             </button>
           </div>
         </div>
       )}
+
+      {/* CSS Animations */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes draw {
+          from { stroke-dashoffset: 24; }
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes shake {
+          10%, 90% { transform: translate3d(-1px, 0, 0); }
+          20%, 80% { transform: translate3d(2px, 0, 0); }
+          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+          40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes shimmerSweep {
+          100% { transform: translateX(100%); }
+        }
+      `}} />
     </div>
   );
 };
+

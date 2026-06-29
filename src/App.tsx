@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Home, FileText, Settings, History, Plus } from 'lucide-react';
+import { useTranslation } from './lib/i18n';
+import mastheadLogo from './assets/rti_express_logo.png';
+import watermarkLogo from './assets/rti_express_watermark.png';
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { SignupScreen } from './screens/SignupScreen';
@@ -10,7 +13,7 @@ import { TemplatesScreen } from './screens/TemplatesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { PreviewScreen } from './screens/PreviewScreen';
-import { useAuthStore, useUIStore } from './store';
+import { useAuthStore } from './store';
 import { supabase } from './lib/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -21,44 +24,115 @@ import { ErrorBoundary } from './ErrorBoundary';
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 relative">
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md px-6 py-4 pt-safe z-10 flex justify-between items-center sticky top-0 border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NewsCraft</h1>
+    <div className="flex flex-col h-screen bg-[#EEF3F8] transition-colors duration-300 relative font-sans">
+
+      {/* ══ RTI Express background watermark ══ */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%) rotate(-30deg)',
+          zIndex: 0,
+          pointerEvents: 'none',
+          width: '100vw',
+          maxWidth: '500px',
+          opacity: 0.1,
+          mixBlendMode: 'multiply'
+        }}
+      >
+        <img
+          src={watermarkLogo}
+          alt=""
+          draggable={false}
+          style={{
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
+          }}
+        />
+      </div>
+
+
+      <header className="w-full bg-[#0D1B2A] flex flex-col pt-safe sticky top-0 z-10 shadow-sm">
+        {/* ── Top meta row: EST. 2024 | INDIA  ·  REPORTER: username ── */}
+        <div className="w-full flex items-center justify-between px-4 pt-2 pb-1">
+          <span className="text-white/55 text-[10px] uppercase tracking-wider font-semibold">EST. 2024 | INDIA</span>
+          <span className="text-white/55 text-[10px] uppercase tracking-wider font-semibold">
+            REPORTER: {(user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Journalist'}
+          </span>
+        </div>
+
+        {/* ── Logo + Title row ── */}
+        <div className="w-full flex items-center justify-between px-4 py-2">
+          <div className="flex items-center gap-3">
+            {/* Logo box */}
+            <div className="rounded-[8px] flex items-center justify-center h-[46px] overflow-hidden">
+              <img src={mastheadLogo} alt="RTI Express Logo" className="h-full w-auto object-contain" style={{ maxWidth: '90px', borderRadius: '4px' }} />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-white text-[24px] leading-none tracking-widest" style={{ fontFamily: "'Georgia', serif" }}>{t.rtiExpress}</span>
+              <span className="text-white/50 text-[11px] uppercase font-bold tracking-widest mt-0.5">24X7</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Date bar ── */}
+        <div className="w-full flex items-center justify-center px-4 py-1.5 bg-[#0D1B2A]">
+          <span className="text-white/60 text-[11px] tracking-wide font-medium">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
+        </div>
+
+        {/* ── Red ticker bar ── */}
+        <div className="w-full bg-[#CC1E1E] py-2 px-4 flex items-center gap-3">
+          <span className="bg-white text-[#CC1E1E] text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full whitespace-nowrap">
+            {t.latest}
+          </span>
+          <span className="text-white text-[12px] truncate">
+            Welcome to RTI Express · {t.tickerText}
+          </span>
+        </div>
       </header>
 
       {/* Main Content Area (Scrollable) */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-4" style={{ position: 'relative', zIndex: 3 }}>
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
       </main>
 
+
       {/* Bottom Navigation */}
-      <nav className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 fixed bottom-0 w-full pb-safe flex justify-around items-center h-[80px] z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] transition-colors duration-300">
-        <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-400'}`}>
-          <Home className={`w-6 h-6 ${isActive('/') ? 'fill-blue-100 dark:fill-blue-900/50' : ''}`} />
-          <span className="text-[10px] font-medium">Home</span>
+      <nav className="bg-[#0D1B2A] fixed bottom-0 w-full pb-safe flex justify-around items-center h-[70px] z-20">
+        <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
+          <Home className="w-6 h-6" />
+          <span className="text-[9px] font-bold uppercase tracking-wider">{t.home}</span>
         </Link>
-        <Link to="/templates" className={`flex flex-col items-center gap-1 ${isActive('/templates') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-400'}`}>
-          <FileText className={`w-6 h-6 ${isActive('/templates') ? 'fill-indigo-100 dark:fill-indigo-900/50' : ''}`} />
-          <span className="text-[10px] font-medium">Templates</span>
+        <Link to="/templates" className={`flex flex-col items-center gap-1 ${isActive('/templates') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
+          <FileText className="w-6 h-6" />
+          <span className="text-[9px] font-bold uppercase tracking-wider">{t.templates}</span>
         </Link>
         
-        {/* FAB Style Center Button */}
-        <Link to="/generate" className="relative -top-5 flex flex-col items-center justify-center w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full text-white shadow-lg shadow-blue-500/40 active:scale-95 transition-transform z-50">
-          <Plus className="w-8 h-8" />
+        {/* Center FAB */}
+        <Link to="/generate" className="relative -top-5 flex items-center justify-center w-[48px] h-[48px] bg-[#CC1E1E] rounded-full text-white shadow-[0_4px_12px_rgba(204,30,30,0.4)] active:scale-95 transition-transform z-50">
+          <Plus className="w-[22px] h-[22px]" strokeWidth={2.5} />
         </Link>
 
-        <Link to="/history" className={`flex flex-col items-center gap-1 ${isActive('/history') ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-400'}`}>
-          <History className={`w-6 h-6 ${isActive('/history') ? 'fill-orange-100 dark:fill-orange-900/50' : ''}`} />
-          <span className="text-[10px] font-medium">History</span>
+        <Link to="/history" className={`flex flex-col items-center gap-1 ${isActive('/history') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
+          <History className="w-6 h-6" />
+          <span className="text-[9px] font-bold uppercase tracking-wider">{t.history}</span>
         </Link>
-        <Link to="/settings" className={`flex flex-col items-center gap-1 ${isActive('/settings') ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-400'}`}>
-          <Settings className={`w-6 h-6 ${isActive('/settings') ? 'fill-gray-200 dark:fill-gray-700' : ''}`} />
-          <span className="text-[10px] font-medium">Settings</span>
+        <Link to="/settings" className={`flex flex-col items-center gap-1 ${isActive('/settings') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
+          <Settings className="w-6 h-6" />
+          <span className="text-[9px] font-bold uppercase tracking-wider">{t.settings}</span>
         </Link>
       </nav>
     </div>
@@ -71,15 +145,6 @@ function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
-  const theme = useUIStore((state) => state.theme);
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
 
   useEffect(() => {
     // Initialize Google Auth plugin

@@ -38,7 +38,7 @@ export type TemplateId =
   | "bharath_reporter"
   | "rti_express"
   | "national_news"
-  | "extra_news";
+  | "modern";
 
 
 export interface GenerationConfig {
@@ -46,8 +46,10 @@ export interface GenerationConfig {
   headline: string;
   language: Language;
   tone: Tone;
-  templateId: string;  // layout template (from Templates page)
-  logoId?: string;    // brand/logo identity (from logo selector)
+  templateId: string;      // brand/logo template (from logo selector)
+  logoId?: string;         // brand/logo identity (from logo selector)
+  /** Layout pattern selected on the Templates page (A–F) */
+  layoutPattern?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
   imageUrl?: string;
   imageUrls?: string[];
   publicationName: string;
@@ -55,6 +57,8 @@ export interface GenerationConfig {
   layoutColumns: number;
   fontFamily?: string;
   columnMode?: 'auto' | 'manual';
+  borderColour?: string;
+  headingBgColour?: string;
 }
 
 export interface Generation {

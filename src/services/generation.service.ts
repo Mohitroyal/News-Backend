@@ -1,4 +1,4 @@
-import api from "@/lib/axios";
+import api, { API_BASE_URL } from "@/lib/axios";
 import type { ApiResponse, PaginatedResponse, Generation, GenerationConfig } from "@/types";
 
 // ─── Logging helpers ──────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export const generationService = {
       }
     } catch (e) {}
 
-    const API_URL = "https://news-backend-sjw6.onrender.com";
+    const API_URL = API_BASE_URL;
 
     // Use fetch with an AbortController so we get a 2-minute window
     const controller = new AbortController();
