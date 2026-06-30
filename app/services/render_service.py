@@ -1240,9 +1240,22 @@ class RenderService:
                             cont.style.setProperty('max-height', exactHeight + 'px', 'important');
                         }
 
-                        const finalW = cont ? cont.offsetWidth : 1200;
-                        const finalH = cont ? cont.offsetHeight : 1600;
-                        return { width: finalW, height: finalH };
+                        // Wait for any final reflows
+                        const finalCont = document.querySelector('.newspaper-container');
+                        if (finalCont) {
+                            // As per requirements: "finalHeight = wrapper.getBoundingClientRect().height + bottomPadding"
+                            const finalRect = finalCont.getBoundingClientRect();
+                            const bottomPadding = 15; // "approximately 10-20px"
+                            const finalHeight = Math.ceil(finalRect.height + bottomPadding);
+                            
+                            // Apply the final exact calculated height to the container
+                            finalCont.style.setProperty('height', finalHeight + 'px', 'important');
+                            finalCont.style.setProperty('max-height', finalHeight + 'px', 'important');
+                            
+                            return { width: Math.ceil(finalRect.width), height: finalHeight };
+                        }
+
+                        return { width: 1200, height: document.documentElement.scrollHeight };
                     }""")
                     
                     await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 20})

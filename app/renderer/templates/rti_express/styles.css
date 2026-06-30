@@ -55,9 +55,7 @@ html[lang="ml"] .headline {
 
 .newspaper-container {
     width: 1060px;
-    /* Precise broadsheet width */
     height: auto;
-    min-height: 500px;
     background: var(--paper-color);
     border: 2px solid var(--border-color);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
