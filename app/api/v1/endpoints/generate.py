@@ -270,12 +270,15 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     print(f"[FAILED] {stage} | {type(asset_err).__name__}: {asset_err}"); sys.stdout.flush()
                     raise asset_err
 
+                import time
+                timestamp = int(time.time())
+                
                 # --- [10] Supabase Upload PNG ---
                 stage = "Supabase Upload (PNG)"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
                 try:
-                    png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}.png")
+                    png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}_{timestamp}.png")
                     if os.path.exists(temp_png):
                         os.remove(temp_png)
                         print(f"TEMP FILE DELETED: {temp_png}"); sys.stdout.flush()
@@ -291,7 +294,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
                 try:
-                    pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}.pdf")
+                    pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}_{timestamp}.pdf")
                     if os.path.exists(temp_pdf):
                         os.remove(temp_pdf)
                         print(f"TEMP FILE DELETED: {temp_pdf}"); sys.stdout.flush()
