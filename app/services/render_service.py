@@ -561,20 +561,19 @@ class RenderService:
                     let imgY = 0;
                     
                     if (isDoublePatternB) {
-                        let baseW = (W_canvas - 24) / 2;
-                        let maxH = Math.max(180, totalChars * 0.4);
-                        let h0_raw = baseW / aspect0;
-                        if (h0_raw > maxH) {
-                            w0 = maxH * aspect0;
-                            h0 = maxH;
-                        } else {
-                            w0 = baseW;
-                            h0 = h0_raw;
-                        }
+                        let a0 = aspect0 || 1.0;
+                        let a1 = aspectRatios[1] || 1.0;
+                        let sharedH = (W_canvas - 24) / (a0 + a1);
+                        w0 = sharedH * a0;
+                        h0 = sharedH;
                         imgX = 0;
                         imgY = 0; // Both images at the top
                         imgVisW = w0;
                         isPatternB_centered = false;
+                        
+                        // Save sharedH for the second image
+                        window.__db_sharedH = sharedH;
+                        window.__db_a1 = a1;
                     } else if (isPatternB) {
                         w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
                         imgX = 0;
@@ -599,18 +598,8 @@ class RenderService:
                     
                     if (urls.length > 1) {
                         if (isDoublePatternB) {
-                            let baseW = (W_canvas - 24) / 2;
-                            let maxH = Math.max(180, totalChars * 0.4);
-                            let aspect1 = aspectRatios[1] || 1.0;
-                            let h1_raw = baseW / aspect1;
-                            let w1, h1;
-                            if (h1_raw > maxH) {
-                                w1 = maxH * aspect1;
-                                h1 = maxH;
-                            } else {
-                                w1 = baseW;
-                                h1 = h1_raw;
-                            }
+                            let h1 = window.__db_sharedH;
+                            let w1 = h1 * window.__db_a1;
                             let x1 = W_canvas - w1; // Right aligned
                             let y1 = 0; // Top aligned
                             obstacles.push({
