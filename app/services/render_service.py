@@ -1130,6 +1130,7 @@ class RenderService:
                     canvas.style.height = actualContentHeight + 'px';
                     canvas.style.minHeight = actualContentHeight + 'px';
                     canvas.style.maxHeight = actualContentHeight + 'px';
+                    canvas.setAttribute('data-computed-height', actualContentHeight);
                 }
                 
                 window.__LAYOUT_DONE__ = true;
@@ -1205,15 +1206,19 @@ class RenderService:
                         if (canvas && cont) {
                             // Find the absolute lowest point of any content in the canvas
                             let realMaxY = 0;
-                            canvas.querySelectorAll('img, p, .image-caption, .nc-image-caption').forEach(el => {
-                                const rect = el.getBoundingClientRect();
-                                const canvasRect = canvas.getBoundingClientRect();
-                                const bottom = rect.bottom - canvasRect.top;
-                                if (bottom > realMaxY) {
-                                    realMaxY = bottom;
-                                    console.log('[DEBUG_CLIP] New realMaxY:', realMaxY, 'from element:', el.tagName, el.className, el.innerText?.substring(0,20));
-                                }
-                            });
+                            const computedAttr = canvas.getAttribute('data-computed-height');
+                            if (computedAttr) {
+                                realMaxY = parseFloat(computedAttr);
+                            } else {
+                                canvas.querySelectorAll('img, p, .image-caption, .nc-image-caption').forEach(el => {
+                                    const rect = el.getBoundingClientRect();
+                                    const canvasRect = canvas.getBoundingClientRect();
+                                    const bottom = rect.bottom - canvasRect.top;
+                                    if (bottom > realMaxY) {
+                                        realMaxY = bottom;
+                                    }
+                                });
+                            }
                             
                             if (realMaxY > 0) {
                                 canvas.style.setProperty('flex', 'none', 'important');
@@ -1225,8 +1230,14 @@ class RenderService:
                             // Eliminate all whitespace at the bottom
                             cont.style.setProperty('padding-bottom', '0px', 'important');
                             cont.style.setProperty('min-height', '0px', 'important');
-                            cont.style.setProperty('height', 'auto', 'important');
                             cont.style.setProperty('margin-bottom', '0px', 'important');
+                            
+                            // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom
+                            const canvasBottom = canvas.getBoundingClientRect().bottom;
+                            const contTop = cont.getBoundingClientRect().top;
+                            const exactHeight = Math.ceil(canvasBottom - contTop);
+                            cont.style.setProperty('height', exactHeight + 'px', 'important');
+                            cont.style.setProperty('max-height', exactHeight + 'px', 'important');
                         }
 
                         const finalW = cont ? cont.offsetWidth : 1200;
