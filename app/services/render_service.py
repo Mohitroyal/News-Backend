@@ -1000,6 +1000,18 @@ class RenderService:
                     
                     canvas.style.height = `${Math.max(maxY, 150)}px`;
                     
+                    // Force zero whitespace below the canvas
+                    const innerBorder = document.querySelector('.inner-border');
+                    if (innerBorder) {
+                        innerBorder.style.flex = 'none';
+                        innerBorder.style.height = 'auto';
+                    }
+                    const container = document.querySelector('.newspaper-container');
+                    if (container) {
+                        container.style.height = 'auto';
+                        container.style.minHeight = '0px';
+                    }
+                    
                     window.__IMAGE_LAYOUT_LOGS__ = {
                         image_count: imgCount,
                         image_orientations: orientations.join(', '),
