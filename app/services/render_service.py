@@ -565,10 +565,8 @@ class RenderService:
                         imgX = 0;
                         imgY = 0; // Both images at the top
                         imgVisW = w0;
-                        // Use the first image's aspect ratio, but cap it so they are never taller than a perfect square (1:1)
-                        // This ensures they always look like the nice rectangles in the sketch!
-                        const constrainedAspect = Math.max(aspect0, 1.0); 
-                        h0 = w0 / constrainedAspect;
+                        // Use the first image's natural aspect ratio so it doesn't get cropped
+                        h0 = w0 / aspect0;
                         isPatternB_centered = false;
                     } else if (isPatternB) {
                         w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
@@ -595,7 +593,8 @@ class RenderService:
                     if (urls.length > 1) {
                         if (isDoublePatternB) {
                             let w1 = w0; // Match width of first image
-                            let h1 = h0; // Match height to keep them aligned as boxes
+                            // Use natural aspect ratio to prevent cropping
+                            let h1 = w1 / (aspectRatios[1] || 1.0); 
                             let x1 = W_canvas - w1; // Right aligned
                             let y1 = 0; // Top aligned
                             obstacles.push({
