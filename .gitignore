@@ -17,3 +17,4 @@ temp_*.pdf
 venv/
 env/
 alembic/versions/__pycache__/
+node_modules
