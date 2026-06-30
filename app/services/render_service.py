@@ -765,13 +765,13 @@ class RenderService:
 
                             imgEl.innerHTML = `
                                 <div style="${innerStyle}">
-                                    <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                                    <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: cover; display: block;" />
                                     ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${obs.caption}</div>` : ''}
                                 </div>
                             `;
                         } else {
                             imgEl.innerHTML = `
-                                <img src="${obs.url}" style="width: 100%; height: ${imgH}px; object-fit: cover; display: block;" />
+                                <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: cover; display: block;" />
                                 ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
                             `;
                         }
@@ -916,12 +916,24 @@ class RenderService:
                     });
                 }
                 
-                let rawSections = [];
+                let paragraphs = [];
                 for (const sec of data.sections) {
                     const cleanSec = sec.replace(/\n+/g, ' ').trim();
-                    if (cleanSec) rawSections.push(cleanSec);
+                    if (cleanSec) {
+                        // Split long paragraphs into smaller pieces to allow the greedy packer to balance columns evenly
+                        const sentences = cleanSec.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanSec];
+                        let currentPiece = "";
+                        sentences.forEach(s => {
+                            if (currentPiece.length + s.length > 250) {
+                                if (currentPiece) paragraphs.push(currentPiece.trim());
+                                currentPiece = s;
+                            } else {
+                                currentPiece += (currentPiece ? " " : "") + s;
+                            }
+                        });
+                        if (currentPiece) paragraphs.push(currentPiece.trim());
+                    }
                 }
-                const paragraphs = [...rawSections];
                 if (paragraphs.length > 0 && data.dateline) {
                     paragraphs[0] = ((data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `) + paragraphs[0];
                 }
@@ -1189,7 +1201,7 @@ class RenderService:
                         const contW = cont ? cont.offsetWidth : 1200;
                         // Shrink container exactly to content to eliminate blank space
                         if (cont && canvasH > 0) {
-                            const totalH = Math.round(canvasTop + canvasH + 24);
+                            const totalH = Math.round(canvasTop + canvasH + 6); // Extremely tight crop (was 24)
                             cont.style.height = totalH + 'px';
                             cont.style.minHeight = 'unset';
                             cont.style.overflow = 'hidden';
