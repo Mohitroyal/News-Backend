@@ -94,15 +94,16 @@ class RenderService:
             data["headline"] = "NEWSFLASH: Special Report"
 
         # 2. Article safety fallback (check sections, article_content, content)
-        if not data.get("sections"):
+        if isinstance(data.get("sections"), str):
+            data["sections"] = [data["sections"]]
+
+        if not data.get("sections") or len(data.get("sections", [])) == 0:
             if data.get("article_content"):
-                data["sections"] = [data["article_content"]]
+                data["sections"] = [data["article_content"]] if isinstance(data.get("article_content"), str) else data.get("article_content")
             elif data.get("content"):
-                data["sections"] = [data["content"]]
+                data["sections"] = [data["content"]] if isinstance(data.get("content"), str) else data.get("content")
             else:
                 data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
-        elif len(data.get("sections", [])) == 0:
-            data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
         # 2b. Merge short sections to ensure tight newspaper density (no 1-line paragraphs)
         if isinstance(data.get("sections"), list) and len(data["sections"]) > 1:
@@ -518,8 +519,9 @@ class RenderService:
                 if (urls.length > 0) {
                     let S_scale = S_img;
                     let gap = 60;
-                    if (urls.length > 2 && totalChars < 2500) {
-                        const scaleFactor = Math.max(0.65, 1.0 - (2500 - totalChars) / 3000);
+                    // Dynamically rescale images based on text content size to prevent overflowing short articles
+                    if (totalChars > 0 && totalChars < 3000) {
+                        const scaleFactor = Math.max(0.5, 1.0 - (3000 - totalChars) / 3500);
                         S_scale = S_img * scaleFactor;
                         gap = 30;
                     }
