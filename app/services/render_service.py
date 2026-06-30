@@ -1123,7 +1123,7 @@ class RenderService:
                 st.innerHTML = `
                     * { -webkit-font-smoothing: antialiased !important; }
                     body { margin: 0 !important; padding: 0 !important; }
-                    .newspaper-container { height: auto !important; min-height: unset !important; }
+                    .newspaper-container { height: auto !important; min-height: unset !important; padding-bottom: 0px !important; margin-bottom: 0px !important; }
                 `;
                 window.__LAYOUT_DONE__ = true;
             }
@@ -1192,22 +1192,35 @@ class RenderService:
                     await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
 
                     layout_info = await page.evaluate("""() => {
-                        // Use the compositor-canvas height — set precisely by the JS layout engine
-                        // Fallback to newspaper-container if canvas not found
                         const canvas = document.getElementById('compositor-canvas');
                         const cont = document.querySelector('.newspaper-container');
-                        const canvasTop = canvas ? canvas.offsetTop : 0;
-                        const canvasH = canvas ? canvas.offsetHeight : 0;
-                        const contW = cont ? cont.offsetWidth : 1200;
-                        // Shrink container exactly to content to eliminate blank space
-                        if (cont && canvasH > 0) {
-                            const totalH = Math.round(canvasTop + canvasH + 6); // Extremely tight crop (was 24)
-                            cont.style.height = totalH + 'px';
-                            cont.style.minHeight = 'unset';
-                            cont.style.overflow = 'hidden';
+                        
+                        if (canvas && cont) {
+                            // Find the absolute lowest point of any content in the canvas
+                            let realMaxY = 0;
+                            canvas.querySelectorAll('img, p, .image-caption, .nc-image-caption').forEach(el => {
+                                const rect = el.getBoundingClientRect();
+                                const canvasRect = canvas.getBoundingClientRect();
+                                const bottom = rect.bottom - canvasRect.top;
+                                if (bottom > realMaxY) {
+                                    realMaxY = bottom;
+                                }
+                            });
+                            
+                            if (realMaxY > 0) {
+                                canvas.style.setProperty('height', (realMaxY + 4) + 'px', 'important');
+                            }
+                            
+                            // Eliminate all whitespace at the bottom
+                            cont.style.setProperty('padding-bottom', '0px', 'important');
+                            cont.style.setProperty('min-height', '0px', 'important');
+                            cont.style.setProperty('height', 'auto', 'important');
+                            cont.style.setProperty('margin-bottom', '0px', 'important');
                         }
-                        const finalH = canvasH > 0 ? Math.round(canvasTop + canvasH + 24) : (cont ? cont.scrollHeight : 1600);
-                        return { width: contW, height: finalH };
+
+                        const finalW = cont ? cont.offsetWidth : 1200;
+                        const finalH = cont ? cont.offsetHeight : 1600;
+                        return { width: finalW, height: finalH };
                     }""")
                     
                     await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 20})
