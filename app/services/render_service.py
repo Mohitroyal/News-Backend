@@ -1211,10 +1211,12 @@ class RenderService:
                                 const bottom = rect.bottom - canvasRect.top;
                                 if (bottom > realMaxY) {
                                     realMaxY = bottom;
+                                    console.log('[DEBUG_CLIP] New realMaxY:', realMaxY, 'from element:', el.tagName, el.className, el.innerText?.substring(0,20));
                                 }
                             });
                             
                             if (realMaxY > 0) {
+                                canvas.style.setProperty('flex', 'none', 'important');
                                 canvas.style.setProperty('height', (realMaxY + 4) + 'px', 'important');
                                 canvas.style.setProperty('min-height', '0px', 'important');
                                 canvas.style.setProperty('max-height', (realMaxY + 4) + 'px', 'important');
