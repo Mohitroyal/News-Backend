@@ -1161,6 +1161,42 @@ class RenderService:
 
         return html
 
+    def _auto_crop_png(self, image_path: str) -> int:
+        try:
+            from PIL import Image
+            with Image.open(image_path) as img:
+                img_rgb = img.convert("RGB")
+                width, height = img_rgb.size
+                pixels = img_rgb.load()
+                
+                # Background tolerance (accounts for #FFFFFF down to #F5F1E8)
+                def is_bg(r, g, b):
+                    return r >= 235 and g >= 235 and b >= 220
+                
+                last_content_row = 0
+                for y in range(height - 1, -1, -1):
+                    has_content = False
+                    # Sample pixels across the row. Step by 2 or 3 for speed if needed, but scanning every pixel ensures we miss nothing.
+                    for x in range(0, width, 2): 
+                        r, g, b = pixels[x, y]
+                        if not is_bg(r, g, b):
+                            has_content = True
+                            break
+                    if has_content:
+                        last_content_row = y
+                        break
+                
+                final_height = min(height, last_content_row + 15)
+                if final_height < height:
+                    # Crop original image, not the converted RGB one, to preserve original format/colors
+                    cropped = img.crop((0, 0, width, final_height))
+                    cropped.save(image_path, "PNG")
+                
+                return final_height
+        except Exception as e:
+            print(f"[CROP ERROR] {e}")
+            return 0
+
     async def generate_clipping_assets(self, html_content: str, png_path: str | None = None, pdf_path: str | None = None):
         """Uses Playwright to render HTML and take both a PNG screenshot and/or a PDF print."""
         async with self.semaphore:
@@ -1260,10 +1296,15 @@ class RenderService:
                     
                     await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 20})
 
+                    final_h_px = None
                     if png_path:
                         await page.locator('.newspaper-container').first.screenshot(path=png_path, type="png")
+                        # Run the PIL image auto-crop
+                        final_h_px = self._auto_crop_png(png_path)
+                        
                     if pdf_path:
-                        await page.pdf(path=pdf_path, width=f"{layout_info.get('width', 1060)/96.0}in", height=f"{(layout_info.get('height', 1600)+15)/96.0}in", print_background=True, margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"})
+                        pdf_h = (final_h_px / 2.0) if final_h_px else layout_info.get('height', 1600)
+                        await page.pdf(path=pdf_path, width=f"{layout_info.get('width', 1060)/96.0}in", height=f"{(pdf_h+15)/96.0}in", print_background=True, margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"})
 
                     await browser.close()
                     return
