@@ -920,18 +920,7 @@ class RenderService:
                 for (const sec of data.sections) {
                     const cleanSec = sec.replace(/\n+/g, ' ').trim();
                     if (cleanSec) {
-                        // Split long paragraphs into smaller pieces to allow the greedy packer to balance columns evenly
-                        const sentences = cleanSec.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanSec];
-                        let currentPiece = "";
-                        sentences.forEach(s => {
-                            if (currentPiece.length + s.length > 250) {
-                                if (currentPiece) paragraphs.push(currentPiece.trim());
-                                currentPiece = s;
-                            } else {
-                                currentPiece += (currentPiece ? " " : "") + s;
-                            }
-                        });
-                        if (currentPiece) paragraphs.push(currentPiece.trim());
+                        paragraphs.push(cleanSec);
                     }
                 }
                 if (paragraphs.length > 0 && data.dateline) {
@@ -1125,6 +1114,24 @@ class RenderService:
                     body { margin: 0 !important; padding: 0 !important; }
                     .newspaper-container { height: auto !important; min-height: unset !important; padding-bottom: 0px !important; margin-bottom: 0px !important; }
                 `;
+                
+                // Precision shrink-wrap canvas exactly to the lowest content pixel
+                let rBoxBottoms = [];
+                document.querySelectorAll('.nc-text-region-box, .nc-absolute-image').forEach(el => {
+                    rBoxBottoms.push(el.getBoundingClientRect().bottom);
+                });
+                
+                let contentMaxY = rBoxBottoms.length > 0 ? Math.max(...rBoxBottoms) : 0;
+                if (contentMaxY > 0) {
+                    let canvasRect = canvas.getBoundingClientRect();
+                    let actualContentHeight = contentMaxY - canvasRect.top;
+                    // Add a tiny buffer to avoid cutting off descenders
+                    actualContentHeight += 2;
+                    canvas.style.height = actualContentHeight + 'px';
+                    canvas.style.minHeight = actualContentHeight + 'px';
+                    canvas.style.maxHeight = actualContentHeight + 'px';
+                }
+                
                 window.__LAYOUT_DONE__ = true;
             }
 
