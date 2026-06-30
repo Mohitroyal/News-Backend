@@ -1216,6 +1216,8 @@ class RenderService:
                             
                             if (realMaxY > 0) {
                                 canvas.style.setProperty('height', (realMaxY + 4) + 'px', 'important');
+                                canvas.style.setProperty('min-height', '0px', 'important');
+                                canvas.style.setProperty('max-height', (realMaxY + 4) + 'px', 'important');
                             }
                             
                             // Eliminate all whitespace at the bottom
