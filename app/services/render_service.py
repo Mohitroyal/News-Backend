@@ -534,7 +534,7 @@ class RenderService:
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                     const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
-                    let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || isArticleStyle;
+                    let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || isArticleStyle;
                     if (rawLayout === "default" || rawLayout === "") {
                         isPatternB = true;
                     }
@@ -544,16 +544,23 @@ class RenderService:
                     const aspect0 = aspectRatios[0] || 1.2;
                     
                     if (isTriplePatternB) {
-                        // Pattern B with 3 images: Large hero on left, two smaller stacked on right
-                        let w0 = W_canvas * 0.66; // 2/3 width
-                        let h0 = Math.min(w0 / aspect0, W_canvas * 0.55); // Height bounded
+                        // Pattern E style with 3 images: Large hero on top, two smaller side-by-side below
+                        let w0 = W_canvas;
+                        let h0 = Math.min(w0 / aspect0, W_canvas * 0.6);
                         
-                        let w1 = W_canvas - w0 - 24; // Remaining 1/3 width, minus gap
-                        let h1 = (h0 - 24) / 2; // Split height evenly, minus gap
+                        let gap = 24;
+                        let w1 = (W_canvas - gap) / 2;
+                        
+                        let a1 = aspectRatios[1] || 1.5;
+                        let a2 = aspectRatios[2] || 1.5;
+                        let h1 = w1 / a1;
+                        let h2 = w1 / a2;
+                        // Balance their heights so they look perfectly aligned
+                        let sharedH = Math.max(h1, h2);
                         
                         obstacles.push({ url: urls[0], caption: captions[0] || '', x: 0, y: 0, w: Math.round(w0), h: Math.round(h0) });
-                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: Math.round(W_canvas - w1), y: 0, w: Math.round(w1), h: Math.round(h1) });
-                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(W_canvas - w1), y: Math.round(h1 + 24), w: Math.round(w1), h: Math.round(h1) });
+                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
+                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
                         
                         return obstacles;
                     }
