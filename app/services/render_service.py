@@ -566,10 +566,16 @@ class RenderService:
                             }
                             
                             let sumChars = (data.summary || "").length;
-                            let bulChars = (data.bullet_points || []).join(" ").length;
-                            let sumLines = sumChars / ( (W_canvas / 2) / 8 );
-                            let bulLines = bulChars / ( (W_canvas / 2) / 8 ) + (data.bullet_points || []).length * 2.5;
-                            let summaryH = Math.max(120, Math.ceil(Math.max(sumLines, bulLines)) * 22 + 80);
+                            let bulletArr = data.bullet_points || [];
+                            let charsPerLine = Math.floor((W_canvas / 2 - 48) / 8);
+                            let sumLines = Math.ceil(sumChars / charsPerLine) || 1;
+                            let bulLines = bulletArr.length > 0 ? 0 : 1;
+                            for (let i = 0; i < bulletArr.length; i++) {
+                                bulLines += Math.ceil(bulletArr[i].length / charsPerLine) || 1;
+                            }
+                            let sumH = sumLines * 24 + 84;
+                            let bulH = bulLines * 24 + 84;
+                            let summaryH = Math.max(120, sumH, bulH);
                             
                             obstacles.push({
                                 type: 'summary_bullets',
@@ -712,10 +718,16 @@ class RenderService:
                         });
                         
                         let sumChars = (data.summary || "").length;
-                        let bulChars = (data.bullet_points || []).join(" ").length;
-                        let sumLines = sumChars / ( (W_canvas / 2) / 8 );
-                        let bulLines = bulChars / ( (W_canvas / 2) / 8 ) + (data.bullet_points || []).length * 2.5;
-                        let summaryH = Math.max(120, Math.ceil(Math.max(sumLines, bulLines)) * 22 + 80);
+                        let bulletArr = data.bullet_points || [];
+                        let charsPerLine = Math.floor((W_canvas / 2 - 48) / 8);
+                        let sumLines = Math.ceil(sumChars / charsPerLine) || 1;
+                        let bulLines = bulletArr.length > 0 ? 0 : 1;
+                        for (let i = 0; i < bulletArr.length; i++) {
+                            bulLines += Math.ceil(bulletArr[i].length / charsPerLine) || 1;
+                        }
+                        let sumH = sumLines * 24 + 84;
+                        let bulH = bulLines * 24 + 84;
+                        let summaryH = Math.max(120, sumH, bulH);
                         
                         obstacles.push({
                             type: 'summary_bullets',
