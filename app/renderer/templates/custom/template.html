@@ -19,11 +19,15 @@
         
         <div class="footer">
             <div class="footer-logo">
-                మనం
+                {% if logo_url %}
+                    <img src="{{ logo_url }}" style="max-height: 65px; object-fit: contain;">
+                {% else %}
+                    {{ publication_name }}
+                {% endif %}
             </div>
             <div class="footer-meta">
-                https://www.manamepaper.com/clip/242765<br>
-                Ananthapuram (2-5-2026)
+                {{ publication_name }}<br>
+                {{ publication_date }}
             </div>
         </div>
     </div>
