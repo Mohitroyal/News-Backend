@@ -1128,7 +1128,11 @@ class RenderService:
                         if (el.clientHeight === 0) return;
                         if (el.innerText.trim() === '') return;
                     }
-                    rBoxBottoms.push(el.getBoundingClientRect().bottom);
+                    let bottom = el.getBoundingClientRect().bottom;
+                    if (bottom > 500) {
+                        console.log("[LAYOUT DEBUG] Large element found: classes=" + el.className + ", clientHeight=" + el.clientHeight + ", innerText length=" + (el.innerText ? el.innerText.trim().length : 0) + ", bottom=" + bottom);
+                    }
+                    rBoxBottoms.push(bottom);
                 });
                 
                 let contentMaxY = rBoxBottoms.length > 0 ? Math.max(...rBoxBottoms) : 0;
