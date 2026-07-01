@@ -995,7 +995,7 @@ class RenderService:
                 if (isFinal) {
                     let maxY = 0;
                     regions.forEach(r => {
-                        if (r.rBox.lastElementChild) {
+                        if (r.rBox.lastElementChild && r.rBox.innerText.trim() !== '') {
                             const contentHeight = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight + 4;
                             r.rBox.style.height = `${contentHeight}px`;
                             maxY = Math.max(maxY, r.y + contentHeight);
@@ -1124,14 +1124,19 @@ class RenderService:
                 // Precision shrink-wrap canvas exactly to the lowest content pixel
                 let rBoxBottoms = [];
                 document.querySelectorAll('.nc-text-region-box, .nc-absolute-image').forEach(el => {
-                    if (el.classList.contains('nc-text-region-box') && el.clientHeight === 0) return;
+                    if (el.classList.contains('nc-text-region-box')) {
+                        if (el.clientHeight === 0) return;
+                        if (el.innerText.trim() === '') return;
+                    }
                     rBoxBottoms.push(el.getBoundingClientRect().bottom);
                 });
                 
                 let contentMaxY = rBoxBottoms.length > 0 ? Math.max(...rBoxBottoms) : 0;
+                console.log("[LAYOUT DEBUG] contentMaxY: " + contentMaxY);
                 if (contentMaxY > 0) {
                     let canvasRect = canvas.getBoundingClientRect();
                     let actualContentHeight = contentMaxY - canvasRect.top;
+                    console.log("[LAYOUT DEBUG] canvasRect.top: " + canvasRect.top + ", actualContentHeight: " + actualContentHeight);
                     // Add a tiny buffer to avoid cutting off descenders
                     actualContentHeight += 2;
                     canvas.style.height = actualContentHeight + 'px';
