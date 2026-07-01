@@ -1189,11 +1189,26 @@ class RenderService:
                 def is_bg(r, g, b):
                     return r >= 235 and g >= 235 and b >= 220
                 
+                # 1. Detect bottom border thickness by checking the middle of the bottom edge
+                border_height = 0
+                mid_x = width // 2
+                for y in range(height - 1, height - 20, -1):
+                    r, g, b = pixels[mid_x, y]
+                    if not is_bg(r, g, b):
+                        border_height += 1
+                    else:
+                        break
+                
+                # If no clear bottom border found, fallback to 4px
+                if border_height == 0: border_height = 4
+                
+                # 2. Find the actual content, ignoring the bottom border region and side borders
                 last_content_row = 0
-                for y in range(height - 1, -1, -1):
+                # Scan avoiding the left and right 20 pixels to bypass side borders!
+                for y in range(height - border_height - 1, -1, -1):
                     has_content = False
-                    # Sample pixels across the row. Step by 2 or 3 for speed if needed, but scanning every pixel ensures we miss nothing.
-                    for x in range(0, width, 2): 
+                    # Step by 2 for speed, starting past the left border and ending before the right border
+                    for x in range(20, width - 20, 2): 
                         r, g, b = pixels[x, y]
                         if not is_bg(r, g, b):
                             has_content = True
@@ -1202,13 +1217,24 @@ class RenderService:
                         last_content_row = y
                         break
                 
-                final_height = min(height, last_content_row + 15)
-                if final_height < height:
-                    # Crop original image, not the converted RGB one, to preserve original format/colors
-                    cropped = img.crop((0, 0, width, final_height))
-                    cropped.save(image_path, "PNG")
+                # Calculate how much whitespace we can remove
+                whitespace_start = last_content_row + 15
+                whitespace_end = height - border_height
                 
-                return final_height
+                # Only squash if there is a significant amount of whitespace (e.g. > 10px)
+                if whitespace_end > whitespace_start + 10:
+                    new_height = whitespace_start + border_height
+                    # Crop original image, not the converted RGB one, to preserve original format/colors
+                    top_part = img.crop((0, 0, width, whitespace_start))
+                    bottom_part = img.crop((0, height - border_height, width, height))
+                    
+                    new_img = Image.new(img.mode, (width, new_height))
+                    new_img.paste(top_part, (0, 0))
+                    new_img.paste(bottom_part, (0, whitespace_start))
+                    new_img.save(image_path, "PNG")
+                    return new_height
+                
+                return height
         except Exception as e:
             print(f"[CROP ERROR] {e}")
             return 0
