@@ -177,7 +177,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 normalized_id = original_template_id.lower().replace(" ", "").replace("_", "").replace("-", "")
 
                 # Map missing frontend templates or layout-name mixups back to the correct template
-                valid_templates = ["classic", "rti_express", "bharath_reporter", "national_news", "hero-image", "hero_image", "modern"]
+                valid_templates = ["classic", "rti_express", "bharath_reporter", "national_news", "hero-image", "hero_image", "modern", "custom"]
                 
                 # If it's NOT a valid template folder, the frontend definitely sent a layout name or ID by mistake
                 if original_template_id not in valid_templates and normalized_id not in valid_templates:
@@ -195,6 +195,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                             clipping.custom_layout["image_layout"] = "pattern_a"
                         elif "patternb" in normalized_id or normalized_id.endswith("b"):
                             clipping.custom_layout["image_layout"] = "pattern_b"
+                        elif "patterng" in normalized_id or normalized_id.endswith("g"):
+                            clipping.custom_layout["image_layout"] = "pattern_g"
                         elif "single" in normalized_id or "hero" in normalized_id:
                             clipping.custom_layout["image_layout"] = "single_image"
                         else:
