@@ -1096,8 +1096,8 @@ class RenderService:
 
                 // Let's run a binary search to find the minimum height where the text fits.
                 let low = Math.max(300, Math.round(maxObstacleY + 30));
-                let high = H_avail;
-                let H_best = H_avail;
+                let high = Math.max(H_avail, low + 3000);
+                let H_best = high;
                 
                 for (let step = 0; step < 8; step++) {
                     const mid = Math.round((low + high) / 2);
@@ -1111,7 +1111,7 @@ class RenderService:
                 }
                 
                 // Final render pass with H_best (plus 4px margin for safe line wrapping rounding variations)
-                runLayoutPass(conf, S, Math.min(H_avail, H_best + 4), true);
+                runLayoutPass(conf, S, H_best + 4, true);
                 
                 let st = document.getElementById('nc-layout-style');
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
