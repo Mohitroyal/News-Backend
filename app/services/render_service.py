@@ -724,15 +724,33 @@ class RenderService:
                             
                             let sumBg = data.summary_bg || '#FFF4CC';
                             let bulBg = data.bullet_bg || '#00A79D';
+                            let sumHeadingColor = '#B28600';
+                            let sumTextColor = '#333333';
+                            let bulHeadingColor = '#CCF2F0';
+                            let bulTextColor = '#FFFFFF';
+                            let listStyle = 'disc';
+                            let sumBorder = '#FFE066';
+                            let bulBorder = '#008C83';
+                            
+                            if (data.template_id === 'custom') {
+                                sumBg = '#F8E71C'; // Bright yellow
+                                bulBg = '#00B7C6'; // Bright cyan
+                                sumHeadingColor = '#000000';
+                                sumTextColor = '#000000';
+                                bulHeadingColor = '#FFFFFF';
+                                listStyle = '"✦  "';
+                                sumBorder = 'transparent';
+                                bulBorder = 'transparent';
+                            }
                             
                             containerEl.innerHTML = `
-                                <div style="flex: 1; background-color: ${sumBg}; padding: 24px; border-radius: 12px; border: 1px solid #FFE066; display: flex; flex-direction: column; justify-content: center;">
-                                    <h4 style="margin: 0 0 12px 0; color: #B28600; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Summary</h4>
-                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #333333;">${data.summary || ''}</p>
+                                <div style="flex: 1; background-color: ${sumBg}; padding: 24px; border-radius: 12px; border: 1px solid ${sumBorder}; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: ${sumHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Summary</h4>
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${sumTextColor};">${data.summary || ''}</p>
                                 </div>
-                                <div style="flex: 1; background-color: ${bulBg}; padding: 24px; border-radius: 12px; border: 1px solid #008C83; display: flex; flex-direction: column; justify-content: center;">
-                                    <h4 style="margin: 0 0 12px 0; color: #CCF2F0; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Key Takeaways</h4>
-                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #FFFFFF;">
+                                <div style="flex: 1; background-color: ${bulBg}; padding: 24px; border-radius: 12px; border: 1px solid ${bulBorder}; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: ${bulHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Key Takeaways</h4>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: ${bulTextColor}; list-style-type: ${listStyle};">
                                         ${bpHtml}
                                     </ul>
                                 </div>

@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Telugu:wght@400;700;900&display=swap');
+
+:root {
+    --bg-color: #FAED26;
+    --text-color: #000000;
+}
+
+body {
+    background-color: #ffffff;
+    margin: 0;
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.newspaper-container {
+    width: 1060px;
+    height: auto;
+    background-color: var(--bg-color);
+    padding: 15px;
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.inner-content {
+    background-color: #FFFFFF;
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    padding-top: 15px;
+}
+
+.headline-zone {
+    width: 100%;
+    text-align: center;
+    padding: 10px 20px 25px 20px;
+    box-sizing: border-box;
+}
+
+.headline {
+    font-family: 'Noto Serif Telugu', sans-serif;
+    font-size: 95px;
+    font-weight: 900;
+    color: #DD1111;
+    margin: 0;
+    line-height: 1.1;
+    text-align: center;
+    letter-spacing: -1px;
+}
+
+#compositor-canvas {
+    width: 100%;
+    position: relative;
+    background: #FFFFFF;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding: 0 10px;
+    color: #111111;
+}
+
+.footer-logo {
+    font-family: 'Noto Serif Telugu', sans-serif;
+    font-size: 65px;
+    font-weight: 900;
+    color: #1565C0;
+    line-height: 1;
+}
+
+.footer-meta {
+    text-align: right;
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    color: #111111;
+    line-height: 1.4;
+}
+
+.article-content {
+    columns: {{ layout_columns | default(2) }};
+    column-gap: 24px;
+    text-align: justify;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #111111;
+    font-family: 'Noto Serif Telugu', serif;
+}
+
+.paragraph {
+    margin-top: 0;
+    margin-bottom: 12px;
+}

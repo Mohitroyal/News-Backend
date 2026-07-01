@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <title>Custom Template</title>
+    <style>
+        {% include 'custom/styles.css' %}
+    </style>
+</head>
+<body>
+    <div class="newspaper-container">
+        <div class="inner-content">
+            <div class="headline-zone">
+                <h1 class="headline">{{ headline }}</h1>
+            </div>
+            
+            <div id="compositor-canvas"></div>
+        </div>
+        
+        <div class="footer">
+            <div class="footer-logo">
+                మనం
+            </div>
+            <div class="footer-meta">
+                https://www.manamepaper.com/clip/242765<br>
+                Ananthapuram (2-5-2026)
+            </div>
+        </div>
+    </div>
+</body>
+</html>
