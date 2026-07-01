@@ -338,7 +338,13 @@ class RenderService:
             }}
             """
 
-        heading_bg_css = f"background-color: {heading_bg} !important;" if heading_bg else ""
+        heading_bg_css = f"""
+            background-color: {heading_bg} !important;
+            margin-left: -20px !important;
+            margin-right: -20px !important;
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+        """ if heading_bg else ""
 
         dynamic_css = f"""
         <style id="dynamic-theme-override">
@@ -1118,6 +1124,7 @@ class RenderService:
                 // Precision shrink-wrap canvas exactly to the lowest content pixel
                 let rBoxBottoms = [];
                 document.querySelectorAll('.nc-text-region-box, .nc-absolute-image').forEach(el => {
+                    if (el.classList.contains('nc-text-region-box') && el.clientHeight === 0) return;
                     rBoxBottoms.push(el.getBoundingClientRect().bottom);
                 });
                 
