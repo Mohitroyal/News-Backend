@@ -543,8 +543,8 @@ class RenderService:
 
                     const aspect0 = aspectRatios[0] || 1.2;
                     
-                    if (data.template_id === 'custom') {
-                        // Custom template ALWAYS forces a horizontal gallery of ALL images at the top!
+                    if (rawLayout.includes('patterng')) {
+                        // Pattern G ALWAYS forces a horizontal gallery of ALL images at the top!
                         let count = urls.length;
                         if (count > 0) {
                             let gap = 16;
