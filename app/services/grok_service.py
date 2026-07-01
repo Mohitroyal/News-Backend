@@ -49,6 +49,10 @@ class GrokService:
         
         CRITICAL REQUIREMENT 5: Provide image captions based on the context in an "image_captions" array. Do not output "Uploaded image" or "Photo shown". Ensure there are up to 8 professional captions provided.
         
+        CRITICAL REQUIREMENT 6: Generate a concise, engaging summary paragraph based on the content.
+        
+        CRITICAL REQUIREMENT 7: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article.
+        
         The response MUST be a JSON object with the following keys:
         - headline: A catchy, professional newspaper headline strictly in {full_lang}.
         - subheadline: A brief summary line strictly in {full_lang}.
@@ -56,6 +60,8 @@ class GrokService:
         - dateline: A standard newspaper dateline (e.g., location and date) strictly in {full_lang}.
         - byline: The extracted author name strictly in {full_lang}, or "" if none.
         - image_captions: An array of strings containing professional captions.
+        - summary: A concise summary paragraph strictly in {full_lang}.
+        - bullet_points: An array of strings containing 3-5 key takeaways strictly in {full_lang}.
         
         Original Content:
         {content}
@@ -64,7 +70,7 @@ class GrokService:
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": f"You are a professional newspaper layout editor writing strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions."},
+                {"role": "system", "content": f"You are a professional newspaper layout editor writing strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"}
