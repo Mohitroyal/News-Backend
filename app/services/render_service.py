@@ -565,16 +565,27 @@ class RenderService:
                                 obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH) });
                             }
                             
-                            let sumChars = (data.summary || "").length;
-                            let bulletArr = data.bullet_points || [];
-                            let charsPerLine = Math.floor((W_canvas / 2 - 48) / 8);
-                            let sumLines = Math.ceil(sumChars / charsPerLine) || 1;
-                            let bulLines = bulletArr.length > 0 ? 0 : 1;
-                            for (let i = 0; i < bulletArr.length; i++) {
-                                bulLines += Math.ceil(bulletArr[i].length / charsPerLine) || 1;
-                            }
-                            let sumH = sumLines * 24 + 84;
-                            let bulH = bulLines * 24 + 84;
+                            let measureContainer = document.createElement('div');
+                            measureContainer.style.position = 'absolute';
+                            measureContainer.style.visibility = 'hidden';
+                            measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
+                            measureContainer.style.fontSize = '15px';
+                            measureContainer.style.lineHeight = '1.6';
+                            measureContainer.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
+                            measureContainer.style.padding = '24px';
+                            measureContainer.style.boxSizing = 'border-box';
+                            
+                            // Measure Summary
+                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Summary</h4><p style="margin: 0;">${data.summary || ''}</p>`;
+                            document.body.appendChild(measureContainer);
+                            let sumH = measureContainer.offsetHeight;
+                            
+                            // Measure Bullets
+                            let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Key Takeaways</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
+                            let bulH = measureContainer.offsetHeight;
+                            document.body.removeChild(measureContainer);
+                            
                             let summaryH = Math.max(120, sumH, bulH);
                             
                             obstacles.push({
@@ -717,16 +728,27 @@ class RenderService:
                             if (o.y + o.h > maxY) maxY = o.y + o.h;
                         });
                         
-                        let sumChars = (data.summary || "").length;
-                        let bulletArr = data.bullet_points || [];
-                        let charsPerLine = Math.floor((W_canvas / 2 - 48) / 8);
-                        let sumLines = Math.ceil(sumChars / charsPerLine) || 1;
-                        let bulLines = bulletArr.length > 0 ? 0 : 1;
-                        for (let i = 0; i < bulletArr.length; i++) {
-                            bulLines += Math.ceil(bulletArr[i].length / charsPerLine) || 1;
-                        }
-                        let sumH = sumLines * 24 + 84;
-                        let bulH = bulLines * 24 + 84;
+                        let measureContainer = document.createElement('div');
+                        measureContainer.style.position = 'absolute';
+                        measureContainer.style.visibility = 'hidden';
+                        measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
+                        measureContainer.style.fontSize = '15px';
+                        measureContainer.style.lineHeight = '1.6';
+                        measureContainer.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
+                        measureContainer.style.padding = '24px';
+                        measureContainer.style.boxSizing = 'border-box';
+                        
+                        // Measure Summary
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Summary</h4><p style="margin: 0;">${data.summary || ''}</p>`;
+                        document.body.appendChild(measureContainer);
+                        let sumH = measureContainer.offsetHeight;
+                        
+                        // Measure Bullets
+                        let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Key Takeaways</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
+                        let bulH = measureContainer.offsetHeight;
+                        document.body.removeChild(measureContainer);
+                        
                         let summaryH = Math.max(120, sumH, bulH);
                         
                         obstacles.push({
