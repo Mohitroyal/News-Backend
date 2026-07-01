@@ -85,8 +85,12 @@ class GrokService:
                     response.raise_for_status()
                     result = response.json()
                     
-                    # Extract content from response
-                    ai_content = json.loads(result["choices"][0]["message"]["content"])
+                    raw_content = result["choices"][0]["message"]["content"]
+                    if raw_content.startswith("```"):
+                        raw_content = raw_content.strip("` \n")
+                        if raw_content.lower().startswith("json"):
+                            raw_content = raw_content[4:].strip()
+                    ai_content = json.loads(raw_content)
                     return ai_content
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429 and attempt < max_retries - 1:
@@ -122,7 +126,9 @@ class GrokService:
             "sections": body_sections,
             "dateline": "",
             "byline": "",
-            "image_captions": ["Photo capturing the key moment of the event.", "Additional perspective on the recent development."]
+            "image_captions": ["Photo capturing the key moment of the event.", "Additional perspective on the recent development."],
+            "summary": "This is a fallback summary generated because the AI service encountered an error or rate limit.",
+            "bullet_points": ["AI generation temporarily unavailable.", "Please try generating the clipping again.", "Verify your Grok API key and limits."]
         }
 
 grok_service = GrokService()
