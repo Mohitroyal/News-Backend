@@ -1297,8 +1297,7 @@ class RenderService:
                         if (finalCont) {
                             // As per requirements: "finalHeight = wrapper.getBoundingClientRect().height + bottomPadding"
                             const finalRect = finalCont.getBoundingClientRect();
-                            const bottomPadding = 15; // "approximately 10-20px"
-                            const finalHeight = Math.ceil(finalRect.height + bottomPadding);
+                            const finalHeight = Math.ceil(finalRect.height);
                             
                             // Apply the final exact calculated height to the container
                             finalCont.style.setProperty('height', finalHeight + 'px', 'important');
