@@ -543,6 +543,41 @@ class RenderService:
 
                     const aspect0 = aspectRatios[0] || 1.2;
                     
+                    if (data.template_id === 'custom' && rawLayout.includes('patterng') && urls.length >= 4) {
+                        // Pattern G with 4 images on custom template: 4 side-by-side horizontal gallery
+                        let gap = 16;
+                        let w = (W_canvas - (gap * 3)) / 4;
+                        
+                        // Balance their heights so they align nicely (using maximum height)
+                        let maxH = 0;
+                        for (let i = 0; i < 4; i++) {
+                            let asp = aspectRatios[i] || 1.0;
+                            let thisH = w / asp;
+                            if (thisH > maxH) maxH = thisH;
+                        }
+                        
+                        for (let i = 0; i < 4; i++) {
+                            obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH) });
+                        }
+                        
+                        if (isArticleStyle) {
+                            let sumChars = (data.summary || "").length;
+                            let bulChars = (data.bullet_points || []).join(" ").length;
+                            let sumLines = sumChars / ( (W_canvas / 2) / 8 );
+                            let bulLines = bulChars / ( (W_canvas / 2) / 8 ) + (data.bullet_points || []).length * 2.5;
+                            let summaryH = Math.max(120, Math.ceil(Math.max(sumLines, bulLines)) * 22 + 80);
+                            
+                            obstacles.push({
+                                type: 'summary_bullets',
+                                x: 0,
+                                y: Math.round(maxH + 30),
+                                w: W_canvas,
+                                h: summaryH
+                            });
+                        }
+                        return obstacles;
+                    }
+                    
                     if (isTriplePatternB) {
                         // Pattern E style with 3 images: Large hero on top, two smaller side-by-side below
                         let w0 = W_canvas;
