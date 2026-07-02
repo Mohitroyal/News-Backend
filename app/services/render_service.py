@@ -1249,6 +1249,55 @@ class RenderService:
                     console.log("[LAYOUT DEBUG] canvasRect.top: " + canvasRect.top + ", actualContentHeight: " + actualContentHeight);
                     // Add a tiny buffer to avoid cutting off descenders
                     actualContentHeight += 2;
+                    
+                    // CUSTOM TEMPLATE ENHANCEMENT: Thick border + RTI Footer
+                    const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                    if (data.template_id === 'custom' && rawLayout.includes('patterng')) {
+                        const customBorderColor = data.border_color || '#F8E71C';
+                        
+                        // Apply thick border to the container
+                        st.innerHTML += `
+                            .newspaper-container { 
+                                border: 15px solid ${customBorderColor} !important; 
+                                padding-bottom: 75px !important;
+                            }
+                        `;
+                        
+                        // Build the RTI footer
+                        const footerEl = document.createElement('div');
+                        footerEl.style.position = 'absolute';
+                        footerEl.style.bottom = '0';
+                        footerEl.style.left = '0';
+                        footerEl.style.width = '100%';
+                        footerEl.style.height = '60px';
+                        footerEl.style.backgroundColor = customBorderColor;
+                        footerEl.style.display = 'flex';
+                        footerEl.style.justifyContent = 'space-between';
+                        footerEl.style.alignItems = 'center';
+                        footerEl.style.padding = '0 30px';
+                        footerEl.style.boxSizing = 'border-box';
+                        footerEl.style.zIndex = '100';
+                        
+                        // We use the logo_url if provided, else plain text logo
+                        let logoHtml = '';
+                        if (data.logo_url) {
+                            logoHtml = `<img src="${data.logo_url}" style="height: 40px; object-fit: contain;">`;
+                        } else {
+                            logoHtml = `<h2 style="margin:0; color:#111; font-family:'Playfair Display',serif; font-size: 30px; font-weight:900;">RTI EXPRESS</h2>`;
+                        }
+                        
+                        footerEl.innerHTML = `
+                            <div>${logoHtml}</div>
+                            <div style="color: #111; font-size: 14px; font-family: sans-serif; text-align: right; font-weight: bold;">
+                                https://www.rtiexpress.com/clip/${data.id || ''}<br>
+                                ${data.location || 'Local Edition'} (${data.publication_date || ''})
+                            </div>
+                        `;
+                        
+                        // Append directly to container so it sits at the absolute bottom
+                        container.appendChild(footerEl);
+                    }
+                    
                     canvas.style.height = actualContentHeight + 'px';
                     canvas.style.minHeight = actualContentHeight + 'px';
                     canvas.style.maxHeight = actualContentHeight + 'px';

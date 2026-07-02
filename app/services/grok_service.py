@@ -122,15 +122,59 @@ class GrokService:
             else:
                 body_sections = sections[1:]
                 
+        # Localized fallbacks
+        fallbacks = {
+            "te": {
+                "captions": ["ఈవెంట్ యొక్క ముఖ్య క్షణాన్ని బంధించే ఫోటో.", "తాజా పరిణామంపై అదనపు దృశ్యం."],
+                "summary": "AI సేవలో లోపం లేదా రేట్ పరిమితి కారణంగా ఈ ఫాల్‌బ్యాక్ సారాంశం రూపొందించబడింది.",
+                "bullets": ["AI సృష్టి తాత్కాలికంగా అందుబాటులో లేదు.", "దయచేసి క్లిప్పింగ్‌ను మళ్లీ సృష్టించడానికి ప్రయత్నించండి.", "మీ Grok API కీ మరియు పరిమితులను ధృవీకరించండి."]
+            },
+            "hi": {
+                "captions": ["इवेंट के मुख्य क्षण की फोटो।", "नवीनतम विकास पर अतिरिक्त दृष्टिकोण।"],
+                "summary": "यह एक फ़ॉलबैक सारांश है क्योंकि एआई सेवा में त्रुटि या दर सीमा थी।",
+                "bullets": ["एआई जनरेशन अस्थायी रूप से अनुपलब्ध है।", "कृपया क्लिपिंग फिर से बनाने का प्रयास करें।", "अपनी Grok API कुंजी और सीमाएँ सत्यापित करें।"]
+            },
+            "kn": {
+                "captions": ["ಕಾರ್ಯಕ್ರಮದ ಪ್ರಮುಖ ಕ್ಷಣವನ್ನು ಸೆರೆಹಿಡಿಯುವ ಫೋಟೋ.", "ಇತ್ತೀಚಿನ ಬೆಳವಣಿಗೆಯ ಕುರಿತು ಹೆಚ್ಚುವರಿ ನೋಟ."],
+                "summary": "AI ಸೇವೆಯಲ್ಲಿ ದೋಷ ಅಥವಾ ದರ ಮಿತಿಯನ್ನು ಎದುರಿಸಿದ ಕಾರಣ ಈ ಫಾಲ್‌ಬ್ಯಾಕ್ ಸಾರಾಂಶವನ್ನು ರಚಿಸಲಾಗಿದೆ.",
+                "bullets": ["AI ಸೃಷ್ಟಿ ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ.", "ದಯವಿಟ್ಟು ಕ್ಲಿಪ್ಪಿಂಗ್ ಅನ್ನು ಮರುಸೃಷ್ಟಿಸಲು ಪ್ರಯತ್ನಿಸಿ.", "ನಿಮ್ಮ Grok API ಕೀ ಮತ್ತು ಮಿತಿಗಳನ್ನು ಪರಿಶೀಲಿಸಿ."]
+            },
+            "ta": {
+                "captions": ["நிகழ்வின் முக்கிய தருணத்தை படம்பிடிக்கும் புகைப்படம்.", "சமீபத்திய வளர்ச்சியின் கூடுதல் பார்வை."],
+                "summary": "AI சேவையில் பிழை அல்லது விகித வரம்பு ஏற்பட்டதால் இந்த மாற்று சுருக்கம் உருவாக்கப்பட்டது.",
+                "bullets": ["AI உருவாக்கம் தற்காலிகமாக கிடைக்கவில்லை.", "கிளிப்பிங்கை மீண்டும் உருவாக்க முயற்சிக்கவும்.", "உங்கள் Grok API விசை மற்றும் வரம்புகளை சரிபார்க்கவும்."]
+            },
+            "ml": {
+                "captions": ["ഇവന്റിന്റെ പ്രധാന നിമിഷം പകർത്തുന്ന ഫോട്ടോ.", "സമീപകാല വികസനത്തെക്കുറിച്ചുള്ള അധിക കാഴ്ചപ്പാട്."],
+                "summary": "AI സേവനത്തിൽ ഒരു പിശകോ നിരക്ക് പരിധിയോ ഉണ്ടായതിനാൽ ഈ താൽക്കാലിക സംഗ്രഹം സൃഷ്ടിച്ചു.",
+                "bullets": ["AI നിർമ്മാണം താൽക്കാലികമായി ലഭ്യമല്ല.", "ക്ലിപ്പിംഗ് വീണ്ടും സൃഷ്ടിക്കാൻ ശ്രമിക്കുക.", "നിങ്ങളുടെ Grok API കീയും പരിധികളും പരിശോധിക്കുക."]
+            },
+            "en": {
+                "captions": ["Photo capturing the key moment of the event.", "Additional perspective on the recent development."],
+                "summary": "This is a fallback summary generated because the AI service encountered an error or rate limit.",
+                "bullets": ["AI generation temporarily unavailable.", "Please try generating the clipping again.", "Verify your Grok API key and limits."]
+            }
+        }
+        
+        lang_key = language.lower()
+        
+        # If the input was the full name (e.g. "telugu"), convert it back to the short key
+        reverse_map = {v.lower(): k for k, v in language_map.items()}
+        if lang_key in reverse_map:
+            lang_key = reverse_map[lang_key]
+            
+        if lang_key not in fallbacks:
+            lang_key = "en"
+            
         return {
             "headline": headline_fallback,
             "subheadline": subheadline_fallback,
             "sections": body_sections,
             "dateline": "",
             "byline": "",
-            "image_captions": ["Photo capturing the key moment of the event.", "Additional perspective on the recent development."],
-            "summary": "This is a fallback summary generated because the AI service encountered an error or rate limit.",
-            "bullet_points": ["AI generation temporarily unavailable.", "Please try generating the clipping again.", "Verify your Grok API key and limits."]
+            "image_captions": fallbacks[lang_key]["captions"],
+            "summary": fallbacks[lang_key]["summary"],
+            "bullet_points": fallbacks[lang_key]["bullets"]
         }
 
 grok_service = GrokService()
