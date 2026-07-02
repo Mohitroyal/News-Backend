@@ -397,8 +397,8 @@ class RenderService:
             "image_captions": data.get("image_captions", []),
             "image_layout": data.get("image_layout", "default"),
             "heading_bg": data.get("heading_bg", ""),
-            "summary": data.get("summary", ""),
-            "bullet_points": data.get("bullet_points", []),
+            "summary": data.get("summary", "") or data.get("Summary", "") or data.get("summary_text", ""),
+            "bullet_points": data.get("bullet_points", []) or data.get("Bullet_points", []) or data.get("key_takeaways", []),
             "summary_bg": data.get("summary_bg", ""),
             "bullet_bg": data.get("bullet_bg", "")
         }

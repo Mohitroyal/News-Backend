@@ -91,7 +91,9 @@ class GrokService:
                         if raw_content.lower().startswith("json"):
                             raw_content = raw_content[4:].strip()
                     ai_content = json.loads(raw_content)
-                    return ai_content
+                    # Normalize keys to lowercase to prevent missing data in layouts
+                    normalized = {k.lower().replace(" ", "_"): v for k, v in ai_content.items()}
+                    return normalized
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429 and attempt < max_retries - 1:
                     await asyncio.sleep(2 * (attempt + 1))
