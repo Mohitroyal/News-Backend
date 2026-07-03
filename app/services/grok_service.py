@@ -98,6 +98,11 @@ class GrokService:
                     return normalized
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429 and attempt < max_retries - 1:
+                    # Fallback from 70B to 8B if daily token limit is reached
+                    if payload["model"] == "llama-3.3-70b-versatile" and "tokens" in e.response.text.lower():
+                        payload["model"] = "llama-3.1-8b-instant"
+                        print("[INFO] Daily token rate limit exceeded on 70B model. Falling back to llama-3.1-8b-instant.")
+                        continue
                     await asyncio.sleep(2 * (attempt + 1))
                     continue
                 last_error = f"HTTP Error {e.response.status_code}: {e.response.text}"
