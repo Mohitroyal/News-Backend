@@ -73,7 +73,8 @@ class GrokService:
                 {"role": "system", "content": f"You are a professional newspaper layout editor writing strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
             ],
-            "response_format": {"type": "json_object"}
+            "response_format": {"type": "json_object"},
+            "max_tokens": 4096
         }
 
         last_error = ""
