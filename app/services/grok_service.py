@@ -76,6 +76,7 @@ class GrokService:
             "response_format": {"type": "json_object"}
         }
 
+        last_error = ""
         import asyncio
         max_retries = 3
         for attempt in range(max_retries):
@@ -98,9 +99,11 @@ class GrokService:
                 if e.response.status_code == 429 and attempt < max_retries - 1:
                     await asyncio.sleep(2 * (attempt + 1))
                     continue
+                last_error = f"HTTP Error {e.response.status_code}: {e.response.text}"
                 print(f"[WARNING] Grok API call failed (attempt {attempt+1}), using graceful fallback: {repr(e)}. Response Body: {e.response.text}")
                 break
             except Exception as e:
+                last_error = f"Error: {repr(e)}"
                 print(f"[WARNING] Grok API call failed, using graceful fallback: {repr(e)}")
                 break
 
@@ -166,6 +169,10 @@ class GrokService:
         if lang_key not in fallbacks:
             lang_key = "en"
             
+        summary_text = fallbacks[lang_key]["summary"]
+        if last_error:
+            summary_text += f"\n\nError details: {last_error}"
+            
         return {
             "headline": headline_fallback,
             "subheadline": subheadline_fallback,
@@ -173,7 +180,7 @@ class GrokService:
             "dateline": "",
             "byline": "",
             "image_captions": fallbacks[lang_key]["captions"],
-            "summary": fallbacks[lang_key]["summary"],
+            "summary": summary_text,
             "bullet_points": fallbacks[lang_key]["bullets"]
         }
 
