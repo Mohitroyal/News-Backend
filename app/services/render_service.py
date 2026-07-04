@@ -656,7 +656,7 @@ class RenderService:
                         imgX = 0;
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width (covers sides as requested)
-                        h0 = Math.min(imgVisW / aspect0, W_canvas * 0.65) * (S_scale / S_img); // Rescale height instead of width
+                        h0 = (imgVisW / aspect0) * (S_scale / S_img); // Dynamically rescale height based on exact aspect ratio and text scale factor without hardcoded caps
                         isPatternB_centered = true;
                     } else {
                         h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
