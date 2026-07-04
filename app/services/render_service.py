@@ -676,7 +676,8 @@ class RenderService:
                         w: Math.round(w0),
                         h: Math.round(h0),
                         isCentered: isPatternB_centered,
-                        visW: Math.round(imgVisW)
+                        visW: Math.round(imgVisW),
+                        objectFit: isPatternB ? 'contain' : 'cover'
                     });
                     
                     if (urls.length > 1) {
@@ -883,13 +884,13 @@ class RenderService:
 
                             imgEl.innerHTML = `
                                 <div style="${innerStyle}">
-                                    <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: cover; display: block;" />
+                                    <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: ${obs.objectFit || 'cover'}; display: block;" />
                                     ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${obs.caption}</div>` : ''}
                                 </div>
                             `;
                         } else {
                             imgEl.innerHTML = `
-                                <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: cover; display: block;" />
+                                <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: ${obs.objectFit || 'cover'}; display: block;" />
                                 ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
                             `;
                         }
