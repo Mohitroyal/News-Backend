@@ -657,11 +657,11 @@ class RenderService:
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width (covers sides as requested)
                         
-                        // Rescale dynamically based on exact aspect ratio and text density
-                        let dynamicH = (imgVisW / aspect0) * (S_scale / S_img);
+                        // Height matches exact aspect ratio (no text density modifiers that cause squishing)
+                        let dynamicH = imgVisW / aspect0;
                         
                         // Prevent giant vertical images from zooming out the layout and ruining text quality
-                        h0 = Math.min(dynamicH, TARGET_MAX_HEIGHT * 0.55);
+                        h0 = Math.min(dynamicH, TARGET_MAX_HEIGHT * 0.65);
                         
                         isPatternB_centered = true;
                     } else {
@@ -677,8 +677,8 @@ class RenderService:
                         h: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: isPatternB ? 'fill' : 'cover',
-                        objectPosition: 'center center'
+                        objectFit: 'cover',
+                        objectPosition: isPatternB ? 'top center' : 'center center'
                     });
                     
                     if (urls.length > 1) {
