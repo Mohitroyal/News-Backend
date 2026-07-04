@@ -655,7 +655,7 @@ class RenderService:
                         w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
                         imgX = 0;
                         imgY = 0; // Image must appear immediately before the article text
-                        imgVisW = W_canvas; // 100% of content width
+                        imgVisW = W_canvas * Math.max(0.40, Math.min(1.0, S_scale)); // Rescale visual width
                         h0 = Math.min(imgVisW / aspect0, W_canvas * 0.65); // Cap height to 65% of width
                         isPatternB_centered = true;
                     } else {
