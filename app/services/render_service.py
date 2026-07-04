@@ -677,8 +677,8 @@ class RenderService:
                         h: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: 'cover',
-                        objectPosition: isPatternB ? 'top center' : 'center center'
+                        objectFit: isPatternB ? 'fill' : 'cover',
+                        objectPosition: 'center center'
                     });
                     
                     if (urls.length > 1) {
