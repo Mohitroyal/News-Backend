@@ -856,8 +856,8 @@ class RenderService:
                         imgEl.style.width = `${obs.w}px`;
                         imgEl.style.height = 'auto';
                         imgEl.style.boxSizing = 'border-box';
-                        imgEl.style.border = `1px solid ${data.border_color || '#000'}`;
-                        imgEl.style.padding = '4px';
+                        imgEl.style.border = 'none';
+                        imgEl.style.padding = '0';
                         imgEl.style.background = 'var(--bg-color, #F5F1E8)';
                         imgEl.style.zIndex = '5';
                         
@@ -881,7 +881,7 @@ class RenderService:
                             
                             const innerStyle = isFullBleed 
                                 ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
-                                : `width: ${obs.visW}px; border: 1px solid ${data.border_color || '#000'}; padding: 4px; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
+                                : `width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
 
                             imgEl.innerHTML = `
                                 <div style="${innerStyle}">
@@ -1059,8 +1059,8 @@ class RenderService:
                     p.style.lineHeight = conf.lineHeight;
                     p.style.marginBottom = `${conf.paraMargin}px`;
                     p.style.marginTop = '0';
-                    p.style.textAlign = 'left';
-                    p.style.wordBreak = 'break-word';
+                    p.style.textAlign = 'justify';
+                    p.style.wordBreak = 'break-all';
                     p.style.overflowWrap = 'break-word';
                     activeRegion.rBox.appendChild(p);
                     
