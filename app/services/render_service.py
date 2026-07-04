@@ -1059,7 +1059,7 @@ class RenderService:
                     p.style.lineHeight = conf.lineHeight;
                     p.style.marginBottom = `${conf.paraMargin}px`;
                     p.style.marginTop = '0';
-                    p.style.textAlign = 'justify';
+                    p.style.textAlign = 'left';
                     p.style.wordBreak = 'break-word';
                     p.style.overflowWrap = 'break-word';
                     activeRegion.rBox.appendChild(p);
