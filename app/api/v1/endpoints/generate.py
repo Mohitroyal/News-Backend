@@ -190,7 +190,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                         clipping.custom_layout = {}
                         
                     # Only fallback if the frontend didn't explicitly send the layout
-                    if not clipping.custom_layout.get("image_layout") or clipping.custom_layout.get("image_layout") == "default":
+                    if not clipping.custom_layout.get("image_layout") or clipping.custom_layout.get("image_layout") in ["default", "auto"]:
                         if "patterna" in normalized_id or normalized_id.endswith("a"):
                             clipping.custom_layout["image_layout"] = "pattern_a"
                         elif "patternb" in normalized_id or normalized_id.endswith("b"):
