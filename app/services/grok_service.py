@@ -37,25 +37,25 @@ class GrokService:
         prompt = f"""
         Act as a professional JSON formatter. You must format the following content into a newspaper JSON structure.
         
-        CRITICAL REQUIREMENT 1: LANGUAGE AND TRANSLATION. If the original content is in a different language than '{full_lang}', you MUST accurately translate the entire content into '{full_lang}'. If it is already in '{full_lang}', keep the content in its original language.
+        CRITICAL REQUIREMENT 1: LANGUAGE ENFORCEMENT. You MUST output ALL content strictly in {full_lang}. If the original content is NOT in {full_lang}, you MUST translate every single word into {full_lang}. Do NOT output in the original language unless it is already {full_lang}.
         
-        CRITICAL REQUIREMENT 2: PRESERVE CONTENT AND STRUCTURE. Whether translating or keeping the original language, you MUST preserve 100% of the original meaning, sentences, and paragraph structure. Do not summarize, shorten, merge, or split paragraphs unnecessarily. Every paragraph must be kept intact in the "sections" array.
+        CRITICAL REQUIREMENT 2: PRESERVE MEANING. While translating to {full_lang}, you MUST preserve 100% of the original meaning and facts. Every paragraph must be kept intact in the "sections" array. Do not summarize or shorten.
         
         CRITICAL REQUIREMENT 3: Extract the reporter/author name from the content if provided. DO NOT INVENT AUTHORS. If no author is found, set "byline" to "" (empty string).
         
         CRITICAL REQUIREMENT 4: Provide image captions based on the context in an "image_captions" array. Do not output "Uploaded image" or "Photo shown". Ensure there are up to 8 professional captions provided.
         
-        CRITICAL REQUIREMENT 5: Generate a concise, engaging summary paragraph based on the content.
+        CRITICAL REQUIREMENT 5: Generate a concise, engaging summary paragraph based on the content in {full_lang}.
         
-        CRITICAL REQUIREMENT 6: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article.
+        CRITICAL REQUIREMENT 6: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article in {full_lang}.
         
         The response MUST be a JSON object with the following keys:
         - headline: A catchy, professional newspaper headline strictly in {full_lang}.
         - subheadline: A brief summary line strictly in {full_lang}.
-        - sections: An array of strings, where each string is a well-formatted paragraph strictly in {full_lang}. Ensure NO description is omitted.
+        - sections: An array of strings, where each string is a well-formatted paragraph strictly translated to {full_lang}. Ensure NO description is omitted.
         - dateline: A standard newspaper dateline (e.g., location and date) strictly in {full_lang}.
         - byline: The extracted author name strictly in {full_lang}, or "" if none.
-        - image_captions: An array of strings containing professional captions.
+        - image_captions: An array of strings containing professional captions strictly in {full_lang}.
         - summary: A concise summary paragraph strictly in {full_lang}.
         - bullet_points: An array of strings containing 3-5 key takeaways strictly in {full_lang}.
         
@@ -66,7 +66,7 @@ class GrokService:
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": f"You are a professional newspaper layout editor writing strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
+                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST translate and write EVERYTHING strictly in {full_lang}. Do NOT use any other language. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},
