@@ -37,21 +37,17 @@ class GrokService:
         prompt = f"""
         Act as a professional JSON formatter. You must format the following content into a newspaper JSON structure.
         
-        CRITICAL REQUIREMENT 1: DO NOT REWRITE, MODIFY, OR CHANGE THE ORIGINAL CONTENT. You must keep the full content exactly as provided. Do not change any words, phrases, or sentences.
+        CRITICAL REQUIREMENT 1: LANGUAGE AND TRANSLATION. If the original content is in a different language than '{full_lang}', you MUST accurately translate the entire content into '{full_lang}'. If it is already in '{full_lang}', keep the content in its original language.
         
-        CRITICAL REQUIREMENT 2: DO NOT SUMMARIZE OR SHORTEN. You MUST preserve 100% of the original content. Every single sentence and paragraph from the original article must be kept exactly in the "sections" array verbatim.
+        CRITICAL REQUIREMENT 2: PRESERVE CONTENT AND STRUCTURE. Whether translating or keeping the original language, you MUST preserve 100% of the original meaning, sentences, and paragraph structure. Do not summarize, shorten, merge, or split paragraphs unnecessarily. Every paragraph must be kept intact in the "sections" array.
         
-        CRITICAL REQUIREMENT 3: If the original content is in a different language than '{full_lang}', ONLY translate it. If it is already in '{full_lang}', DO NOT change it at all.
+        CRITICAL REQUIREMENT 3: Extract the reporter/author name from the content if provided. DO NOT INVENT AUTHORS. If no author is found, set "byline" to "" (empty string).
         
-        CRITICAL REQUIREMENT 4: Keep the paragraphs exactly as they are provided in the source text. Do not merge or split paragraphs unnecessarily. Just return the full content unmodified.
+        CRITICAL REQUIREMENT 4: Provide image captions based on the context in an "image_captions" array. Do not output "Uploaded image" or "Photo shown". Ensure there are up to 8 professional captions provided.
         
-        CRITICAL REQUIREMENT 5: Extract the reporter/author name from the content if provided. DO NOT INVENT AUTHORS. If no author is found, set "byline" to "" (empty string).
+        CRITICAL REQUIREMENT 5: Generate a concise, engaging summary paragraph based on the content.
         
-        CRITICAL REQUIREMENT 5: Provide image captions based on the context in an "image_captions" array. Do not output "Uploaded image" or "Photo shown". Ensure there are up to 8 professional captions provided.
-        
-        CRITICAL REQUIREMENT 6: Generate a concise, engaging summary paragraph based on the content.
-        
-        CRITICAL REQUIREMENT 7: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article.
+        CRITICAL REQUIREMENT 6: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article.
         
         The response MUST be a JSON object with the following keys:
         - headline: A catchy, professional newspaper headline strictly in {full_lang}.
