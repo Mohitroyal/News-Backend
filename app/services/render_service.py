@@ -536,7 +536,8 @@ class RenderService:
                     const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
                     let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || isArticleStyle;
                     const isSinglePatternC = rawLayout.includes('patternc') && urls.length === 1;
-                    if (isSinglePatternC) {
+                    const isSinglePatternA = rawLayout.includes('patterna') && urls.length === 1;
+                    if (isSinglePatternC || isSinglePatternA) {
                         isPatternB = false;
                     }
                     
