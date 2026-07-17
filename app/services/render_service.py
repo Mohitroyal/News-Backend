@@ -535,6 +535,11 @@ class RenderService:
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                     const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
                     let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || isArticleStyle;
+                    const isSinglePatternC = rawLayout.includes('patternc') && urls.length === 1;
+                    if (isSinglePatternC) {
+                        isPatternB = false;
+                    }
+                    
                     if (rawLayout === "default" || rawLayout === "" || rawLayout === "auto") {
                         isPatternB = true;
                     }
@@ -634,7 +639,7 @@ class RenderService:
                     let isPatternB_centered = false;
                     let imgVisW = w0;
                     let h0 = w0 / aspect0;
-                    let imgX = Math.round(W_canvas - w0);
+                    let imgX = isSinglePatternC ? 0 : Math.round(W_canvas - w0);
                     let imgY = 0;
                     
                     if (isDoublePatternB) {
