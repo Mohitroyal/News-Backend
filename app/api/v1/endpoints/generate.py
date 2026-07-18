@@ -229,6 +229,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "logo_id": clipping.logo_id or clipping.template_id,
                     "is_premium": is_premium,
                     "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
+                    "show_inner_borders": getattr(clipping, "show_inner_borders", True),
                     "image_layout": custom.get("image_layout", "default"),
                     "heading_bg": custom.get("heading_bg", None),
                     "border_color": custom.get("border_color", None),
@@ -532,6 +533,7 @@ async def create_clipping(
         layout_columns=clipping_in.layout_columns,
         font_family=clipping_in.font_family or "playfair",
         show_watermark=clipping_in.show_watermark,
+        show_inner_borders=getattr(clipping_in, "show_inner_borders", True),
         custom_layout={
             "image_layout": clipping_in.image_layout,
             "heading_bg": clipping_in.heading_bg,

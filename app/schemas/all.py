@@ -45,10 +45,11 @@ class ClippingBase(BaseModel):
     heading_bg: Optional[str] = Field(None, alias="headingBg")
     border_color: Optional[str] = Field(None, alias="borderColor")
     primary_color: Optional[str] = Field(None, alias="primaryColor")
+    show_inner_borders: bool = Field(True, alias="showInnerBorders")
 
     @model_validator(mode="before")
     @classmethod
-    def populate_show_watermark(cls, data: Any) -> Any:
+    def populate_boolean_toggles(cls, data: Any) -> Any:
         if isinstance(data, dict):
             # Check all possible alias keys for watermark / logo mode toggles
             keys_to_check = [
@@ -72,6 +73,28 @@ class ClippingBase(BaseModel):
                     elif isinstance(val, bool):
                         data["show_watermark"] = val
                         break
+                        
+            # Check for inner borders toggles
+            border_keys = [
+                "showInnerBorders",
+                "show_inner_borders",
+                "innerBorders",
+                "inner_borders"
+            ]
+            for key in border_keys:
+                if key in data:
+                    val = data[key]
+                    if isinstance(val, str):
+                        if val.lower() in ("false", "0", "off", "no"):
+                            data["show_inner_borders"] = False
+                            break
+                        elif val.lower() in ("true", "1", "on", "yes"):
+                            data["show_inner_borders"] = True
+                            break
+                    elif isinstance(val, bool):
+                        data["show_inner_borders"] = val
+                        break
+
         return data
 
     @model_validator(mode="before")

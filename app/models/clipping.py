@@ -30,6 +30,7 @@ class Clipping(Base):
     layout_columns = Column(Integer, default=3)
     font_family = Column(String, default="playfair")
     show_watermark = Column(Boolean, default=True)  # Toggle watermark/logo overlay
+    show_inner_borders = Column(Boolean, default=True)  # Toggle inner border lines
 
     # Custom Editor Layout Data
     custom_layout = Column(JSON, nullable=True)
