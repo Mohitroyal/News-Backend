@@ -93,17 +93,16 @@ class RenderService:
         if not data.get("headline"):
             data["headline"] = "NEWSFLASH: Special Report"
 
-        # 2. Article safety fallback (check sections, article_content, content)
-        if isinstance(data.get("sections"), str):
+        # 2. Article raw text preservation (prioritize raw user input over AI formatted sections)
+        raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content")
+        if raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
+            raw_clean = raw_text_input.strip()
+            split_p = [p.strip() for p in re.split(r'\n+|\r\n', raw_clean) if p.strip()]
+            data["sections"] = split_p if split_p else [raw_clean]
+        elif isinstance(data.get("sections"), str):
             data["sections"] = [data["sections"]]
-
-        if not data.get("sections") or len(data.get("sections", [])) == 0:
-            if data.get("article_content"):
-                data["sections"] = [data["article_content"]] if isinstance(data.get("article_content"), str) else data.get("article_content")
-            elif data.get("content"):
-                data["sections"] = [data["content"]] if isinstance(data.get("content"), str) else data.get("content")
-            else:
-                data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
+        elif not data.get("sections") or len(data.get("sections", [])) == 0:
+            data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
         # 2a. Normalize punctuation spacing & split long single-paragraph inputs
         import re
@@ -1478,7 +1477,7 @@ class RenderService:
             try:
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
-                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
+                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3)
                     def handle_console(msg):
                         if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                             return
@@ -1554,8 +1553,7 @@ class RenderService:
                     final_h_px = None
                     if png_path:
                         await page.locator('.newspaper-container').first.screenshot(path=png_path, type="png")
-                        # Run the PIL image auto-crop
-                        final_h_px = self._auto_crop_png(png_path)
+                        final_h_px = layout_info.get('height', 1600)
                         
                     if pdf_path:
                         pdf_h = (final_h_px / 2.0) if final_h_px else layout_info.get('height', 1600)
