@@ -3,6 +3,7 @@ import glob
 import logging
 import sys
 import gc
+import re
 import psutil
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
@@ -105,7 +106,6 @@ class RenderService:
             data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
         # 2a. Normalize punctuation spacing & split long single-paragraph inputs
-        import re
         processed_sections = []
         for sec in data["sections"]:
             if not isinstance(sec, str):

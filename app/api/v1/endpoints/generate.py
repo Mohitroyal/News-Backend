@@ -18,6 +18,7 @@ import logging
 import traceback as _traceback
 import sys
 import asyncio
+import re
 import gc
 import psutil
 from datetime import datetime, timedelta
@@ -723,7 +724,6 @@ def update_clipping_layout(
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
 
-    import re
     def extract_hex(val: Any) -> Any:
         if isinstance(val, str):
             match = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}', val)

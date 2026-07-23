@@ -2,6 +2,7 @@ from typing import List, Optional, Any
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from uuid import UUID
 from datetime import datetime
+import re
 
 # ─── User Schemas ────────────────────────────────────────────────
 class UserBase(BaseModel):
@@ -128,7 +129,6 @@ class ClippingBase(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def clean_human_readable_inputs(cls, data: Any) -> Any:
-        import re
         if isinstance(data, dict):
             # Extract Hex codes from color strings (e.g., "Classic Red #CC2222")
             def extract_hex(val: Any) -> Any:
