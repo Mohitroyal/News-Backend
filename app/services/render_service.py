@@ -310,6 +310,12 @@ class RenderService:
             override_css = f"""
             {local_fonts_css}
             <style id="indic-font-enforcer">
+                /* High-DPI font smoothing & crisp text rendering */
+                html, body, .newspaper-container, div, p, span, h1, h2, h3, h4 {{
+                    -webkit-font-smoothing: antialiased !important;
+                    -moz-osx-font-smoothing: grayscale !important;
+                    text-rendering: optimizeLegibility !important;
+                }}
                 /* Force Indic font first, fallback to Latin */
                 .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption, .nc-image-caption, .byline-section, .byline, .nc-absolute-summary, .nc-absolute-summary h4, .nc-absolute-summary p, .nc-absolute-summary ul, .nc-absolute-summary li {{
                     font-family: {indic_font_override}, 'Playfair Display', 'Merriweather', serif !important;
@@ -1488,7 +1494,17 @@ class RenderService:
                     if html_content.startswith("http"): await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
                     else: await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
 
+                    try:
+                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
+                    except Exception:
+                        pass
+
                     await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
+
+                    try:
+                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
+                    except Exception:
+                        pass
 
                     layout_info = await page.evaluate("""() => {
                         const canvas = document.getElementById('compositor-canvas');
