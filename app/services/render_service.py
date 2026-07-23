@@ -105,6 +105,32 @@ class RenderService:
             else:
                 data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
+        # 2a. Normalize punctuation spacing & split long single-paragraph inputs
+        import re
+        processed_sections = []
+        for sec in data["sections"]:
+            if not isinstance(sec, str):
+                continue
+            # Ensure space after punctuation (.,!?:;) if followed directly by a letter/glyph
+            clean_sec = re.sub(r'([.,!?:;])([^\s\d])', r'\1 \2', sec)
+            # If section is longer than 350 chars and has multiple sentences, split into paragraphs
+            if len(clean_sec) > 350 and re.search(r'[.,!?]\s+', clean_sec):
+                sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', clean_sec) if s.strip()]
+                curr_p = []
+                curr_len = 0
+                for s in sentences:
+                    curr_p.append(s)
+                    curr_len += len(s)
+                    if curr_len >= 250:
+                        processed_sections.append(" ".join(curr_p))
+                        curr_p = []
+                        curr_len = 0
+                if curr_p:
+                    processed_sections.append(" ".join(curr_p))
+            else:
+                processed_sections.append(clean_sec)
+        data["sections"] = processed_sections if processed_sections else data["sections"]
+
         # 2b. Merge short sections to ensure tight newspaper density (no 1-line paragraphs)
         if isinstance(data.get("sections"), list) and len(data["sections"]) > 1:
             merged_sections = []
@@ -1116,8 +1142,9 @@ class RenderService:
                     let maxY = 0;
                     regions.forEach(r => {
                         if (r.rBox.lastElementChild && r.rBox.innerText.trim() !== '') {
-                            const contentHeight = r.rBox.lastElementChild.offsetTop + r.rBox.lastElementChild.offsetHeight + 4;
+                            const contentHeight = Math.max(r.height, r.rBox.scrollHeight);
                             r.rBox.style.height = `${contentHeight}px`;
+                            r.rBox.style.overflow = 'visible';
                             maxY = Math.max(maxY, r.y + contentHeight);
                         } else {
                             r.rBox.style.height = '0px';
@@ -1212,21 +1239,52 @@ class RenderService:
                 
                 const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - blockedArea) / (totalChars * 0.54));
                 const maxFontSize = (urls.length > 2 && totalChars < 2500) ? 23.0 : 21.0;
-                const conf = { fontSize: Math.max(15.0, Math.min(maxFontSize, estFontSize)), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
+                const conf = { fontSize: Math.min(maxFontSize, estFontSize), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
 
-                // Let's run a binary search to find the minimum height where the text fits.
-                let low = Math.max(300, Math.round(maxObstacleY + 30));
-                let high = Math.max(H_avail, low + 3000);
-                let H_best = high;
+                // Step 1: Find best font size that fits 100% of text within H_avail
+                let targetFs = Math.min(maxFontSize, estFontSize);
+                let foundFit = false;
                 
-                for (let step = 0; step < 8; step++) {
-                    const mid = Math.round((low + high) / 2);
-                    const fits = runLayoutPass(conf, S, mid, false);
-                    if (fits) {
-                        H_best = mid;
-                        high = mid - 1;
-                    } else {
-                        low = mid + 1;
+                for (let fs = targetFs; fs >= 11.0; fs -= 0.5) {
+                    conf.fontSize = fs;
+                    if (runLayoutPass(conf, S, H_avail, false)) {
+                        foundFit = true;
+                        targetFs = fs;
+                        break;
+                    }
+                }
+
+                let low = Math.max(300, Math.round(maxObstacleY + 30));
+                let high = H_avail;
+                let H_best = H_avail;
+
+                if (foundFit) {
+                    // Binary search for minimum height at targetFs
+                    conf.fontSize = targetFs;
+                    H_best = high;
+                    for (let step = 0; step < 8; step++) {
+                        const mid = Math.round((low + high) / 2);
+                        if (runLayoutPass(conf, S, mid, false)) {
+                            H_best = mid;
+                            high = mid - 1;
+                        } else {
+                            low = mid + 1;
+                        }
+                    }
+                } else {
+                    // Content is exceptionally long: fix fontSize at 11.0px and expand height until it fits
+                    conf.fontSize = 11.0;
+                    low = H_avail;
+                    high = H_avail + 6000;
+                    H_best = high;
+                    for (let step = 0; step < 10; step++) {
+                        const mid = Math.round((low + high) / 2);
+                        if (runLayoutPass(conf, S, mid, false)) {
+                            H_best = mid;
+                            high = mid - 1;
+                        } else {
+                            low = mid + 1;
+                        }
                     }
                 }
                 
