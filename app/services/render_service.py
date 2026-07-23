@@ -653,7 +653,9 @@ class RenderService:
                         return obstacles;
                     }
                     
-                    let w0 = W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
+                    let w0 = (isSinglePatternC || isSinglePatternA || !isPatternB)
+                        ? Math.round((W_canvas - 24) * 0.48)
+                        : W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
                     
                     let isPatternB_centered = false;
                     let imgVisW = w0;
@@ -689,7 +691,7 @@ class RenderService:
                         
                         isPatternB_centered = true;
                     } else {
-                        h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.3, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                        h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.50, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
                     }
                     
                     obstacles.push({
@@ -925,10 +927,10 @@ class RenderService:
                 
                 let inflatedObstacles = obstacles.map(obs => {
                     return {
-                        x: obs.x - 12,
-                        y: obs.y - 12,
-                        w: obs.w + 24,
-                        h: obs.h + 24
+                        x: obs.x - 8,
+                        y: obs.y - 8,
+                        w: obs.w + 16,
+                        h: obs.h + 16
                     };
                 });
                 
