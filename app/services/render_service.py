@@ -131,26 +131,13 @@ class RenderService:
                 processed_sections.append(clean_sec)
         data["sections"] = processed_sections if processed_sections else data["sections"]
 
-        # 2b. Merge short sections to ensure tight newspaper density (no 1-line paragraphs)
-        if isinstance(data.get("sections"), list) and len(data["sections"]) > 1:
-            merged_sections = []
-            current_section = ""
+        # 2b. Clean sections list ensuring raw text is preserved without duplication
+        if isinstance(data.get("sections"), list):
+            clean_sections = []
             for sec in data["sections"]:
-                if current_section:
-                    current_section += " " + sec
-                else:
-                    current_section = sec
-                
-                # Maintain dense newspaper blocks (min ~450 chars to ensure ~8 lines)
-                if len(current_section) > 450:
-                    merged_sections.append(current_section)
-                    current_section = ""
-            if current_section:
-                if merged_sections:
-                    merged_sections[-1] += " " + current_section
-                else:
-                    merged_sections.append(current_section)
-            data["sections"] = merged_sections
+                if isinstance(sec, str) and sec.strip():
+                    clean_sections.append(sec.strip())
+            data["sections"] = clean_sections if clean_sections else data["sections"]
 
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
