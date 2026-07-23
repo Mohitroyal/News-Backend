@@ -537,6 +537,18 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
+            function resolveColumns(colVal, charLen) {
+                const s = String(colVal === undefined || colVal === null ? "auto" : colVal).toLowerCase().trim();
+                const p = parseInt(s);
+                if (!isNaN(p) && p >= 1 && p <= 4 && s !== "0" && s !== "auto") {
+                    return p;
+                }
+                if (charLen < 600) {
+                    return 2;
+                }
+                return 3;
+            }
+
             function getObstacles(W_canvas, S_img, imgHeightPx, H_canvas) {
                 H_canvas = H_canvas || 1200;
                 const obstacles = [];
@@ -805,7 +817,7 @@ class RenderService:
                 const W_canvas = canvas.offsetWidth || 1060;
                 
                 // Calculate columns
-                let N = parseInt(data.layout_columns) || 3;
+                let N = resolveColumns(data.layout_columns, totalChars);
                 
                 const G = 24; // Column gap in pixels
                 const W_col = (W_canvas - (N - 1) * G) / N;
@@ -1201,7 +1213,7 @@ class RenderService:
                 S = Math.max(0.75, Math.min(1.25, S));
 
                 const W_canvas = canvas.offsetWidth || 1060;
-                const N = parseInt(data.layout_columns) || 3;
+                const N = resolveColumns(data.layout_columns, totalChars);
                 const W_col = (W_canvas - (N - 1) * 24) / N;
                 const canvasTop = canvas.getBoundingClientRect().top + window.scrollY;
                 const H_avail = Math.max(1200, TARGET_MAX_HEIGHT - canvasTop - 60);

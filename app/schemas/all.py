@@ -39,7 +39,7 @@ class ClippingBase(BaseModel):
     image_urls: List[str] = Field(default=[], alias="imageUrls")
     publication_name: str = Field(alias="publicationName")
     publication_date: str = Field(alias="publicationDate")
-    layout_columns: int = Field(3, alias="layoutColumns")
+    layout_columns: Optional[Any] = Field("auto", alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
     show_watermark: bool = Field(True, alias="showWatermark")
     image_layout: Optional[str] = Field("default", alias="imageLayout")
@@ -224,7 +224,7 @@ class Clipping(BaseModel):
     png_url: Optional[str] = Field(None, alias="previewUrl")
     pdf_url: Optional[str] = None
     status: str
-    layout_columns: int = Field(3, alias="layoutColumns")
+    layout_columns: Optional[Any] = Field("auto", alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
     created_at: datetime = Field(alias="createdAt")
 
