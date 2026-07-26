@@ -401,7 +401,8 @@ class RenderService:
             "volume": data.get("volume", "CXIV"),
             "edition": data.get("edition", "27"),
             "location": data.get("location", "Global Edition"),
-            "language_name": data.get("language_name", "English"),
+            "language": data.get("language", "") or data.get("language_name", "English"),
+            "language_name": data.get("language_name", "English") or data.get("language", "English"),
             "byline": data.get("byline", ""),
             "dateline": data.get("dateline", ""),
             "template_id": data.get("template_id", "classic"),
@@ -607,18 +608,28 @@ class RenderService:
                             measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
                             measureContainer.style.fontSize = '15px';
                             measureContainer.style.lineHeight = '1.6';
-                            measureContainer.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
-                            measureContainer.style.padding = '24px';
-                            measureContainer.style.boxSizing = 'border-box';
-                            
+                            let langStr = (data.language || data.language_name || 'en').toLowerCase();
+                            let langKey = 'en';
+                            if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
+                            else if (langStr.includes('hindi') || langStr === 'hi') langKey = 'hi';
+                            else if (langStr.includes('kannada') || langStr === 'kn') langKey = 'kn';
+                            else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
+                            else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
+
+                            let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுരുக்கம்', 'ml': 'സംഗ്രഹം', 'en': 'SUMMARY' };
+                            let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ಮುಖ್ಯಾಂಶಗಳು', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'പ്രധാന വിവരങ്ങൾ', 'en': 'KEY TAKEAWAYS' };
+
+                            let sumTitle = sumLabels[langKey] || 'SUMMARY';
+                            let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
+
                             // Measure Summary
-                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Summary</h4><p style="margin: 0;">${data.summary || ''}</p>`;
+                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${sumTitle}</h4><p style="margin: 0;">${data.summary || ''}</p>`;
                             document.body.appendChild(measureContainer);
                             let sumH = measureContainer.offsetHeight;
                             
                             // Measure Bullets
                             let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
-                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Key Takeaways</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
+                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${bulTitle}</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
                             let bulH = measureContainer.offsetHeight;
                             document.body.removeChild(measureContainer);
                             
@@ -785,13 +796,13 @@ class RenderService:
                         measureContainer.style.boxSizing = 'border-box';
                         
                         // Measure Summary
-                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Summary</h4><p style="margin: 0;">${data.summary || ''}</p>`;
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${sumTitle}</h4><p style="margin: 0;">${data.summary || ''}</p>`;
                         document.body.appendChild(measureContainer);
                         let sumH = measureContainer.offsetHeight;
                         
                         // Measure Bullets
                         let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
-                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">Key Takeaways</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${bulTitle}</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
                         let bulH = measureContainer.offsetHeight;
                         document.body.removeChild(measureContainer);
                         
@@ -872,11 +883,11 @@ class RenderService:
                             
                             containerEl.innerHTML = `
                                 <div style="flex: 1; background-color: ${sumBg}; padding: 24px; border-radius: 12px; border: 1px solid ${sumBorder}; display: flex; flex-direction: column; justify-content: center;">
-                                    <h4 style="margin: 0 0 12px 0; color: ${sumHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Summary</h4>
+                                    <h4 style="margin: 0 0 12px 0; color: ${sumHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${sumTitle}</h4>
                                     <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${sumTextColor};">${data.summary || ''}</p>
                                 </div>
                                 <div style="flex: 1; background-color: ${bulBg}; padding: 24px; border-radius: 12px; border: 1px solid ${bulBorder}; display: flex; flex-direction: column; justify-content: center;">
-                                    <h4 style="margin: 0 0 12px 0; color: ${bulHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Key Takeaways</h4>
+                                    <h4 style="margin: 0 0 12px 0; color: ${bulHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${bulTitle}</h4>
                                     <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: ${bulTextColor}; list-style-type: ${listStyle};">
                                         ${bpHtml}
                                     </ul>

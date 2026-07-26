@@ -8,12 +8,13 @@ class GrokService:
     def __init__(self):
         self.api_key = settings.GROK_API_KEY
         # Auto-detect Groq keys starting with gsk_
+        # Auto-detect Groq keys starting with gsk_
         if self.api_key and self.api_key.startswith("gsk_"):
             self.base_url = "https://api.groq.com/openai/v1/chat/completions"
-            self.model = "llama-3.3-70b-versatile"
+            self.model = "llama-3.1-8b-instant"
         else:
             self.base_url = "https://api.x.ai/v1/chat/completions"
-            self.model = "grok-beta"
+            self.model = "grok-2-latest"
             
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -46,9 +47,9 @@ class GrokService:
         
         CRITICAL REQUIREMENT 4: Provide image captions based on the context in an "image_captions" array. Do not output "Uploaded image" or "Photo shown". Ensure there are up to 8 professional captions provided strictly in {full_lang}.
         
-        CRITICAL REQUIREMENT 5: Generate a concise, engaging summary paragraph based on the content strictly in {full_lang}. DO NOT USE ENGLISH for summary if {full_lang} is not English.
+        CRITICAL REQUIREMENT 5: Generate a detailed, informative summary paragraph (3-4 complete sentences, ~350-450 characters) based on the content strictly in {full_lang}. DO NOT USE ENGLISH for summary if {full_lang} is not English.
         
-        CRITICAL REQUIREMENT 6: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article strictly in {full_lang}. DO NOT USE ENGLISH for bullet points if {full_lang} is not English.
+        CRITICAL REQUIREMENT 6: Generate an array of 4-5 complete, informative bullet points summarizing the key takeaways from the article strictly in {full_lang}. DO NOT USE ENGLISH for bullet points if {full_lang} is not English.
         
         The response MUST be a JSON object with the following keys:
         - headline: A catchy, professional newspaper headline strictly in {full_lang}.
@@ -57,15 +58,14 @@ class GrokService:
         - dateline: A standard newspaper dateline (e.g., location and date) strictly in {full_lang}.
         - byline: The extracted author name strictly in {full_lang}, or "" if none.
         - image_captions: An array of strings containing professional captions strictly in {full_lang}.
-        - summary: A concise summary paragraph strictly in {full_lang}.
-        - bullet_points: An array of strings containing 3-5 key takeaways strictly in {full_lang}.
+        - summary: A detailed summary paragraph strictly in {full_lang}.
+        - bullet_points: An array of strings containing 4-5 key takeaways strictly in {full_lang}.
         
         Original Content:
         {content}
         """
         
         payload = {
-            "model": self.model,
             "messages": [
                 {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST translate and write EVERYTHING strictly in {full_lang}. Do NOT use any other language for any field. Summary and bullet_points MUST be written in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
@@ -74,13 +74,16 @@ class GrokService:
             "max_tokens": 2500
         }
 
-        last_error = ""
+        models_to_try = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"] if (self.api_key and self.api_key.startswith("gsk_")) else ["grok-2-1212", "grok-2", "grok-beta", "llama-3.1-8b-instant"]
+
+        normalized = None
         import asyncio
-        max_retries = 3
-        for attempt in range(max_retries):
+        for model in models_to_try:
+            payload["model"] = model
+            url = "https://api.groq.com/openai/v1/chat/completions" if "llama" in model else self.base_url
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.post(self.base_url, headers=self.headers, json=payload)
+                    response = await client.post(url, headers=self.headers, json=payload)
                     response.raise_for_status()
                     result = response.json()
                     
@@ -90,65 +93,50 @@ class GrokService:
                         if raw_content.lower().startswith("json"):
                             raw_content = raw_content[4:].strip()
                     ai_content = json.loads(raw_content)
-                    # Normalize keys to lowercase to prevent missing data in layouts
                     normalized = {k.lower().replace(" ", "_"): v for k, v in ai_content.items()}
-                    
-                    # Ensure summary and bullet_points are in the requested language
-                    lang_key = language.lower()
-                    reverse_map = {v.lower(): k for k, v in language_map.items()}
-                    if lang_key in reverse_map:
-                        lang_key = reverse_map[lang_key]
-                        
-                    if lang_key != "en":
-                        sec_list = normalized.get("sections", [])
-                        sec_text = "\n\n".join(sec_list) if isinstance(sec_list, list) else str(sec_list)
-                        if not sec_text.strip():
-                            sec_text = content
-                            
-                        sum_val = normalized.get("summary", "")
-                        bp_val = normalized.get("bullet_points", [])
-                        
-                        if self._is_mostly_english(sum_val) or self._is_mostly_english(bp_val):
-                            clean_sum, clean_bps = self._extract_summary_and_bullets(sec_text)
-                            if self._is_mostly_english(sum_val):
-                                normalized["summary"] = clean_sum
-                            if self._is_mostly_english(bp_val):
-                                normalized["bullet_points"] = clean_bps
-                                
-                    return normalized
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code in (429, 413, 400) and attempt < max_retries - 1:
-                    payload["max_tokens"] = 1500
-                    if payload["model"] == "llama-3.3-70b-versatile":
-                        payload["model"] = "llama-3.1-8b-instant"
-                        print("[INFO] Rate or token limit reached on 70B model. Falling back to llama-3.1-8b-instant.")
-                    await asyncio.sleep(2 * (attempt + 1))
-                    continue
-                last_error = f"HTTP Error {e.response.status_code}: {e.response.text}"
-                print(f"[WARNING] Grok API call failed (attempt {attempt+1}), using graceful fallback: {repr(e)}. Response Body: {e.response.text}")
-                break
+                    break # Success!
             except Exception as e:
-                last_error = f"Error: {repr(e)}"
-                print(f"[WARNING] Grok API call failed, using graceful fallback: {repr(e)}")
-                break
+                print(f"[WARNING] Model {model} failed: {e}")
+                await asyncio.sleep(0.3)
 
-        # Fallback to local parsing of content if all retries fail
-        sections = [p.strip() for p in content.split("\n\n") if p.strip()]
-        if not sections:
-            sections = [content]
+        if not normalized:
+            # Fallback to local parsing of content if AI calls fail
+            clean_sum, clean_bps = self._extract_summary_and_bullets(content)
+            sections = [p.strip() for p in content.split("\n\n") if p.strip()] or [content]
+            return {
+                "headline": sections[0][:60] + "..." if len(sections[0]) > 60 else sections[0],
+                "subheadline": "",
+                "sections": sections,
+                "dateline": "",
+                "byline": "",
+                "image_captions": ["ఈవెంట్ యొక్క ముఖ్య క్షణాన్ని బంధించే ఫోటో.", "తాజా పరిణామంపై అదనపు దృశ్యం."],
+                "summary": clean_sum,
+                "bullet_points": clean_bps
+            }
+
+        # Post-process target language compliance
+        lang_key = language.lower()
+        reverse_map = {v.lower(): k for k, v in language_map.items()}
+        if lang_key in reverse_map:
+            lang_key = reverse_map[lang_key]
             
-        headline_fallback = sections[0][:60] + "..." if len(sections[0]) > 60 else sections[0]
-        subheadline_fallback = ""
-        body_sections = sections
-        
-        # Smart fallback: if there are multiple paragraphs, treat the first as headline, second as subheadline
-        if len(sections) > 1 and len(sections[0]) < 150:
-            headline_fallback = sections[0]
-            if len(sections) > 2 and len(sections[1]) < 200:
-                subheadline_fallback = sections[1]
-                body_sections = sections[2:]
-            else:
-                body_sections = sections[1:]
+        if lang_key != "en":
+            sec_list = normalized.get("sections", [])
+            sec_text = "\n\n".join(sec_list) if isinstance(sec_list, list) else str(sec_list)
+            if not sec_text.strip():
+                sec_text = content
+                
+            sum_val = normalized.get("summary", "")
+            bp_val = normalized.get("bullet_points", [])
+            
+            if self._is_mostly_english(sum_val) or self._is_mostly_english(bp_val):
+                clean_sum, clean_bps = self._extract_summary_and_bullets(sec_text)
+                if self._is_mostly_english(sum_val):
+                    normalized["summary"] = clean_sum
+                if self._is_mostly_english(bp_val):
+                    normalized["bullet_points"] = clean_bps
+
+        return normalized
 
         # Smart extraction of summary and key takeaways directly from article content (NO ERROR STRINGS)
         summary_fallback, bullet_points_fallback = self._extract_summary_and_bullets(content)
@@ -193,17 +181,17 @@ class GrokService:
         return len(english_words) >= 3
 
     def _extract_summary_and_bullets(self, content: str) -> tuple:
-        """Extracts clean, non-error summary and key takeaways from raw content."""
-        paragraphs = [p.strip() for p in content.replace("\r", "\n").split("\n") if p.strip()]
+        """Extracts clean, non-error summary and key takeaways from raw content without breaking abbreviations."""
+        raw_text = content.replace("\r", "\n").strip()
         
-        sentences = []
-        for p in paragraphs:
-            chunks = re.split(r'[\.!\?।]+', p)
-            for c in chunks:
-                cleaned = c.strip()
-                if len(cleaned) > 15:
-                    sentences.append(cleaned)
-                    
+        # Protect abbreviation dots (e.g., ఆర్., టి., ఐ., శ్రీ., డా., బి., 26.07)
+        protected_text = re.sub(r'(\b[^\s\.]{1,4})\.\s+', r'\1_DOT_ ', raw_text)
+        protected_text = re.sub(r'(\d+)\.(\d+)', r'\1_NUMDOT_\2', protected_text)
+        
+        # Split by actual sentence endings (. or । or ? or ! or \n)
+        chunks = [c.replace('_DOT_', '.').replace('_NUMDOT_', '.').strip() for c in re.split(r'[\.!\?।\n]+', protected_text) if c.strip()]
+        
+        sentences = [c for c in chunks if len(c) > 15]
         if not sentences:
             clean_content = content.strip()
             if clean_content:
@@ -211,38 +199,46 @@ class GrokService:
             else:
                 sentences = ["తాజా సమాచారం ప్రకారం వివరాలు సిద్ధమవుతున్నాయి."]
 
-        # 1. Build summary paragraph (first 1-2 clean sentences)
-        if len(sentences) >= 2:
-            summary = f"{sentences[0]}. {sentences[1]}."
-        else:
-            summary = f"{sentences[0]}."
-            
-        if len(summary) > 250:
-            summary = summary[:247] + "..."
+        # 1. Build rich summary paragraph (up to ~450 chars)
+        summary_sentences = sentences[:3]
+        summary = " ".join(s.rstrip('.') + '.' for s in summary_sentences)
+        if len(summary) > 480:
+            summary = summary[:477] + "..."
 
-        # 2. Build 3 key takeaway bullets from content sentences
-        bullets = []
+        # 2. Extract clauses for 4-5 key takeaway bullet points
+        clauses = []
         for s in sentences:
-            bullet_text = s[:120].strip()
-            if bullet_text and bullet_text not in bullets:
-                bullets.append(bullet_text if bullet_text.endswith(('.', '।')) else bullet_text + ".")
-            if len(bullets) == 3:
+            if len(s) > 120 and ',' in s:
+                parts = [p.strip() for p in s.split(',') if len(p.strip()) > 15]
+                clauses.extend(parts)
+            else:
+                clauses.append(s)
+                
+        bullets = []
+        for c in clauses:
+            clean_c = c.strip()
+            if clean_c and clean_c not in bullets:
+                if not clean_c.endswith(('.', '।')):
+                    clean_c += "."
+                bullets.append(clean_c)
+            if len(bullets) == 5:
                 break
                 
-        # Fill to 3 bullets if content is short
-        while len(bullets) < 3:
+        # Fill to 4 bullets if content is short
+        while len(bullets) < 4:
             if bullets:
                 last = bullets[-1]
-                if len(last) > 40:
+                if len(last) > 50:
                     split_idx = len(last) // 2
                     bullets.append(last[split_idx:].strip())
                 else:
                     bullets.append(bullets[0])
             else:
-                bullets.append(summary[:80] + "...")
+                bullets.append(summary[:100] + "...")
 
-        return summary, bullets[:3]
+        return summary, bullets[:5]
 
 grok_service = GrokService()
+
 
 
