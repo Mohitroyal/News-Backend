@@ -13,7 +13,9 @@ import { TemplatesScreen } from './screens/TemplatesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { PreviewScreen } from './screens/PreviewScreen';
-import { useAuthStore } from './store';
+import { LoginOtpScreen } from './screens/LoginOtpScreen';
+import { VerifyOtpScreen } from './screens/VerifyOtpScreen';
+import { useAuthStore, useUIStore } from './store';
 import { supabase } from './lib/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -145,6 +147,7 @@ function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
+  const setPendingCropImageSrc = useUIStore((state) => state.setPendingCropImageSrc);
 
   useEffect(() => {
     // Initialize Google Auth plugin
@@ -179,6 +182,19 @@ function App() {
       }
     });
 
+    // Listen for appRestoredResult to handle Android background killing during camera/gallery intents
+    CapacitorApp.addListener('appRestoredResult', (data: any) => {
+      console.log('App restored result:', data);
+      if (data && data.pluginId === 'Camera' && data.methodName === 'pickImages') {
+        if (data.data && data.data.photos && data.data.photos.length > 0) {
+          const webPath = data.data.photos[0].webPath;
+          if (webPath) {
+            setPendingCropImageSrc(webPath);
+          }
+        }
+      }
+    });
+
     // Also set up the global auth listener
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
@@ -205,8 +221,21 @@ function App() {
           element={!isAuthenticated ? <LoginScreen /> : <Navigate to="/" />} 
         />
         <Route 
+          path="/login/otp" 
+          element={!isAuthenticated ? <LoginOtpScreen /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/login/verify" 
+          element={!isAuthenticated ? <VerifyOtpScreen /> : <Navigate to="/" />} 
+        />
+        <Route 
           path="/signup" 
           element={!isAuthenticated ? <SignupScreen /> : <Navigate to="/" />} 
+        />
+        
+        <Route 
+          path="/preview/:id" 
+          element={isAuthenticated ? <PreviewScreen /> : <Navigate to="/login" />} 
         />
         
         <Route 
@@ -220,7 +249,6 @@ function App() {
                   <Route path="/templates" element={<TemplatesScreen />} />
                   <Route path="/history" element={<HistoryScreen />} />
                   <Route path="/settings" element={<SettingsScreen />} />
-                  <Route path="/preview/:id" element={<PreviewScreen />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </MainLayout>

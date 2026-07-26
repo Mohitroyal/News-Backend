@@ -155,13 +155,16 @@ export const LoginScreen = () => {
             Sign in with Google
           </button>
 
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center flex flex-col gap-2">
             <p className="text-[#a0c4dc] text-xs font-medium">
               Don't have an account?{' '}
               <Link to="/signup" className="text-[#0a2540] font-bold hover:underline transition-colors">
                 Sign Up
               </Link>
             </p>
+            <Link to="/login/otp" className="text-[#0a2540] text-xs font-bold hover:underline transition-colors mt-2">
+              Login with OTP instead
+            </Link>
           </div>
         </div>
       </div>

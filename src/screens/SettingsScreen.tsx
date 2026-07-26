@@ -74,7 +74,9 @@ export const SettingsScreen = () => {
 
   // Use persistent UI store
   const logoMode = useUIStore((state) => state.logoMode);
+  const showInnerBorders = useUIStore((state) => state.showInnerBorders);
   const toggleLogoMode = useUIStore((state) => state.toggleLogoMode);
+  const toggleInnerBorders = useUIStore((state) => state.toggleInnerBorders);
   const { t, language: activeLanguage } = useTranslation();
   const setLanguage = useUIStore((state) => state.setLanguage);
 
@@ -211,6 +213,16 @@ export const SettingsScreen = () => {
       <div className="space-y-5">
         {/* Appearance */}
         <SettingsSection title={t.appearance} icon={Moon}>
+          <SettingsRow
+            label="Inner Border Lines"
+            description="Show borders below the logo and headline."
+            control={
+              <ToggleSwitch
+                enabled={showInnerBorders ?? true}
+                onToggle={toggleInnerBorders}
+              />
+            }
+          />
           <SettingsRow
             label={t.darkMode}
             description={t.darkModeDesc}

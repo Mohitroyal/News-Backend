@@ -59,6 +59,7 @@ export interface GenerationConfig {
   columnMode?: 'auto' | 'manual';
   borderColour?: string;
   headingBgColour?: string;
+  showInnerBorders?: boolean;
 }
 
 export interface Generation {

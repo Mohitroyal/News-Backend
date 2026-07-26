@@ -10,6 +10,8 @@ interface AuthStore {
   login: (user: User, token: string) => void;
   logout: () => void;
   updateUser: (partial: Partial<User>) => void;
+  otpState?: { phoneNumber: string; reqId: string } | null;
+  setOtpState: (state: { phoneNumber: string; reqId: string } | null) => void;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -26,6 +28,8 @@ export const useAuthStore = create<AuthStore>()(
         set((state) => ({
           user: state.user ? { ...state.user, ...partial } : null,
         })),
+      otpState: null,
+      setOtpState: (otpState) => set({ otpState }),
     }),
     { name: "newscraft-auth" }
   )
@@ -47,8 +51,8 @@ interface GenerationStore {
 const defaultConfig: Partial<GenerationConfig> = {
   language: "en",
   tone: "formal",
-  templateId: "bharath_reporter",
-  publicationName: "Bharath Reporter",
+  templateId: "rti_express",
+  publicationName: "RTI Express",
   publicationDate: new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -60,7 +64,7 @@ const defaultConfig: Partial<GenerationConfig> = {
   fontFamily: "playfair",
   layoutPattern: "A",
   borderColour: "#cc2222",
-  headingBgColour: "#fff3f3",
+  headingBgColour: "#cc2222",
 };
 
 export const useGenerationStore = create<GenerationStore>()(
@@ -108,21 +112,32 @@ interface UIStore {
   logoMode: boolean;
   sidebarOpen: boolean;
   language: string;
+  showInnerBorders: boolean;
   toggleLogoMode: () => void;
+  toggleInnerBorders: () => void;
+  setLogoMode: (val: boolean) => void;
   setSidebarOpen: (open: boolean) => void;
   setLanguage: (lang: string) => void;
+  pendingCropImageSrc: string | null;
+  setPendingCropImageSrc: (src: string | null) => void;
 }
 
 export const useUIStore = create<UIStore>()(
   persist(
     (set) => ({
       logoMode: false,
+      showInnerBorders: true,
       sidebarOpen: true,
       language: "en",
       toggleLogoMode: () =>
         set((state) => ({ logoMode: !state.logoMode })),
+      toggleInnerBorders: () =>
+        set((state) => ({ showInnerBorders: !(state.showInnerBorders ?? true) })),
+      setLogoMode: (val) => set({ logoMode: val }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setLanguage: (lang) => set({ language: lang }),
+      pendingCropImageSrc: null,
+      setPendingCropImageSrc: (src) => set({ pendingCropImageSrc: src }),
     }),
     { name: "newscraft-ui" }
   )

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGenerationStore, useUIStore } from '@/store';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Image as ImageIcon, X, Newspaper, CheckCircle2, Globe, Type } from 'lucide-react';
 import { generationService, compressImage } from '@/services/generation.service';
 import { TEMPLATES_LIST } from '@/lib/constants';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { ImageCropModal } from '@/components/ImageCropModal';
 import type { Language } from '@/types';
 import { LiveNewspaperPreview } from '@/components/LiveNewspaperPreview';
 import { PatternSelectionModal } from '@/components/PatternSelectionModal';
@@ -62,7 +62,11 @@ export const GenerateScreen = () => {
   const currentConfig   = useGenerationStore((state) => state.currentConfig);
   const addGeneration   = useGenerationStore((state) => state.addGeneration);
   const setConfig       = useGenerationStore((state) => state.setConfig);
+  const resetConfig     = useGenerationStore((state) => state.resetConfig);
   const logoMode        = useUIStore((state) => state.logoMode);
+  const showInnerBorders = useUIStore((state) => state.showInnerBorders);
+  const pendingCropImageSrc = useUIStore((state) => state.pendingCropImageSrc);
+  const setPendingCropImageSrc = useUIStore((state) => state.setPendingCropImageSrc);
   const navigate        = useNavigate();
 
   const [headline,      setHeadline]      = useState(currentConfig.headline || '');
@@ -76,9 +80,22 @@ export const GenerateScreen = () => {
   const [isLogoModalOpen,    setIsLogoModalOpen]    = useState(false);
   const [activeColourTab,    setActiveColourTab]    = useState<'border' | 'heading'>('border');
   const [showLangPicker,     setShowLangPicker]     = useState(false);
+  const [showColPicker,      setShowColPicker]      = useState(false);
 
   const [loading,    setLoading]    = useState(false);
   const [stageIndex, setStageIndex] = useState(-1);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropImageMime, setCropImageMime] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check for restored image on mount
+  useEffect(() => {
+    if (pendingCropImageSrc) {
+      setCropImageMime('image/jpeg'); // Default since format isn't stored in pending
+      setCropImageSrc(pendingCropImageSrc);
+      setPendingCropImageSrc(null);
+    }
+  }, [pendingCropImageSrc, setPendingCropImageSrc]);
 
   const currentStage = stageIndex >= 0 ? GEN_STAGES[Math.min(stageIndex, GEN_STAGES.length - 1)] : null;
 
@@ -87,6 +104,16 @@ export const GenerateScreen = () => {
   const selectedHeadingBgColour  = currentConfig.headingBgColour || '#fff3f3';
   const selectedTemplateId       = currentConfig.templateId      || 'rti_express';
   const selectedTemplateDetails  = TEMPLATES_LIST.find(t => t.id === selectedTemplateId) || TEMPLATES_LIST[0];
+
+  useEffect(() => {
+    if (selectedTemplateId === 'rti_express') {
+      useUIStore.getState().setLogoMode(true);
+      setConfig({
+        borderColour: '#cc2222',
+        headingBgColour: '#cc2222'
+      });
+    }
+  }, [selectedTemplateId, setConfig]);
 
   const maxImages = ['A', 'B'].includes(selectedPattern) ? 1 : ['C', 'D'].includes(selectedPattern) ? 2 : 3;
 
@@ -110,31 +137,51 @@ export const GenerateScreen = () => {
       alert(`Max ${maxImages} image(s) for Pattern ${selectedPattern}.`);
       return;
     }
-    try {
-      const image = await Camera.getPhoto({
-        quality: 85, allowEditing: false,
-        resultType: CameraResultType.Base64, source: CameraSource.Photos,
-      });
-      if (!image.base64String) return;
-      setLoading(true);
+    
+    fileInputRef.current?.click();
+  };
 
-      const byteCharacters = atob(image.base64String);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
-      const byteArray  = new Uint8Array(byteNumbers);
-      const mimeType   = image.format === 'png' ? 'image/png' : 'image/jpeg';
-      const rawFile    = new File([new Blob([byteArray], { type: mimeType })], `upload.${image.format || 'jpeg'}`, { type: mimeType });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Ensure it's an image even though we accept */*
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (jpeg, png, etc).');
+      return;
+    }
+    
+    const mimeType = file.type;
+    const url = URL.createObjectURL(file);
+    setCropImageMime(mimeType);
+    setCropImageSrc(url);
+    
+    // Reset input value so same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropImageSrc(null);
+    setLoading(true);
+    try {
+      const mimeType = cropImageMime || 'image/jpeg';
+      const extension = mimeType === 'image/png' ? 'png' : 'jpeg';
+      const rawFile = new File([croppedBlob], `upload.${extension}`, { type: mimeType });
       const compressed = await compressImage(rawFile, 1600, 0.82);
       const uploadRes  = await generationService.uploadImage(compressed);
 
-      if (uploadRes.success && uploadRes.data.url) {
+      if (uploadRes.success && uploadRes.data?.url) {
         let finalUrl = uploadRes.data.url;
         if (finalUrl.includes('onrender.com')) finalUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
         setImageUrls(prev => [...prev, finalUrl].slice(0, maxImages));
+      } else {
+        alert(`Upload Failed: ${(uploadRes as any).error || 'Unknown error'}`);
       }
     } catch (err: any) {
-      if (err.message !== 'User cancelled photos app') alert(`Upload Error\n\n${err.message || 'Unknown error'}`);
-    } finally { setLoading(false); }
+      alert(`Upload Error\n\n${err.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ─── Generate clipping ──────────────────────────────────────────────────────
@@ -149,6 +196,7 @@ export const GenerateScreen = () => {
         publicationName: selectedTemplateDetails.name,
         logoId: logoMode ? selectedTemplateId : undefined,
         showWatermark: logoMode,
+        showInnerBorders: showInnerBorders ?? true,
         publicationDate: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
       };
       setConfig(configToSave); setStageIndex(1);
@@ -171,6 +219,7 @@ export const GenerateScreen = () => {
         generateHeadline: false, 
         generate_headline: false, 
         autoGenerateHeadline: false,
+        showInnerBorders: showInnerBorders ?? true,
         columnMode: layoutColumns === 0 ? 'auto' : 'manual',
         layoutColumns,
         borderColor: currentConfig.borderColour || undefined,
@@ -185,7 +234,21 @@ export const GenerateScreen = () => {
       finally { clearTimeout(renderTimer); clearTimeout(finalTimer); }
 
       const generation = res?.data?.id ? res.data : (res?.id ? res : null);
-      if (generation) { generation.config = configToSave; addGeneration(generation); navigate(`/preview/${generation.id}`); }
+      if (generation) { 
+        generation.config = configToSave; 
+        addGeneration(generation); 
+        
+        // Reset form for next generation
+        resetConfig();
+        setHeadline('');
+        setContent('');
+        setLanguage('en');
+        setFontFamily('playfair');
+        setLayoutColumns(3);
+        setImageUrls([]);
+        
+        navigate(`/preview/${generation.id}`); 
+      }
       else throw new Error(`Unexpected server response: ${JSON.stringify(res)}`);
     } catch (err: any) {
       let errorTitle = 'Generation Failed';
@@ -197,6 +260,15 @@ export const GenerateScreen = () => {
 
   return (
     <div style={{ background: '#EEF3F8', minHeight: '100%', paddingBottom: '130px' }}>
+
+      {cropImageSrc && (
+        <ImageCropModal
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+          onCancel={() => setCropImageSrc(null)}
+        />
+      )}
+
 
       {/* ── Page title banner ── */}
       <div style={{ background: '#0D1B2A', paddingTop: '14px', paddingBottom: '16px', marginBottom: '12px', borderBottom: '3px solid #CC1E1E' }}>
@@ -453,22 +525,35 @@ export const GenerateScreen = () => {
           <div style={{ ...cardStyle, marginBottom: 0 }}>
             <div style={labelStyle}>COLUMNS</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-              {[{ label: 'Auto', val: 0 }, { label: '1 Column', val: 1 }, { label: '2 Columns', val: 2 }, { label: '3 Columns', val: 3 }].map(({ label, val }) => {
+              {[{ label: 'Auto', val: 0 }, { label: '1 Column', val: 1 }, { label: '2 Columns', val: 2 }, { label: '3 Columns', val: 3 }]
+                .filter(({ val }) => showColPicker || layoutColumns === val)
+                .map(({ label, val }) => {
                 const isActive = layoutColumns === val;
                 return (
                   <button
                     key={label}
-                    onClick={() => setLayoutColumns(val)}
+                    onClick={() => {
+                      if (!showColPicker) {
+                        setShowColPicker(true);
+                      } else {
+                        setLayoutColumns(val);
+                        setShowColPicker(false);
+                      }
+                    }}
                     style={{
                       padding: '9px 12px', borderRadius: '8px',
-                      background: isActive ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
-                      border: isActive ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
+                      background: isActive && showColPicker ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
+                      border: isActive && showColPicker ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
                       color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
                       fontSize: '12px', fontWeight: isActive ? 700 : 400,
                       textAlign: 'left', cursor: 'pointer',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                     }}
                   >
-                    {label}
+                    <span>{label}</span>
+                    {!showColPicker && (
+                      <span style={{ opacity: 0.5, fontSize: '10px' }}>▼</span>
+                    )}
                   </button>
                 );
               })}
@@ -511,6 +596,14 @@ export const GenerateScreen = () => {
       </div>
 
       {/* ── Modals ── */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept="*/*" 
+        onChange={handleFileChange} 
+      />
+        
       <PatternSelectionModal
         isOpen={isPatternModalOpen}
         onClose={() => setIsPatternModalOpen(false)}

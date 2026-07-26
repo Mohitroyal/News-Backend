@@ -17,6 +17,11 @@ export const PATTERN_GROUPS = [
         title: 'Pattern B',
         description: 'Left red bar headline · full width center image · 2 col text',
       },
+      {
+        patternId: 'C',
+        title: 'Pattern C',
+        description: 'Center image · text below',
+      },
     ],
   },
   {

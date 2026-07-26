@@ -3,7 +3,7 @@ import { useAuthStore } from "@/store";
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}`
-  : "https://news-backendm.onrender.com";
+  : "https://news-backend-sjw6.onrender.com";
 
 /**
  * Axios instance.
