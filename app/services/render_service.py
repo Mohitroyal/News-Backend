@@ -552,6 +552,7 @@ class RenderService:
 
             function getObstacles(W_canvas, S_img, imgHeightPx, H_canvas) {
                 H_canvas = H_canvas || 1200;
+                const TARGET_MAX_HEIGHT = H_canvas;
                 const obstacles = [];
                 if (urls.length > 0) {
                     let S_scale = S_img;
