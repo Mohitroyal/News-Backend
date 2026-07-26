@@ -44,11 +44,11 @@ class GrokService:
         
         CRITICAL REQUIREMENT 3: Extract the reporter/author name from the content if provided. DO NOT INVENT AUTHORS. If no author is found, set "byline" to "" (empty string).
         
-        CRITICAL REQUIREMENT 4: Provide image captions based on the context in an "image_captions" array. Do not output "Uploaded image" or "Photo shown". Ensure there are up to 8 professional captions provided.
+        CRITICAL REQUIREMENT 4: Provide image captions based on the context in an "image_captions" array. Do not output "Uploaded image" or "Photo shown". Ensure there are up to 8 professional captions provided strictly in {full_lang}.
         
-        CRITICAL REQUIREMENT 5: Generate a concise, engaging summary paragraph based on the content in {full_lang}.
+        CRITICAL REQUIREMENT 5: Generate a concise, engaging summary paragraph based on the content strictly in {full_lang}. DO NOT USE ENGLISH for summary if {full_lang} is not English.
         
-        CRITICAL REQUIREMENT 6: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article in {full_lang}.
+        CRITICAL REQUIREMENT 6: Generate an array of 3-5 short bullet points summarizing the key takeaways from the article strictly in {full_lang}. DO NOT USE ENGLISH for bullet points if {full_lang} is not English.
         
         The response MUST be a JSON object with the following keys:
         - headline: A catchy, professional newspaper headline strictly in {full_lang}.
@@ -67,7 +67,7 @@ class GrokService:
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST translate and write EVERYTHING strictly in {full_lang}. Do NOT use any other language. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
+                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST translate and write EVERYTHING strictly in {full_lang}. Do NOT use any other language for any field. Summary and bullet_points MUST be written in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},
@@ -92,6 +92,29 @@ class GrokService:
                     ai_content = json.loads(raw_content)
                     # Normalize keys to lowercase to prevent missing data in layouts
                     normalized = {k.lower().replace(" ", "_"): v for k, v in ai_content.items()}
+                    
+                    # Ensure summary and bullet_points are in the requested language
+                    lang_key = language.lower()
+                    reverse_map = {v.lower(): k for k, v in language_map.items()}
+                    if lang_key in reverse_map:
+                        lang_key = reverse_map[lang_key]
+                        
+                    if lang_key != "en":
+                        sec_list = normalized.get("sections", [])
+                        sec_text = "\n\n".join(sec_list) if isinstance(sec_list, list) else str(sec_list)
+                        if not sec_text.strip():
+                            sec_text = content
+                            
+                        sum_val = normalized.get("summary", "")
+                        bp_val = normalized.get("bullet_points", [])
+                        
+                        if self._is_mostly_english(sum_val) or self._is_mostly_english(bp_val):
+                            clean_sum, clean_bps = self._extract_summary_and_bullets(sec_text)
+                            if self._is_mostly_english(sum_val):
+                                normalized["summary"] = clean_sum
+                            if self._is_mostly_english(bp_val):
+                                normalized["bullet_points"] = clean_bps
+                                
                     return normalized
             except httpx.HTTPStatusError as e:
                 if e.response.status_code in (429, 413, 400) and attempt < max_retries - 1:
@@ -158,6 +181,17 @@ class GrokService:
             "bullet_points": bullet_points_fallback
         }
 
+    def _is_mostly_english(self, data: Any) -> bool:
+        """Returns True if the data contains 3 or more English words."""
+        if isinstance(data, list):
+            text = " ".join(str(item) for item in data)
+        else:
+            text = str(data or "")
+        if not text.strip():
+            return False
+        english_words = re.findall(r'\b[a-zA-Z]{3,}\b', text)
+        return len(english_words) >= 3
+
     def _extract_summary_and_bullets(self, content: str) -> tuple:
         """Extracts clean, non-error summary and key takeaways from raw content."""
         paragraphs = [p.strip() for p in content.replace("\r", "\n").split("\n") if p.strip()]
@@ -210,4 +244,5 @@ class GrokService:
         return summary, bullets[:3]
 
 grok_service = GrokService()
+
 
