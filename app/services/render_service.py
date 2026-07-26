@@ -227,6 +227,13 @@ class RenderService:
         print(f"[MULTILANG] Body chars total  : {_char_count} across {len(_sections)} sections")
         sys.stdout.flush()
 
+        # Resolve render URL — on production use the deployed frontend URL
+        if data.get("template_id") == "custom":
+            clipping_id = data.get("id", "")
+            frontend_url = settings.FRONTEND_URL or os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
+            render_url = f"{frontend_url}/render/{clipping_id}"
+            return render_url  # Playwright will navigate to this URL
+
         try:
             template = self.env.get_template(f"{template_key}/template.html")
         except Exception:
@@ -447,7 +454,9 @@ class RenderService:
             return false;
         };
         
-        async function startCompositorLayout() {
+        document.addEventListener("DOMContentLoaded", async () => {
+            const TARGET_MAX_HEIGHT = 1500;
+
             try {
                 const dataEl = document.getElementById('newspaper-data');
                 if (dataEl) {
@@ -471,20 +480,20 @@ class RenderService:
 
             // waitReady utility with timeout
             async function waitReady() {
-                const WAIT_TIMEOUT = 800;
+                const WAIT_TIMEOUT = 8000;
                 try {
                     await Promise.race([
-                        document.fonts ? document.fonts.ready : Promise.resolve(),
+                        document.fonts.ready,
                         new Promise(r => setTimeout(r, WAIT_TIMEOUT))
                     ]);
                 } catch(e) {}
 
                 const imgPromises = Array.from(document.images).map(img => {
-                    if (img.complete || !img.src || !img.src.startsWith('http')) return Promise.resolve();
+                    if (img.complete) return Promise.resolve();
                     return Promise.race([
                         new Promise(r => {
-                            img.onload = r;
-                            img.onerror = r;
+                            img.addEventListener('load',  r, { once: true });
+                            img.addEventListener('error', r, { once: true });
                         }),
                         new Promise(r => setTimeout(r, WAIT_TIMEOUT))
                     ]);
@@ -492,7 +501,6 @@ class RenderService:
                 await Promise.all(imgPromises);
             }
 
-            const TARGET_MAX_HEIGHT = 1600;
             const urls = data.image_urls || [];
             const captions = data.image_captions || [];
             const imgCount = urls.length;
@@ -502,7 +510,6 @@ class RenderService:
 
             // getImageDimensions utility
             async function getImageDimensions(url) {
-                if (!url) return { width: 800, height: 600 };
                 const existingImg = Array.from(document.images).find(img => img.src === url || img.getAttribute('src') === url);
                 if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
                     return { width: existingImg.naturalWidth, height: existingImg.naturalHeight };
@@ -510,13 +517,13 @@ class RenderService:
                 return Promise.race([
                     new Promise((resolve) => {
                         const img = new Image();
-                        img.onload  = () => resolve({ width: img.naturalWidth || 800, height: img.naturalHeight || 600 });
+                        img.onload  = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
                         img.onerror = () => resolve({ width: 800, height: 600 });
                         img.src = url;
                     }),
                     new Promise(resolve => setTimeout(() => {
                         resolve({ width: 800, height: 600 });
-                    }, 1500))
+                    }, 8000))
                 ]);
             }
 
@@ -545,7 +552,6 @@ class RenderService:
 
             function getObstacles(W_canvas, S_img, imgHeightPx, H_canvas) {
                 H_canvas = H_canvas || 1200;
-                const TARGET_MAX_HEIGHT = H_canvas;
                 const obstacles = [];
                 if (urls.length > 0) {
                     let S_scale = S_img;
@@ -772,6 +778,44 @@ class RenderService:
                             h: Math.round(h2)
                         });
                     }
+
+                    if (isArticleStyle) {
+                        let maxY = 0;
+                        obstacles.forEach(o => {
+                            if (o.y + o.h > maxY) maxY = o.y + o.h;
+                        });
+                        
+                        let measureContainer = document.createElement('div');
+                        measureContainer.style.position = 'absolute';
+                        measureContainer.style.visibility = 'hidden';
+                        measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
+                        measureContainer.style.fontSize = '15px';
+                        measureContainer.style.lineHeight = '1.6';
+                        measureContainer.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
+                        measureContainer.style.padding = '24px';
+                        measureContainer.style.boxSizing = 'border-box';
+                        
+                        // Measure Summary
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${sumTitle}</h4><p style="margin: 0;">${data.summary || ''}</p>`;
+                        document.body.appendChild(measureContainer);
+                        let sumH = measureContainer.offsetHeight;
+                        
+                        // Measure Bullets
+                        let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${bulTitle}</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
+                        let bulH = measureContainer.offsetHeight;
+                        document.body.removeChild(measureContainer);
+                        
+                        let summaryH = Math.max(120, sumH, bulH);
+                        
+                        obstacles.push({
+                            type: 'summary_bullets',
+                            x: 0,
+                            y: maxY > 0 ? maxY + 30 : 0,
+                            w: W_canvas,
+                            h: summaryH
+                        });
+                    }
                 }
                 return obstacles;
             }
@@ -799,6 +843,60 @@ class RenderService:
                 // Render absolute images onto canvas if it's the final pass
                 if (isFinal) {
                     obstacles.forEach(obs => {
+                        if (obs.type === 'summary_bullets') {
+                            const containerEl = document.createElement('div');
+                            containerEl.className = 'nc-absolute-summary';
+                            containerEl.style.position = 'absolute';
+                            containerEl.style.left = `${obs.x}px`;
+                            containerEl.style.top = `${obs.y}px`;
+                            containerEl.style.width = `${obs.w}px`;
+                            containerEl.style.height = `${obs.h}px`;
+                            containerEl.style.boxSizing = 'border-box';
+                            containerEl.style.display = 'flex';
+                            containerEl.style.flexDirection = 'row';
+                            containerEl.style.gap = '24px';
+                            containerEl.style.zIndex = '5';
+                            containerEl.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
+                            
+                            let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                            
+                            let sumBg = data.summary_bg || '#FFF4CC';
+                            let bulBg = data.bullet_bg || '#00A79D';
+                            let sumHeadingColor = '#B28600';
+                            let sumTextColor = '#333333';
+                            let bulHeadingColor = '#CCF2F0';
+                            let bulTextColor = '#FFFFFF';
+                            let listStyle = 'disc';
+                            let sumBorder = '#FFE066';
+                            let bulBorder = '#008C83';
+                            
+                            if (data.template_id === 'custom') {
+                                sumBg = '#F8E71C'; // Bright yellow
+                                bulBg = '#00B7C6'; // Bright cyan
+                                sumHeadingColor = '#000000';
+                                sumTextColor = '#000000';
+                                bulHeadingColor = '#FFFFFF';
+                                listStyle = '"✦  "';
+                                sumBorder = 'transparent';
+                                bulBorder = 'transparent';
+                            }
+                            
+                            containerEl.innerHTML = `
+                                <div style="flex: 1; background-color: ${sumBg}; padding: 24px; border-radius: 12px; border: 1px solid ${sumBorder}; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: ${sumHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${sumTitle}</h4>
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${sumTextColor};">${data.summary || ''}</p>
+                                </div>
+                                <div style="flex: 1; background-color: ${bulBg}; padding: 24px; border-radius: 12px; border: 1px solid ${bulBorder}; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: ${bulHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${bulTitle}</h4>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: ${bulTextColor}; list-style-type: ${listStyle};">
+                                        ${bpHtml}
+                                    </ul>
+                                </div>
+                            `;
+                            canvas.appendChild(containerEl);
+                            return;
+                        }
+
                         const imgEl = document.createElement('div');
                         imgEl.className = 'nc-absolute-image';
                         imgEl.style.position = 'absolute';
@@ -821,24 +919,31 @@ class RenderService:
                         }
                         const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
                         
-                            let captionHtml = obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${obs.caption}</div>` : '';
-                            if (obs.isCentered) {
-                                const isFullBleed = (obs.visW >= obs.w);
-                                imgEl.style.display = 'flex';
-                                imgEl.style.flexDirection = 'column';
-                                imgEl.style.alignItems = 'center';
-                                imgEl.style.border = 'none';
-                                imgEl.style.background = 'transparent';
-                                imgEl.style.padding = '0';
-                                
-                                const innerStyle = isFullBleed 
-                                    ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
-                                    : `width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
+                        if (obs.isCentered) {
+                            const isFullBleed = (obs.visW >= obs.w);
+                            imgEl.style.display = 'flex';
+                            imgEl.style.flexDirection = 'column';
+                            imgEl.style.alignItems = 'center';
+                            imgEl.style.border = 'none';
+                            imgEl.style.background = 'transparent';
+                            imgEl.style.padding = '0';
+                            
+                            const innerStyle = isFullBleed 
+                                ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
+                                : `width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
 
-                                imgEl.innerHTML = '<div style="' + innerStyle + '"><img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'cover') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
-                            } else {
-                                imgEl.innerHTML = '<img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'cover') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml;
-                            }
+                            imgEl.innerHTML = `
+                                <div style="${innerStyle}">
+                                    <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: ${obs.objectFit || 'cover'}; object-position: ${obs.objectPosition || 'center center'}; display: block;" />
+                                    ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${obs.caption}</div>` : ''}
+                                </div>
+                            `;
+                        } else {
+                            imgEl.innerHTML = `
+                                <img src="${obs.url}" style="width: 100%; height: ${imgH}px; max-height: none !important; object-fit: ${obs.objectFit || 'cover'}; object-position: ${obs.objectPosition || 'center center'}; display: block;" />
+                                ${obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; word-wrap: break-word;">${obs.caption}</div>` : ''}
+                            `;
+                        }
                         canvas.appendChild(imgEl);
                     });
                 }
@@ -1086,85 +1191,7 @@ class RenderService:
                     };
                 }
                 
-            function renderSummaryBulletsBox(yTop) {
-                if ((!data.summary || !String(data.summary).trim()) && (!data.bullet_points || data.bullet_points.length === 0)) {
-                    return 0;
-                }
-                const containerEl = document.createElement('div');
-                containerEl.className = 'nc-absolute-summary';
-                containerEl.style.position = 'absolute';
-                containerEl.style.left = '0px';
-                containerEl.style.top = `${yTop}px`;
-                containerEl.style.width = '100%';
-                containerEl.style.boxSizing = 'border-box';
-                containerEl.style.display = 'flex';
-                containerEl.style.flexDirection = 'row';
-                containerEl.style.gap = '24px';
-                containerEl.style.zIndex = '5';
-                containerEl.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
-                
-                let langStr = (data.language || data.language_name || 'en').toLowerCase();
-                let langKey = 'en';
-                if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
-                else if (langStr.includes('hindi') || langStr === 'hi') langKey = 'hi';
-                else if (langStr.includes('kannada') || langStr === 'kn') langKey = 'kn';
-                else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
-                else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
-
-                let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுരുக்கம்', 'ml': 'സംഗ్రహం', 'en': 'SUMMARY' };
-                let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ముఖ్యాంಶలు', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'പ്രధాన വിവരాలు', 'en': 'KEY TAKEAWAYS' };
-
-                let sumTitle = sumLabels[langKey] || 'SUMMARY';
-                let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
-
-                let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
-                
-                let sumBg = data.summary_bg || '#FFF4CC';
-                let bulBg = data.bullet_bg || '#00A79D';
-                let sumHeadingColor = '#B28600';
-                let sumTextColor = '#333333';
-                let bulHeadingColor = '#CCF2F0';
-                let bulTextColor = '#FFFFFF';
-                let listStyle = 'disc';
-                let sumBorder = '#FFE066';
-                let bulBorder = '#008C83';
-                
-                if (data.template_id === 'custom') {
-                    sumBg = '#F8E71C';
-                    bulBg = '#00B7C6';
-                    sumHeadingColor = '#000000';
-                    sumTextColor = '#000000';
-                    bulHeadingColor = '#FFFFFF';
-                    listStyle = '"✦  "';
-                    sumBorder = 'transparent';
-                    bulBorder = 'transparent';
-                }
-                
-                let summaryBoxHtml = '';
-                if (data.summary && String(data.summary).trim()) {
-                    summaryBoxHtml = `
-                        <div style="flex: 1; background-color: ${sumBg}; padding: 20px; border-radius: 12px; border: 1px solid ${sumBorder}; display: flex; flex-direction: column; justify-content: flex-start;">
-                            <div style="font-weight: 800; font-size: 15px; text-transform: uppercase; color: ${sumHeadingColor}; margin-bottom: 8px; letter-spacing: 0.5px;">${sumTitle}</div>
-                            <div style="font-size: 14px; line-height: 1.6; color: ${sumTextColor}; text-align: justify;">${data.summary}</div>
-                        </div>
-                    `;
-                }
-
-                let bulletBoxHtml = '';
-                if (data.bullet_points && data.bullet_points.length > 0) {
-                    bulletBoxHtml = `
-                        <div style="flex: 1; background-color: ${bulBg}; padding: 20px; border-radius: 12px; border: 1px solid ${bulBorder}; display: flex; flex-direction: column; justify-content: flex-start; color: ${bulTextColor};">
-                            <div style="font-weight: 800; font-size: 15px; text-transform: uppercase; color: ${bulHeadingColor}; margin-bottom: 8px; letter-spacing: 0.5px;">${bulTitle}</div>
-                            <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; list-style-type: ${listStyle};">
-                                ${bpHtml}
-                            </ul>
-                        </div>
-                    `;
-                }
-
-                containerEl.innerHTML = summaryBoxHtml + bulletBoxHtml;
-                canvas.appendChild(containerEl);
-                return containerEl.offsetHeight || 180;
+                return true;
             }
 
             async function executeLayout() {
@@ -1175,8 +1202,19 @@ class RenderService:
                 // Force headline to fit on a single line
                 const hl = document.querySelector('.headline');
                 if (hl) {
-                    hl.style.whiteSpace = 'normal';
-                    hl.style.wordBreak = 'break-word';
+                    hl.style.whiteSpace = 'nowrap';
+                    hl.style.overflow = 'visible';
+                    hl.style.display = 'inline-block';
+                    hl.style.width = 'auto';
+                    let fs = 76; // Start slightly larger to fill space if short
+                    hl.style.fontSize = fs + 'px';
+                    const parent = hl.parentElement;
+                    const cs = window.getComputedStyle(parent);
+                    const maxWidth = parent.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0) - 4;
+                    while (hl.offsetWidth > maxWidth && fs > 16) {
+                        fs -= 1;
+                        hl.style.fontSize = fs + 'px';
+                    }
                     hl.style.display = 'block';
                     hl.style.width = '100%';
                 }
@@ -1297,11 +1335,8 @@ class RenderService:
                 if (contentMaxY > 0) {
                     let canvasRect = canvas.getBoundingClientRect();
                     let actualContentHeight = contentMaxY - canvasRect.top;
-                    
-                    let sumBoxH = renderSummaryBulletsBox(actualContentHeight + 20);
-                    if (sumBoxH > 0) {
-                        actualContentHeight += 20 + sumBoxH;
-                    }
+                    console.log("[LAYOUT DEBUG] canvasRect.top: " + canvasRect.top + ", actualContentHeight: " + actualContentHeight);
+                    // Add a tiny buffer to avoid cutting off descenders
                     actualContentHeight += 2;
                     
                     // CUSTOM TEMPLATE ENHANCEMENT: Thick border + RTI Footer
@@ -1361,20 +1396,9 @@ class RenderService:
                 window.__LAYOUT_DONE__ = true;
             }
 
-            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 15000);
-            executeLayout().then(() => {
-                window.__LAYOUT_DONE__ = true;
-            }).catch(err => {
-                console.error("[LAYOUT FATAL ERROR]", err && err.stack ? err.stack : err);
-                window.__LAYOUT_DONE__ = true;
-            });
-        }
-        }
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', startCompositorLayout);
-        } else {
-            startCompositorLayout();
-        }
+            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 10000);
+            executeLayout();
+        });
         </script>
         """
 
@@ -1492,20 +1516,15 @@ class RenderService:
                     page.on("console", handle_console)
                     page.set_default_timeout(300000)
 
-                    if html_content.startswith("http"): await page.goto(html_content, wait_until="commit", timeout=300000)
-                    else: await page.set_content(html_content, wait_until="commit", timeout=300000)
+                    if html_content.startswith("http"): await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
+                    else: await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
 
                     try:
-                        await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
+                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
                     except Exception:
                         pass
 
-                    for wait_i in range(15):
-                        is_done = await page.evaluate("window.__LAYOUT_DONE__ === true")
-                        print(f"[DEBUG LAYOUT POLL {wait_i}] is_done = {is_done}")
-                        if is_done:
-                            break
-                        await asyncio.sleep(0.5)
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
 
                     try:
                         await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
