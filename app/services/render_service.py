@@ -227,13 +227,6 @@ class RenderService:
         print(f"[MULTILANG] Body chars total  : {_char_count} across {len(_sections)} sections")
         sys.stdout.flush()
 
-        # Resolve render URL — on production use the deployed frontend URL
-        if data.get("template_id") == "custom":
-            clipping_id = data.get("id", "")
-            frontend_url = settings.FRONTEND_URL or os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
-            render_url = f"{frontend_url}/render/{clipping_id}"
-            return render_url  # Playwright will navigate to this URL
-
         try:
             template = self.env.get_template(f"{template_key}/template.html")
         except Exception:
