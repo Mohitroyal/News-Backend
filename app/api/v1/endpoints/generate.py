@@ -240,17 +240,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "primary_color": custom.get("primary_color", None),
                 }
 
-                if clipping.template_id == "custom":
-                    if not clipping.custom_layout:
-                        clipping.status = "completed"
-                        db.commit()
-                        return
-                    import os as _os
-                    _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
-                    html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
-                else:
-                    html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
-                    print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
+                html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
+                print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
                 # --- [9] PNG & PDF Asset Generation ---
                 stage = "Asset Generation"
                 last_failed_stage = stage

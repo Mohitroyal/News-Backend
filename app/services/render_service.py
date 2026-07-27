@@ -182,6 +182,12 @@ class RenderService:
                 "publication_name": "The Extra News",
                 "logo_url": f"{self._logo_base}/extra_news.svg",
             },
+            "custom": {
+                "primary_color": "#1d70b8",
+                "accent_color": "#1d70b8",
+                "publication_name": "RTI Express",
+                "logo_url": f"{self._logo_base}/rti_express.svg",
+            },
         }
 
         brand_key = data.get("logo_id") or template_key
@@ -226,13 +232,6 @@ class RenderService:
         print(f"[MULTILANG] Caption chars     : {_caption_chars}")
         print(f"[MULTILANG] Body chars total  : {_char_count} across {len(_sections)} sections")
         sys.stdout.flush()
-
-        # Resolve render URL — on production use the deployed frontend URL
-        if data.get("template_id") == "custom":
-            clipping_id = data.get("id", "")
-            frontend_url = settings.FRONTEND_URL or os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
-            render_url = f"{frontend_url}/render/{clipping_id}"
-            return render_url  # Playwright will navigate to this URL
 
         try:
             template = self.env.get_template(f"{template_key}/template.html")
@@ -1318,7 +1317,7 @@ class RenderService:
                 
                 // Precision shrink-wrap canvas exactly to the lowest content pixel
                 let rBoxBottoms = [];
-                document.querySelectorAll('.nc-text-region-box, .nc-absolute-image').forEach(el => {
+                document.querySelectorAll('.nc-text-region-box, .nc-absolute-image, .nc-absolute-summary').forEach(el => {
                     if (el.classList.contains('nc-text-region-box')) {
                         if (el.clientHeight === 0) return;
                         if (el.innerText.trim() === '') return;
