@@ -1148,7 +1148,7 @@ class RenderService:
                     } else pIdx++;
                 }
                 
-                if (pIdx < paragraphs.length) {
+                if (regions.length === 0 || pIdx < paragraphs.length) {
                     return false; // Did not fit all paragraphs
                 }
                 
@@ -1270,7 +1270,7 @@ class RenderService:
                     }
                 }
 
-                let low = Math.max(300, Math.round(maxObstacleY + 30));
+                let low = Math.max(500, Math.round(maxObstacleY + 120));
                 let high = H_avail;
                 let H_best = H_avail;
 

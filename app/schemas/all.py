@@ -52,6 +52,14 @@ class ClippingBase(BaseModel):
     @classmethod
     def populate_boolean_toggles(cls, data: Any) -> Any:
         if isinstance(data, dict):
+            # Check article_content alternative keys
+            if "articleContent" not in data and "article_content" not in data:
+                for alt_key in ["content", "description", "articleContentText", "raw_content", "text"]:
+                    if alt_key in data and data[alt_key]:
+                        data["article_content"] = data[alt_key]
+                        data["articleContent"] = data[alt_key]
+                        break
+
             # Check all possible alias keys for watermark / logo mode toggles
             keys_to_check = [
                 "showWatermark",
