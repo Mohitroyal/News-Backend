@@ -132,11 +132,11 @@ class GrokService:
             sum_val = normalized.get("summary", "")
             bp_val = normalized.get("bullet_points", [])
             
-            if self._is_mostly_english(sum_val) or self._is_mostly_english(bp_val):
+            if self._is_mostly_english(sum_val, lang_key) or self._is_mostly_english(bp_val, lang_key):
                 clean_sum, clean_bps = self._extract_summary_and_bullets(sec_text)
-                if self._is_mostly_english(sum_val):
+                if self._is_mostly_english(sum_val, lang_key):
                     normalized["summary"] = clean_sum
-                if self._is_mostly_english(bp_val):
+                if self._is_mostly_english(bp_val, lang_key):
                     normalized["bullet_points"] = clean_bps
 
         return normalized
@@ -172,50 +172,81 @@ class GrokService:
             "bullet_points": bullet_points_fallback
         }
 
-    def _is_mostly_english(self, data: Any) -> bool:
-        """Returns True if the data contains 3 or more English words."""
+    def _is_mostly_english(self, data: Any, target_lang: str = "en") -> bool:
+        """Returns True ONLY if Latin ASCII characters overwhelmingly dominate the text for a non-English target language."""
+        if target_lang.lower() in ["en", "english"]:
+            return False
         if isinstance(data, list):
             text = " ".join(str(item) for item in data)
         else:
             text = str(data or "")
-        if not text.strip():
+        text = text.strip()
+        if not text:
             return False
-        english_words = re.findall(r'\b[a-zA-Z]{3,}\b', text)
-        return len(english_words) >= 3
+        
+        latin_chars = len(re.findall(r'[a-zA-Z]', text))
+        non_latin_chars = len(re.findall(r'[^\x00-\x7F]', text))
+        
+        if non_latin_chars == 0:
+            return latin_chars > 8
+            
+        return latin_chars > (non_latin_chars * 2)
 
     def _extract_summary_and_bullets(self, content: str) -> tuple:
-        """Extracts clean, non-error summary and key takeaways from raw content without breaking abbreviations."""
+        """Extracts clean, meaningful summary and key takeaways by filtering out header artifacts, equals lines and datelines."""
         raw_text = content.replace("\r", "\n").strip()
         
-        # Protect abbreviation dots (e.g., ఆర్., టి., ఐ., శ్రీ., డా., బి., 26.07)
-        protected_text = re.sub(r'(\b[^\s\.]{1,4})\.\s+', r'\1_DOT_ ', raw_text)
+        # 1. Clean out divider lines, equals signs, datelines and empty artifacts
+        lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
+        clean_paragraphs = []
+        
+        for l in lines:
+            if re.search(r'^[=\-_.\s]{3,}$', l):
+                continue
+            clean_l = re.sub(r'[=\-_]{2,}', '', l).strip()
+            if len(clean_l) < 30 and ("ప్రతినిధి" in clean_l or "రిపోర్టర్" in clean_l or "నాయక్" in clean_l):
+                continue
+            if clean_l:
+                clean_paragraphs.append(clean_l)
+
+        full_clean_text = " ".join(clean_paragraphs)
+        
+        # Protect abbreviation dots
+        protected_text = re.sub(r'(\b[^\s\.]{1,4})\.\s+', r'\1_DOT_ ', full_clean_text)
         protected_text = re.sub(r'(\d+)\.(\d+)', r'\1_NUMDOT_\2', protected_text)
         
-        # Split by actual sentence endings (. or । or ? or ! or \n)
-        chunks = [c.replace('_DOT_', '.').replace('_NUMDOT_', '.').strip() for c in re.split(r'[\.!\?।\n]+', protected_text) if c.strip()]
-        
-        sentences = [c for c in chunks if len(c) > 15]
+        raw_chunks = [c.replace('_DOT_', '.').replace('_NUMDOT_', '.').strip() for c in re.split(r'[\.!\?।\n]+', protected_text) if c.strip()]
+        sentences = []
+        for s in raw_chunks:
+            clean_s = re.sub(r'[=\-_]{2,}', '', s).strip()
+            if len(clean_s) > 25 and not clean_s.startswith("సంగారెడ్డి జిల్లా : ప్రతినిధి"):
+                sentences.append(clean_s)
+                
         if not sentences:
-            clean_content = content.strip()
-            if clean_content:
-                sentences = [clean_content[:150]]
+            sentences = [full_clean_text[:150]] if full_clean_text else ["తాజా సమాచారం ప్రకారం వివరాలు సిద్ధమవుతున్నాయి."]
+
+        # Summary: Take substantial body sentences (up to ~300 chars)
+        summary_sentences = []
+        total_len = 0
+        for s in sentences:
+            if total_len + len(s) <= 320:
+                summary_sentences.append(s.rstrip('.') + '.')
+                total_len += len(s)
             else:
-                sentences = ["తాజా సమాచారం ప్రకారం వివరాలు సిద్ధమవుతున్నాయి."]
+                if not summary_sentences:
+                    summary_sentences.append(s[:315].rsplit(' ', 1)[0] + '...')
+                break
+                
+        summary = " ".join(summary_sentences)
 
-        # 1. Build concise summary paragraph (up to ~320 chars)
-        summary_sentences = sentences[:2]
-        summary = " ".join(s.rstrip('.') + '.' for s in summary_sentences)
-        if len(summary) > 320:
-            summary = summary[:315].rsplit(' ', 1)[0] + "..."
-
-        # 2. Extract 4-5 concise key takeaway bullet points (max 85 chars each)
+        # Bullet Points: Extract 4-5 concise key takeaway clauses (max 85 chars each)
         bullets = []
         for s in sentences:
             sub_parts = re.split(r'[,;—–-]', s)
             for p in sub_parts:
                 clean_p = p.strip()
                 clean_p = re.sub(r'^[•\-\*\d\.\s]+', '', clean_p)
-                if 15 <= len(clean_p) <= 85:
+                if 20 <= len(clean_p) <= 85:
                     if not clean_p.endswith(('.', '।')):
                         clean_p += "."
                     if clean_p not in bullets:
