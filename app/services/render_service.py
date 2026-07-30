@@ -94,38 +94,52 @@ class RenderService:
         if not data.get("headline"):
             data["headline"] = "NEWSFLASH: Special Report"
 
-        # 2. Article raw text preservation (prioritize raw user input over AI formatted sections)
-        raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content")
-        if raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
-            raw_clean = raw_text_input.strip()
-            split_p = [p.strip() for p in re.split(r'\n+|\r\n', raw_clean) if p.strip()]
-            data["sections"] = split_p if split_p else [raw_clean]
-        elif isinstance(data.get("sections"), str):
-            data["sections"] = [data["sections"]]
-        elif not data.get("sections") or len(data.get("sections", [])) == 0:
-            data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
+        # 2. Section & Raw Text Handling - Preserve AI-formatted sections if available!
+        existing_sections = data.get("sections")
+        if isinstance(existing_sections, str) and existing_sections.strip():
+            data["sections"] = [existing_sections.strip()]
+        elif isinstance(existing_sections, list) and any(isinstance(s, str) and s.strip() for s in existing_sections):
+            data["sections"] = [s.strip() for s in existing_sections if isinstance(s, str) and s.strip()]
+        else:
+            raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content")
+            if raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
+                raw_clean = raw_text_input.strip()
+                split_p = [p.strip() for p in re.split(r'\n+|\r\n', raw_clean) if p.strip()]
+                data["sections"] = split_p if split_p else [raw_clean]
+            else:
+                data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
 
-        # 2a. Normalize punctuation spacing & split long single-paragraph inputs
+        # 2a. Normalize punctuation spacing & split long single-paragraph inputs (supports Indic danda । as well as Latin .!?)
         processed_sections = []
         for sec in data["sections"]:
-            if not isinstance(sec, str):
+            if not isinstance(sec, str) or not sec.strip():
                 continue
-            # Ensure space after punctuation (.,!?:;) if followed directly by a letter/glyph
-            clean_sec = re.sub(r'([.,!?:;])([^\s\d])', r'\1 \2', sec)
-            # If section is longer than 350 chars and has multiple sentences, split into paragraphs
-            if len(clean_sec) > 350 and re.search(r'[.,!?]\s+', clean_sec):
-                sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', clean_sec) if s.strip()]
-                curr_p = []
-                curr_len = 0
-                for s in sentences:
-                    curr_p.append(s)
-                    curr_len += len(s)
-                    if curr_len >= 250:
+            # Ensure space after punctuation (.,!?:;।) if followed directly by a letter/glyph
+            clean_sec = re.sub(r'([.,!?:;।])([^\s\d])', r'\1 \2', sec.strip())
+            # If section is longer than 300 chars, split into readable paragraph blocks
+            if len(clean_sec) > 300:
+                sentences = [s.strip() for s in re.split(r'(?<=[.!?।])\s+|\n+', clean_sec) if s.strip()]
+                if len(sentences) > 1:
+                    curr_p = []
+                    curr_len = 0
+                    for s in sentences:
+                        curr_p.append(s)
+                        curr_len += len(s)
+                        if curr_len >= 220:
+                            processed_sections.append(" ".join(curr_p))
+                            curr_p = []
+                            curr_len = 0
+                    if curr_p:
                         processed_sections.append(" ".join(curr_p))
-                        curr_p = []
-                        curr_len = 0
-                if curr_p:
-                    processed_sections.append(" ".join(curr_p))
+                else:
+                    # Single long unbroken sentence (>300 chars): split in half by words so it flows across columns
+                    words = clean_sec.split()
+                    if len(words) > 25:
+                        mid = len(words) // 2
+                        processed_sections.append(" ".join(words[:mid]))
+                        processed_sections.append(" ".join(words[mid:]))
+                    else:
+                        processed_sections.append(clean_sec)
             else:
                 processed_sections.append(clean_sec)
         data["sections"] = processed_sections if processed_sections else data["sections"]
@@ -705,15 +719,15 @@ class RenderService:
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width (covers sides as requested)
                         
-                        // Height matches exact aspect ratio (no text density modifiers that cause squishing)
+                        // Height matches aspect ratio with a cap to guarantee vertical room for text below
                         let dynamicH = imgVisW / aspect0;
                         
-                        // Prevent giant vertical images from zooming out the layout and ruining text quality
-                        h0 = Math.min(dynamicH, TARGET_MAX_HEIGHT * 0.65);
+                        // Cap hero image height to 460px max so ample vertical column space remains for article text
+                        h0 = Math.min(dynamicH, 460);
                         
                         isPatternB_centered = true;
                     } else {
-                        h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.50, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                        h0 = Math.min(h0, 460, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
                     }
                     
                     obstacles.push({
