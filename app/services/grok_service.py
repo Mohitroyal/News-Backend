@@ -74,7 +74,10 @@ class GrokService:
             "max_tokens": 2500
         }
 
-        models_to_try = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"] if (self.api_key and self.api_key.startswith("gsk_")) else ["grok-2-1212", "grok-2", "grok-beta", "llama-3.1-8b-instant"]
+        if self.api_key and self.api_key.startswith("gsk_"):
+            models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+        else:
+            models_to_try = ["grok-2-latest", "grok-2", "grok-beta"]
 
         normalized = None
         import asyncio
