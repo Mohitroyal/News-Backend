@@ -562,6 +562,20 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
+            let langStr = (data.language || data.language_name || 'en').toLowerCase();
+            let langKey = 'en';
+            if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
+            else if (langStr.includes('hindi') || langStr === 'hi') langKey = 'hi';
+            else if (langStr.includes('kannada') || langStr === 'kn') langKey = 'kn';
+            else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
+            else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
+
+            let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுருக்கம்', 'ml': 'సంగ్రహం', 'en': 'SUMMARY' };
+            let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ముఖ్యాంశాలు', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'ప్రధాన వివరాలు', 'en': 'KEY TAKEAWAYS' };
+
+            let sumTitle = sumLabels[langKey] || 'SUMMARY';
+            let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
+
             function resolveColumns(colVal, charLen) {
                 const s = String(colVal === undefined || colVal === null ? "auto" : colVal).toLowerCase().trim();
                 const p = parseInt(s);
@@ -632,16 +646,6 @@ class RenderService:
                             measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
                             measureContainer.style.fontSize = '15px';
                             measureContainer.style.lineHeight = '1.6';
-                            let langStr = (data.language || data.language_name || 'en').toLowerCase();
-                            let langKey = 'en';
-                            if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
-                            else if (langStr.includes('hindi') || langStr === 'hi') langKey = 'hi';
-                            else if (langStr.includes('kannada') || langStr === 'kn') langKey = 'kn';
-                            else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
-                            else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
-
-                            let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுരുக்கம்', 'ml': 'സംഗ്രഹം', 'en': 'SUMMARY' };
-                            let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ಮುಖ್ಯಾಂಶಗಳು', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'പ്രധാന വിവരങ്ങൾ', 'en': 'KEY TAKEAWAYS' };
 
                             let sumTitle = sumLabels[langKey] || 'SUMMARY';
                             let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
