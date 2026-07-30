@@ -121,25 +121,23 @@ class RenderService:
             # Ensure space after punctuation (.,!?:;।) if followed directly by a letter/glyph
             clean_sec = re.sub(r'([.,!?:;।])([^\s\d])', r'\1 \2', clean_sec)
             
-            # If section is longer than 250 chars, split into readable paragraph blocks
-            if len(clean_sec) > 250:
+            # If section is longer than 100 chars, split into readable paragraph blocks
+            if len(clean_sec) > 100:
                 sentences = [s.strip() for s in re.split(r'(?<=[.!?।,;])\s+|\n+', clean_sec) if s.strip()]
                 if len(sentences) > 1:
-                    curr_p = []
-                    curr_len = 0
                     for s in sentences:
-                        curr_p.append(s)
-                        curr_len += len(s)
-                        if curr_len >= 180:
-                            processed_sections.append(" ".join(curr_p))
-                            curr_p = []
-                            curr_len = 0
-                    if curr_p:
-                        processed_sections.append(" ".join(curr_p))
+                        if len(s) > 10:
+                            words = s.split()
+                            if len(words) > 20:
+                                chunk_size = 14
+                                for i in range(0, len(words), chunk_size):
+                                    processed_sections.append(" ".join(words[i:i + chunk_size]))
+                            else:
+                                processed_sections.append(s)
                 else:
                     words = clean_sec.split()
-                    if len(words) > 15:
-                        chunk_size = 15
+                    if len(words) > 14:
+                        chunk_size = 14
                         for i in range(0, len(words), chunk_size):
                             processed_sections.append(" ".join(words[i:i + chunk_size]))
                     else:
@@ -1214,7 +1212,7 @@ class RenderService:
                     let maxY = 0;
                     regions.forEach(r => {
                         if (r.rBox.lastElementChild && r.rBox.innerText.trim() !== '') {
-                            const contentHeight = r.rBox.scrollHeight + 12;
+                            const contentHeight = Math.max(r.height, r.rBox.scrollHeight);
                             r.rBox.style.height = `${contentHeight}px`;
                             r.rBox.style.overflow = 'visible';
                             maxY = Math.max(maxY, r.y + contentHeight);
