@@ -152,6 +152,19 @@ class RenderService:
 
         data["sections"] = processed_sections
 
+        # 2b. Auto-extract summary and key takeaways if missing
+        if not data.get("summary") or not data.get("bullet_points") or not isinstance(data.get("bullet_points"), list) or len(data.get("bullet_points")) == 0:
+            try:
+                from app.services.grok_service import grok_service
+                full_sec_text = "\n\n".join(data["sections"])
+                clean_sum, clean_bps = grok_service._extract_summary_and_bullets(full_sec_text)
+                if not data.get("summary") or not str(data.get("summary")).strip():
+                    data["summary"] = clean_sum
+                if not data.get("bullet_points") or not isinstance(data.get("bullet_points"), list) or len(data.get("bullet_points")) == 0:
+                    data["bullet_points"] = clean_bps
+            except Exception as sum_err:
+                print(f"[WARNING] Summary fallback extraction error: {sum_err}")
+
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
             fallback_img = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80"
@@ -1201,7 +1214,7 @@ class RenderService:
                     let maxY = 0;
                     regions.forEach(r => {
                         if (r.rBox.lastElementChild && r.rBox.innerText.trim() !== '') {
-                            const contentHeight = Math.max(r.height, r.rBox.scrollHeight);
+                            const contentHeight = r.rBox.scrollHeight + 12;
                             r.rBox.style.height = `${contentHeight}px`;
                             r.rBox.style.overflow = 'visible';
                             maxY = Math.max(maxY, r.y + contentHeight);
