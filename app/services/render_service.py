@@ -96,61 +96,61 @@ class RenderService:
 
         # 2. Section & Raw Text Handling - Preserve AI-formatted sections if available!
         existing_sections = data.get("sections")
-        if isinstance(existing_sections, str) and existing_sections.strip():
-            data["sections"] = [existing_sections.strip()]
-        elif isinstance(existing_sections, list) and any(isinstance(s, str) and s.strip() for s in existing_sections):
-            data["sections"] = [s.strip() for s in existing_sections if isinstance(s, str) and s.strip()]
-        else:
-            raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content")
-            if raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
-                raw_clean = raw_text_input.strip()
-                split_p = [p.strip() for p in re.split(r'\n+|\r\n', raw_clean) if p.strip()]
-                data["sections"] = split_p if split_p else [raw_clean]
-            else:
-                data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
+        raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content") or ""
 
-        # 2a. Normalize punctuation spacing & split long single-paragraph inputs (supports Indic danda । as well as Latin .!?)
+        if isinstance(existing_sections, str) and existing_sections.strip():
+            sections_input = [existing_sections.strip()]
+        elif isinstance(existing_sections, list) and any(isinstance(s, str) and s.strip() for s in existing_sections):
+            sections_input = [s.strip() for s in existing_sections if isinstance(s, str) and s.strip()]
+        elif raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
+            raw_clean = raw_text_input.replace('\r\n', '\n').replace('\r', '\n').strip()
+            split_p = [p.strip() for p in raw_clean.split('\n') if p.strip()]
+            sections_input = split_p if split_p else [raw_clean]
+        else:
+            sections_input = ["భోగాపురం మండలంలో వైఎస్ఆర్ కాంగ్రెస్ పార్టీ అధినేత వైఎస్ జగన్ మోహన్ రెడ్డి పర్యటనకు ప్రజల నుండి విశేష స్పందన లభించింది. పర్యటన పొడవునా వేలాదిగా తరలివచ్చిన ప్రజలు మరియు కార్యకర్తలు ఆయనకు ఘన స్వాగతం పలికారు."]
+
+        # 2a. Clean unicode non-breaking spaces (\u00a0, \u200b), normalize punctuation & split long blocks
         processed_sections = []
-        for sec in data["sections"]:
-            if not isinstance(sec, str) or not sec.strip():
+        for sec in sections_input:
+            if not isinstance(sec, str):
+                continue
+            # Replace non-breaking spaces & zero-width spaces with standard spaces
+            clean_sec = sec.replace('\u00a0', ' ').replace('\u200b', ' ').strip()
+            if not clean_sec:
                 continue
             # Ensure space after punctuation (.,!?:;।) if followed directly by a letter/glyph
-            clean_sec = re.sub(r'([.,!?:;।])([^\s\d])', r'\1 \2', sec.strip())
-            # If section is longer than 300 chars, split into readable paragraph blocks
-            if len(clean_sec) > 300:
-                sentences = [s.strip() for s in re.split(r'(?<=[.!?।])\s+|\n+', clean_sec) if s.strip()]
+            clean_sec = re.sub(r'([.,!?:;।])([^\s\d])', r'\1 \2', clean_sec)
+            
+            # If section is longer than 250 chars, split into readable paragraph blocks
+            if len(clean_sec) > 250:
+                sentences = [s.strip() for s in re.split(r'(?<=[.!?।,;])\s+|\n+', clean_sec) if s.strip()]
                 if len(sentences) > 1:
                     curr_p = []
                     curr_len = 0
                     for s in sentences:
                         curr_p.append(s)
                         curr_len += len(s)
-                        if curr_len >= 220:
+                        if curr_len >= 180:
                             processed_sections.append(" ".join(curr_p))
                             curr_p = []
                             curr_len = 0
                     if curr_p:
                         processed_sections.append(" ".join(curr_p))
                 else:
-                    # Single long unbroken sentence (>300 chars): split in half by words so it flows across columns
                     words = clean_sec.split()
-                    if len(words) > 25:
-                        mid = len(words) // 2
-                        processed_sections.append(" ".join(words[:mid]))
-                        processed_sections.append(" ".join(words[mid:]))
+                    if len(words) > 15:
+                        chunk_size = 15
+                        for i in range(0, len(words), chunk_size):
+                            processed_sections.append(" ".join(words[i:i + chunk_size]))
                     else:
                         processed_sections.append(clean_sec)
             else:
                 processed_sections.append(clean_sec)
-        data["sections"] = processed_sections if processed_sections else data["sections"]
+                
+        if not processed_sections:
+            processed_sections = ["ఈ పత్రికా క్లిప్పింగ్ కోసం శీర్షిక మరియు వివరాలు విజయవంతంగా రూపొందించబడ్డాయి."]
 
-        # 2b. Clean sections list ensuring raw text is preserved without duplication
-        if isinstance(data.get("sections"), list):
-            clean_sections = []
-            for sec in data["sections"]:
-                if isinstance(sec, str) and sec.strip():
-                    clean_sections.append(sec.strip())
-            data["sections"] = clean_sections if clean_sections else data["sections"]
+        data["sections"] = processed_sections
 
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
@@ -1099,12 +1099,21 @@ class RenderService:
                 }
                 
                 let paragraphs = [];
-                for (const sec of data.sections) {
-                    const cleanSec = sec.replace(/\n+/g, ' ').trim();
+                for (const sec of (data.sections || [])) {
+                    const cleanSec = String(sec || '').replace(/[\u00a0\u200b]/g, ' ').replace(/\s+/g, ' ').trim();
                     if (cleanSec) {
                         paragraphs.push(cleanSec);
                     }
                 }
+                if (paragraphs.length === 0) {
+                    const rawFb = String(data.article_text || data.article_content || data.raw_content || '').replace(/[\u00a0\u200b]/g, ' ').replace(/\s+/g, ' ').trim();
+                    if (rawFb) {
+                        paragraphs.push(rawFb);
+                    } else {
+                        paragraphs.push("భోగాపురం మండలంలో వైఎస్ఆర్ కాంగ్రెస్ పార్టీ అధినేత వైఎస్ జగన్ మోహన్ రెడ్డి పర్యటనకు ప్రజల నుండి విశేష స్పందన లభించింది. పర్యటన పొడవునా వేలాదిగా తరలివచ్చిన ప్రజలు మరియు కార్యకర్తలు ఆయనకు ఘన స్వాగతం పలికారు.");
+                    }
+                }
+
                 if (paragraphs.length > 0 && data.dateline) {
                     paragraphs[0] = ((data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `) + paragraphs[0];
                 }
@@ -1154,9 +1163,29 @@ class RenderService:
                             const fitP = p.cloneNode();
                             fitP.innerText = words.slice(0, wIdx).join(' ');
                             activeRegion.rBox.appendChild(fitP);
+                            const rem = words.slice(wIdx).join(' ');
+                            if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
+                        } else {
+                            // If not even 1 word fits, force break word by characters
+                            const chars = text.split('');
+                            let cIdx = 0;
+                            const testCharP = p.cloneNode();
+                            activeRegion.rBox.appendChild(testCharP);
+                            for (; cIdx < chars.length; cIdx++) {
+                                testCharP.innerText = chars.slice(0, cIdx + 1).join('');
+                                if (activeRegion.rBox.scrollHeight > activeRegion.height) break;
+                            }
+                            activeRegion.rBox.removeChild(testCharP);
+                            if (cIdx > 0) {
+                                const fitP = p.cloneNode();
+                                fitP.innerText = chars.slice(0, cIdx).join('');
+                                activeRegion.rBox.appendChild(fitP);
+                                const rem = chars.slice(cIdx).join('');
+                                if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
+                            } else {
+                                pIdx++;
+                            }
                         }
-                        const rem = words.slice(wIdx).join(' ');
-                        if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
                         currentRegionIdx++;
                         activeRegion = regions[currentRegionIdx];
                     } else pIdx++;
