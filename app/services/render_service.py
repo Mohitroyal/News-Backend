@@ -1577,10 +1577,13 @@ class RenderService:
                             cont.style.setProperty('min-height', '0px', 'important');
                             cont.style.setProperty('margin-bottom', '0px', 'important');
                             
-                            // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom
+                            // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom + padding & borders
                             const canvasBottom = canvas.getBoundingClientRect().bottom;
                             const contTop = cont.getBoundingClientRect().top;
-                            const exactHeight = Math.ceil(canvasBottom - contTop);
+                            const contStyle = window.getComputedStyle(cont);
+                            const padBottom = parseFloat(contStyle.paddingBottom || '0');
+                            const borderBottom = parseFloat(contStyle.borderBottomWidth || '0');
+                            const exactHeight = Math.ceil(canvasBottom - contTop + padBottom + borderBottom + 12);
                             cont.style.setProperty('height', exactHeight + 'px', 'important');
                             cont.style.setProperty('max-height', exactHeight + 'px', 'important');
                         }
