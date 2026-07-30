@@ -202,42 +202,44 @@ class GrokService:
             else:
                 sentences = ["తాజా సమాచారం ప్రకారం వివరాలు సిద్ధమవుతున్నాయి."]
 
-        # 1. Build rich summary paragraph (up to ~450 chars)
-        summary_sentences = sentences[:3]
+        # 1. Build concise summary paragraph (up to ~320 chars)
+        summary_sentences = sentences[:2]
         summary = " ".join(s.rstrip('.') + '.' for s in summary_sentences)
-        if len(summary) > 480:
-            summary = summary[:477] + "..."
+        if len(summary) > 320:
+            summary = summary[:315].rsplit(' ', 1)[0] + "..."
 
-        # 2. Extract clauses for 4-5 key takeaway bullet points
-        clauses = []
-        for s in sentences:
-            if len(s) > 120 and ',' in s:
-                parts = [p.strip() for p in s.split(',') if len(p.strip()) > 15]
-                clauses.extend(parts)
-            else:
-                clauses.append(s)
-                
+        # 2. Extract 4-5 concise key takeaway bullet points (max 85 chars each)
         bullets = []
-        for c in clauses:
-            clean_c = c.strip()
-            if clean_c and clean_c not in bullets:
-                if not clean_c.endswith(('.', '।')):
-                    clean_c += "."
-                bullets.append(clean_c)
-            if len(bullets) == 5:
+        for s in sentences:
+            sub_parts = re.split(r'[,;—–-]', s)
+            for p in sub_parts:
+                clean_p = p.strip()
+                clean_p = re.sub(r'^[•\-\*\d\.\s]+', '', clean_p)
+                if 15 <= len(clean_p) <= 85:
+                    if not clean_p.endswith(('.', '।')):
+                        clean_p += "."
+                    if clean_p not in bullets:
+                        bullets.append(clean_p)
+                elif len(clean_p) > 85:
+                    truncated = clean_p[:82].rsplit(' ', 1)[0] + "..."
+                    if truncated not in bullets:
+                        bullets.append(truncated)
+                if len(bullets) >= 5:
+                    break
+            if len(bullets) >= 5:
                 break
-                
-        # Fill to 4 bullets if content is short
-        while len(bullets) < 4:
-            if bullets:
-                last = bullets[-1]
-                if len(last) > 50:
-                    split_idx = len(last) // 2
-                    bullets.append(last[split_idx:].strip())
-                else:
-                    bullets.append(bullets[0])
-            else:
-                bullets.append(summary[:100] + "...")
+
+        # Fallback to ensure 4 to 5 bullet points
+        if len(bullets) < 4:
+            for s in sentences:
+                clean_s = s.strip()
+                clean_s = re.sub(r'^[•\-\*\d\.\s]+', '', clean_s)
+                if len(clean_s) > 85:
+                    clean_s = clean_s[:82].rsplit(' ', 1)[0] + "..."
+                if clean_s and clean_s not in bullets:
+                    bullets.append(clean_s)
+                if len(bullets) >= 4:
+                    break
 
         return summary, bullets[:5]
 

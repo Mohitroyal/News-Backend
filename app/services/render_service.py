@@ -163,6 +163,24 @@ class RenderService:
             except Exception as sum_err:
                 print(f"[WARNING] Summary fallback extraction error: {sum_err}")
 
+        # 2c. Enforce concise 4-5 bullet points (max 85 chars each) to fit cyan container without overflow
+        raw_bps = data.get("bullet_points") or []
+        if isinstance(raw_bps, list):
+            formatted_bps = []
+            for bp in raw_bps:
+                clean_bp = str(bp).strip()
+                clean_bp = re.sub(r'^[•\-\*\d\.\s]+', '', clean_bp)
+                if len(clean_bp) > 85:
+                    clean_bp = clean_bp[:82].rsplit(' ', 1)[0] + "..."
+                if clean_bp and clean_bp not in formatted_bps:
+                    formatted_bps.append(clean_bp)
+                if len(formatted_bps) >= 5:
+                    break
+            data["bullet_points"] = formatted_bps[:5]
+
+        if data.get("summary") and len(str(data["summary"])) > 320:
+            data["summary"] = str(data["summary"])[:315].rsplit(' ', 1)[0] + "..."
+
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
             fallback_img = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80"
