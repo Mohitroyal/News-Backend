@@ -18,6 +18,7 @@ import logging
 import traceback as _traceback
 import sys
 import asyncio
+import re
 import gc
 import psutil
 from datetime import datetime, timedelta
@@ -218,34 +219,29 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 render_data = {
                     **formatted,
                     "id": str(clipping_id),
-                    "headline": clipping.headline,
+                    "article_text": clipping.article_content,
+                    "raw_content": clipping.article_content,
+                    "article_content": clipping.article_content,
+                    "headline": clipping.headline if clipping.headline else formatted.get("headline"),
                     "publication_name": clipping.publication_name,
                     "publication_date": clipping.publication_date,
                     "image_url": safe_image_url,
                     "image_urls": safe_image_urls,
                     "language": clipping.language,
-                    "layout_columns": clipping.layout_columns,
+                    "layout_columns": custom.get("layout_columns") or custom.get("layoutColumns") or (clipping.layout_columns if clipping.layout_columns is not None else "auto"),
                     "font_family": clipping.font_family or "playfair",
                     "logo_id": clipping.logo_id or clipping.template_id,
                     "is_premium": is_premium,
                     "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
+                    "show_inner_borders": getattr(clipping, "show_inner_borders", True),
                     "image_layout": custom.get("image_layout", "default"),
                     "heading_bg": custom.get("heading_bg", None),
                     "border_color": custom.get("border_color", None),
                     "primary_color": custom.get("primary_color", None),
                 }
 
-                if clipping.template_id == "custom":
-                    if not clipping.custom_layout:
-                        clipping.status = "completed"
-                        db.commit()
-                        return
-                    import os as _os
-                    _frontend = settings.FRONTEND_URL or _os.getenv("RENDER_EXTERNAL_URL", "http://localhost:3000")
-                    html = f"{_frontend.rstrip('/')}/render/{clipping_id}"
-                else:
-                    html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
-                    print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
+                html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
+                print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
                 # --- [9] PNG & PDF Asset Generation ---
                 stage = "Asset Generation"
                 last_failed_stage = stage
@@ -529,10 +525,12 @@ async def create_clipping(
         image_urls=clipping_in.image_urls or [],
         publication_name=clipping_in.publication_name,
         publication_date=clipping_in.publication_date,
-        layout_columns=clipping_in.layout_columns,
+        layout_columns=0 if str(clipping_in.layout_columns).lower() in ["auto", "0", "none"] else (int(clipping_in.layout_columns) if str(clipping_in.layout_columns).isdigit() else 0),
         font_family=clipping_in.font_family or "playfair",
         show_watermark=clipping_in.show_watermark,
+        show_inner_borders=getattr(clipping_in, "show_inner_borders", True),
         custom_layout={
+            "layout_columns": clipping_in.layout_columns,
             "image_layout": clipping_in.image_layout,
             "heading_bg": clipping_in.heading_bg,
             "border_color": clipping_in.border_color,
@@ -718,7 +716,6 @@ def update_clipping_layout(
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
 
-    import re
     def extract_hex(val: Any) -> Any:
         if isinstance(val, str):
             match = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}', val)

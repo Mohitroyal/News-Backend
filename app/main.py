@@ -61,6 +61,19 @@ async def lifespan(app: FastAPI):
         print(f"  [WARNING] Telugu fonts auto-download failed or skipped: {fe}", flush=True)
     print("="*60 + "\n", flush=True)
 
+    # 3.5 Database Auto-Migrations Failsafe
+    print("\n" + "="*60, flush=True)
+    print("=== DATABASE AUTO-MIGRATIONS ===", flush=True)
+    try:
+        from sqlalchemy import text
+        from app.db.session import engine
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE clippings ADD COLUMN IF NOT EXISTS show_inner_borders BOOLEAN DEFAULT TRUE;"))
+            print("  [SUCCESS] Column show_inner_borders is present.", flush=True)
+    except Exception as e:
+        print(f"  [WARNING] DB auto-migration skipped or failed: {e}", flush=True)
+    print("="*60 + "\n", flush=True)
+
     # 4. Startup Success Log
     print("\n" + "="*60, flush=True)
     print(f"=== {settings.PROJECT_NAME.upper()} STARTUP SUCCESSFUL ===", flush=True)

@@ -94,6 +94,7 @@ class RenderService:
         if not data.get("headline"):
             data["headline"] = "NEWSFLASH: Special Report"
 
+<<<<<<< HEAD
         # 2. Article raw text preservation (prioritize raw user input over AI formatted sections)
         raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content")
         if raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
@@ -138,6 +139,94 @@ class RenderService:
                     cleaned_p = re.sub(r'^[*\-•]\s*', '', sec.strip())
                     clean_sections.append(cleaned_p)
             data["sections"] = clean_sections if clean_sections else data["sections"]
+=======
+        # 2. Section & Raw Text Handling - Preserve AI-formatted sections if available!
+        existing_sections = data.get("sections")
+        raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content") or ""
+
+        if isinstance(existing_sections, str) and existing_sections.strip():
+            sections_input = [existing_sections.strip()]
+        elif isinstance(existing_sections, list) and any(isinstance(s, str) and s.strip() for s in existing_sections):
+            sections_input = [s.strip() for s in existing_sections if isinstance(s, str) and s.strip()]
+        elif raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
+            raw_clean = raw_text_input.replace('\r\n', '\n').replace('\r', '\n').strip()
+            split_p = [p.strip() for p in raw_clean.split('\n') if p.strip()]
+            sections_input = split_p if split_p else [raw_clean]
+        else:
+            sections_input = ["భోగాపురం మండలంలో వైఎస్ఆర్ కాంగ్రెస్ పార్టీ అధినేత వైఎస్ జగన్ మోహన్ రెడ్డి పర్యటనకు ప్రజల నుండి విశేష స్పందన లభించింది. పర్యటన పొడవునా వేలాదిగా తరలివచ్చిన ప్రజలు మరియు కార్యకర్తలు ఆయనకు ఘన స్వాగతం పలికారు."]
+
+        # 2a. Clean unicode non-breaking spaces (\u00a0, \u200b), normalize punctuation & split long blocks
+        processed_sections = []
+        for sec in sections_input:
+            if not isinstance(sec, str):
+                continue
+            # Replace non-breaking spaces & zero-width spaces with standard spaces
+            clean_sec = sec.replace('\u00a0', ' ').replace('\u200b', ' ').strip()
+            if not clean_sec:
+                continue
+            # Ensure space after punctuation (.,!?:;।) if followed directly by a letter/glyph
+            clean_sec = re.sub(r'([.,!?:;।])([^\s\d])', r'\1 \2', clean_sec)
+            
+            # If section is longer than 100 chars, split into readable paragraph blocks
+            if len(clean_sec) > 100:
+                sentences = [s.strip() for s in re.split(r'(?<=[.!?।,;])\s+|\n+', clean_sec) if s.strip()]
+                if len(sentences) > 1:
+                    for s in sentences:
+                        if len(s) > 10:
+                            words = s.split()
+                            if len(words) > 20:
+                                chunk_size = 14
+                                for i in range(0, len(words), chunk_size):
+                                    processed_sections.append(" ".join(words[i:i + chunk_size]))
+                            else:
+                                processed_sections.append(s)
+                else:
+                    words = clean_sec.split()
+                    if len(words) > 14:
+                        chunk_size = 14
+                        for i in range(0, len(words), chunk_size):
+                            processed_sections.append(" ".join(words[i:i + chunk_size]))
+                    else:
+                        processed_sections.append(clean_sec)
+            else:
+                processed_sections.append(clean_sec)
+                
+        if not processed_sections:
+            processed_sections = ["ఈ పత్రికా క్లిప్పింగ్ కోసం శీర్షిక మరియు వివరాలు విజయవంతంగా రూపొందించబడ్డాయి."]
+
+        data["sections"] = processed_sections
+
+        # 2b. Auto-extract summary and key takeaways if missing
+        if not data.get("summary") or not data.get("bullet_points") or not isinstance(data.get("bullet_points"), list) or len(data.get("bullet_points")) == 0:
+            try:
+                from app.services.grok_service import grok_service
+                full_sec_text = "\n\n".join(data["sections"])
+                clean_sum, clean_bps = grok_service._extract_summary_and_bullets(full_sec_text)
+                if not data.get("summary") or not str(data.get("summary")).strip():
+                    data["summary"] = clean_sum
+                if not data.get("bullet_points") or not isinstance(data.get("bullet_points"), list) or len(data.get("bullet_points")) == 0:
+                    data["bullet_points"] = clean_bps
+            except Exception as sum_err:
+                print(f"[WARNING] Summary fallback extraction error: {sum_err}")
+
+        # 2c. Enforce concise 4-5 bullet points (max 85 chars each) to fit cyan container without overflow
+        raw_bps = data.get("bullet_points") or []
+        if isinstance(raw_bps, list):
+            formatted_bps = []
+            for bp in raw_bps:
+                clean_bp = str(bp).strip()
+                clean_bp = re.sub(r'^[•\-\*\d\.\s]+', '', clean_bp)
+                if len(clean_bp) > 85:
+                    clean_bp = clean_bp[:82].rsplit(' ', 1)[0] + "..."
+                if clean_bp and clean_bp not in formatted_bps:
+                    formatted_bps.append(clean_bp)
+                if len(formatted_bps) >= 5:
+                    break
+            data["bullet_points"] = formatted_bps[:5]
+
+        if data.get("summary") and len(str(data["summary"])) > 320:
+            data["summary"] = str(data["summary"])[:315].rsplit(' ', 1)[0] + "..."
+>>>>>>> origin/main
 
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
@@ -182,6 +271,12 @@ class RenderService:
                 "accent_color": "#1e40af",
                 "publication_name": "The Extra News",
                 "logo_url": f"{self._logo_base}/extra_news.svg",
+            },
+            "custom": {
+                "primary_color": "#1d70b8",
+                "accent_color": "#1d70b8",
+                "publication_name": "RTI Express",
+                "logo_url": f"{self._logo_base}/rti_express.svg",
             },
         }
 
@@ -532,6 +627,23 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
+<<<<<<< HEAD
+=======
+            let langStr = (data.language || data.language_name || 'en').toLowerCase();
+            let langKey = 'en';
+            if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
+            else if (langStr.includes('hindi') || langStr === 'hi') langKey = 'hi';
+            else if (langStr.includes('kannada') || langStr === 'kn') langKey = 'kn';
+            else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
+            else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
+
+            let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுருக்கம்', 'ml': 'సంగ్రహం', 'en': 'SUMMARY' };
+            let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ముఖ్యాంశాలు', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'ప్రధాన వివరాలు', 'en': 'KEY TAKEAWAYS' };
+
+            let sumTitle = sumLabels[langKey] || 'SUMMARY';
+            let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
+
+>>>>>>> origin/main
             function resolveColumns(colVal, charLen) {
                 const s = String(colVal === undefined || colVal === null ? "auto" : colVal).toLowerCase().trim();
                 const p = parseInt(s);
@@ -603,6 +715,7 @@ class RenderService:
                             measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
                             measureContainer.style.fontSize = '15px';
                             measureContainer.style.lineHeight = '1.6';
+<<<<<<< HEAD
                             let langStr = (data.language || data.language_name || 'en').toLowerCase();
                             let langKey = 'en';
                             if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
@@ -613,6 +726,8 @@ class RenderService:
 
                             let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுരുக்கம்', 'ml': 'സംഗ്രഹം', 'en': 'SUMMARY' };
                             let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ಮುಖ್ಯಾಂಶಗಳು', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'പ്രധാന വിവരങ്ങൾ', 'en': 'KEY TAKEAWAYS' };
+=======
+>>>>>>> origin/main
 
                             let sumTitle = sumLabels[langKey] || 'SUMMARY';
                             let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
@@ -701,15 +816,19 @@ class RenderService:
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width (covers sides as requested)
                         
-                        // Height matches exact aspect ratio (no text density modifiers that cause squishing)
+                        // Height matches aspect ratio with a cap to guarantee vertical room for text below
                         let dynamicH = imgVisW / aspect0;
                         
-                        // Prevent giant vertical images from zooming out the layout and ruining text quality
-                        h0 = Math.min(dynamicH, TARGET_MAX_HEIGHT * 0.65);
+                        // Cap hero image height to 460px max so ample vertical column space remains for article text
+                        h0 = Math.min(dynamicH, 460);
                         
                         isPatternB_centered = true;
                     } else {
+<<<<<<< HEAD
                         h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.50, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+=======
+                        h0 = Math.min(h0, 460, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+>>>>>>> origin/main
                     }
                     
                     obstacles.push({
@@ -818,6 +937,47 @@ class RenderService:
                             h: Math.round(h2)
                         });
                     }
+<<<<<<< HEAD
+=======
+
+                    if (isArticleStyle) {
+                        let maxY = 0;
+                        obstacles.forEach(o => {
+                            if (o.y + o.h > maxY) maxY = o.y + o.h;
+                        });
+                        
+                        let measureContainer = document.createElement('div');
+                        measureContainer.style.position = 'absolute';
+                        measureContainer.style.visibility = 'hidden';
+                        measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
+                        measureContainer.style.fontSize = '15px';
+                        measureContainer.style.lineHeight = '1.6';
+                        measureContainer.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
+                        measureContainer.style.padding = '24px';
+                        measureContainer.style.boxSizing = 'border-box';
+                        
+                        // Measure Summary
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${sumTitle}</h4><p style="margin: 0;">${data.summary || ''}</p>`;
+                        document.body.appendChild(measureContainer);
+                        let sumH = measureContainer.offsetHeight;
+                        
+                        // Measure Bullets
+                        let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${bulTitle}</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
+                        let bulH = measureContainer.offsetHeight;
+                        document.body.removeChild(measureContainer);
+                        
+                        let summaryH = Math.max(120, sumH, bulH);
+                        
+                        obstacles.push({
+                            type: 'summary_bullets',
+                            x: 0,
+                            y: maxY > 0 ? maxY + 30 : 0,
+                            w: W_canvas,
+                            h: summaryH
+                        });
+                    }
+>>>>>>> origin/main
                 }
                 return obstacles;
             }
@@ -846,7 +1006,60 @@ class RenderService:
                 if (isFinal) {
                     obstacles.forEach(obs => {
                         if (obs.type === 'summary_bullets') {
+<<<<<<< HEAD
                             renderSummaryBulletsBox(obs.y);
+=======
+                            const containerEl = document.createElement('div');
+                            containerEl.className = 'nc-absolute-summary';
+                            containerEl.style.position = 'absolute';
+                            containerEl.style.left = `${obs.x}px`;
+                            containerEl.style.top = `${obs.y}px`;
+                            containerEl.style.width = `${obs.w}px`;
+                            containerEl.style.height = `${obs.h}px`;
+                            containerEl.style.boxSizing = 'border-box';
+                            containerEl.style.display = 'flex';
+                            containerEl.style.flexDirection = 'row';
+                            containerEl.style.gap = '24px';
+                            containerEl.style.zIndex = '5';
+                            containerEl.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
+                            
+                            let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                            
+                            let sumBg = data.summary_bg || '#FFF4CC';
+                            let bulBg = data.bullet_bg || '#00A79D';
+                            let sumHeadingColor = '#B28600';
+                            let sumTextColor = '#333333';
+                            let bulHeadingColor = '#CCF2F0';
+                            let bulTextColor = '#FFFFFF';
+                            let listStyle = 'disc';
+                            let sumBorder = '#FFE066';
+                            let bulBorder = '#008C83';
+                            
+                            if (data.template_id === 'custom') {
+                                sumBg = '#F8E71C'; // Bright yellow
+                                bulBg = '#00B7C6'; // Bright cyan
+                                sumHeadingColor = '#000000';
+                                sumTextColor = '#000000';
+                                bulHeadingColor = '#FFFFFF';
+                                listStyle = '"✦  "';
+                                sumBorder = 'transparent';
+                                bulBorder = 'transparent';
+                            }
+                            
+                            containerEl.innerHTML = `
+                                <div style="flex: 1; background-color: ${sumBg}; padding: 24px; border-radius: 12px; border: 1px solid ${sumBorder}; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: ${sumHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${sumTitle}</h4>
+                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${sumTextColor};">${data.summary || ''}</p>
+                                </div>
+                                <div style="flex: 1; background-color: ${bulBg}; padding: 24px; border-radius: 12px; border: 1px solid ${bulBorder}; display: flex; flex-direction: column; justify-content: center;">
+                                    <h4 style="margin: 0 0 12px 0; color: ${bulHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${bulTitle}</h4>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: ${bulTextColor}; list-style-type: ${listStyle};">
+                                        ${bpHtml}
+                                    </ul>
+                                </div>
+                            `;
+                            canvas.appendChild(containerEl);
+>>>>>>> origin/main
                             return;
                         }
                         const imgEl = document.createElement('div');
@@ -1031,12 +1244,21 @@ class RenderService:
                 }
                 
                 let paragraphs = [];
-                for (const sec of data.sections) {
-                    const cleanSec = sec.replace(/\n+/g, ' ').trim();
+                for (const sec of (data.sections || [])) {
+                    const cleanSec = String(sec || '').replace(/[\u00a0\u200b]/g, ' ').replace(/\s+/g, ' ').trim();
                     if (cleanSec) {
                         paragraphs.push(cleanSec);
                     }
                 }
+                if (paragraphs.length === 0) {
+                    const rawFb = String(data.article_text || data.article_content || data.raw_content || '').replace(/[\u00a0\u200b]/g, ' ').replace(/\s+/g, ' ').trim();
+                    if (rawFb) {
+                        paragraphs.push(rawFb);
+                    } else {
+                        paragraphs.push("భోగాపురం మండలంలో వైఎస్ఆర్ కాంగ్రెస్ పార్టీ అధినేత వైఎస్ జగన్ మోహన్ రెడ్డి పర్యటనకు ప్రజల నుండి విశేష స్పందన లభించింది. పర్యటన పొడవునా వేలాదిగా తరలివచ్చిన ప్రజలు మరియు కార్యకర్తలు ఆయనకు ఘన స్వాగతం పలికారు.");
+                    }
+                }
+
                 if (paragraphs.length > 0 && data.dateline) {
                     paragraphs[0] = ((data.template_id === 'classic') ? `[${data.dateline}] — ` : `${data.dateline} — `) + paragraphs[0];
                 }
@@ -1096,15 +1318,35 @@ class RenderService:
                             const fitP = p.cloneNode();
                             fitP.innerText = words.slice(0, wIdx).join(' ');
                             activeRegion.rBox.appendChild(fitP);
+                            const rem = words.slice(wIdx).join(' ');
+                            if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
+                        } else {
+                            // If not even 1 word fits, force break word by characters
+                            const chars = text.split('');
+                            let cIdx = 0;
+                            const testCharP = p.cloneNode();
+                            activeRegion.rBox.appendChild(testCharP);
+                            for (; cIdx < chars.length; cIdx++) {
+                                testCharP.innerText = chars.slice(0, cIdx + 1).join('');
+                                if (activeRegion.rBox.scrollHeight > activeRegion.height) break;
+                            }
+                            activeRegion.rBox.removeChild(testCharP);
+                            if (cIdx > 0) {
+                                const fitP = p.cloneNode();
+                                fitP.innerText = chars.slice(0, cIdx).join('');
+                                activeRegion.rBox.appendChild(fitP);
+                                const rem = chars.slice(cIdx).join('');
+                                if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
+                            } else {
+                                pIdx++;
+                            }
                         }
-                        const rem = words.slice(wIdx).join(' ');
-                        if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
                         currentRegionIdx++;
                         activeRegion = regions[currentRegionIdx];
                     } else pIdx++;
                 }
                 
-                if (pIdx < paragraphs.length) {
+                if (regions.length === 0 || pIdx < paragraphs.length) {
                     return false; // Did not fit all paragraphs
                 }
                 
@@ -1295,7 +1537,11 @@ class RenderService:
                     }
                 }
 
+<<<<<<< HEAD
                 let low = Math.max(300, Math.round(maxObstacleY + 30));
+=======
+                let low = Math.max(500, Math.round(maxObstacleY + 120));
+>>>>>>> origin/main
                 let high = H_avail;
                 let H_best = H_avail;
 
@@ -1342,7 +1588,7 @@ class RenderService:
                 
                 // Precision shrink-wrap canvas exactly to the lowest content pixel
                 let rBoxBottoms = [];
-                document.querySelectorAll('.nc-text-region-box, .nc-absolute-image').forEach(el => {
+                document.querySelectorAll('.nc-text-region-box, .nc-absolute-image, .nc-absolute-summary').forEach(el => {
                     if (el.classList.contains('nc-text-region-box')) {
                         if (el.clientHeight === 0) return;
                         if (el.innerText.trim() === '') return;
@@ -1560,6 +1806,7 @@ class RenderService:
                     else: await page.set_content(html_content, wait_until="commit", timeout=300000)
 
                     try:
+<<<<<<< HEAD
                         await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
                     except Exception:
                         pass
@@ -1570,6 +1817,18 @@ class RenderService:
                         if is_done:
                             break
                         await asyncio.sleep(0.5)
+
+                    try:
+                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
+                    except Exception:
+                        pass
+=======
+                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
+                    except Exception:
+                        pass
+
+                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
+>>>>>>> origin/main
 
                     try:
                         await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
@@ -1609,10 +1868,13 @@ class RenderService:
                             cont.style.setProperty('min-height', '0px', 'important');
                             cont.style.setProperty('margin-bottom', '0px', 'important');
                             
-                            // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom
+                            // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom + padding & borders
                             const canvasBottom = canvas.getBoundingClientRect().bottom;
                             const contTop = cont.getBoundingClientRect().top;
-                            const exactHeight = Math.ceil(canvasBottom - contTop);
+                            const contStyle = window.getComputedStyle(cont);
+                            const padBottom = parseFloat(contStyle.paddingBottom || '0');
+                            const borderBottom = parseFloat(contStyle.borderBottomWidth || '0');
+                            const exactHeight = Math.ceil(canvasBottom - contTop + padBottom + borderBottom + 12);
                             cont.style.setProperty('height', exactHeight + 'px', 'important');
                             cont.style.setProperty('max-height', exactHeight + 'px', 'important');
                         }

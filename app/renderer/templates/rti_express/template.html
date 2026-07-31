@@ -30,7 +30,7 @@
         {% endif %}
 
         <!-- ZONE 1: Logo Zone (Height: 90px) -->
-        <div class="logo-zone" style="height: 90px; display: flex; justify-content: center; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; padding: 0; overflow: hidden; width: 100%;">
+        <div class="logo-zone" style="height: 90px; display: flex; justify-content: center; align-items: center; box-sizing: border-box; {% if show_inner_borders %}border-bottom: 1px solid var(--border-color, #111111);{% endif %} margin: 0; padding: 0; overflow: hidden; width: 100%;">
             <div class="logo-container" style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
                 {% set current_logo = logo_id if logo_id else template_id %}
                 {% if current_logo == 'bharath_reporter' %}
@@ -50,13 +50,13 @@
         </div>
 
         <!-- ZONE 2: Metadata Zone -->
-        <div class="metadata-zone" style="width: 100%; height: auto; padding: 5px 0; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; border-bottom: 1px solid var(--border-color, #111111); margin: 0; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;">
+        <div class="metadata-zone" style="width: 100%; height: auto; padding: 5px 0; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; {% if show_inner_borders %}border-bottom: 1px solid var(--border-color, #111111);{% endif %} margin: 0; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;">
             <span>{{ publication_name }} - {{ publication_date }}</span>
             <span>WANTED REPORTERS: 7668886666</span>
         </div>
 
         <!-- ZONE 3: Headline Zone (Height: Auto, Min-height: 120px) -->
-        <div class="headline-zone" style="min-height: 120px; height: auto; padding: 20px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--border-color, #111111); margin-bottom: 15px; width: 100%;">
+        <div class="headline-zone" style="min-height: 120px; height: auto; padding: 20px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; {% if show_inner_borders %}border-bottom: 1px solid var(--border-color, #111111);{% endif %} margin-bottom: 15px; width: 100%;">
             <div class="headline-section" style="margin: 0; padding: 15px; background-color: {{ heading_bg if heading_bg else '#CC2222' }}; border: 2px solid {{ border_color if border_color else '#CC2222' }}; text-align: center; box-sizing: border-box;">
                 <h1 class="headline" style="font-size: 68px; font-weight: bold; margin: 0; line-height: 1.1; text-align: center; width: 100%; box-sizing: border-box;">{{ headline }}</h1>
             </div>

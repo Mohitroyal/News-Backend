@@ -2,6 +2,7 @@ from typing import List, Optional, Any
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from uuid import UUID
 from datetime import datetime
+import re
 
 # ─── User Schemas ────────────────────────────────────────────────
 class UserBase(BaseModel):
@@ -38,18 +39,27 @@ class ClippingBase(BaseModel):
     image_urls: List[str] = Field(default=[], alias="imageUrls")
     publication_name: str = Field(alias="publicationName")
     publication_date: str = Field(alias="publicationDate")
-    layout_columns: int = Field(3, alias="layoutColumns")
+    layout_columns: Optional[Any] = Field("auto", alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
     show_watermark: bool = Field(True, alias="showWatermark")
     image_layout: Optional[str] = Field("default", alias="imageLayout")
     heading_bg: Optional[str] = Field(None, alias="headingBg")
     border_color: Optional[str] = Field(None, alias="borderColor")
     primary_color: Optional[str] = Field(None, alias="primaryColor")
+    show_inner_borders: bool = Field(True, alias="showInnerBorders")
 
     @model_validator(mode="before")
     @classmethod
-    def populate_show_watermark(cls, data: Any) -> Any:
+    def populate_boolean_toggles(cls, data: Any) -> Any:
         if isinstance(data, dict):
+            # Check article_content alternative keys
+            if "articleContent" not in data and "article_content" not in data:
+                for alt_key in ["content", "description", "articleContentText", "raw_content", "text"]:
+                    if alt_key in data and data[alt_key]:
+                        data["article_content"] = data[alt_key]
+                        data["articleContent"] = data[alt_key]
+                        break
+
             # Check all possible alias keys for watermark / logo mode toggles
             keys_to_check = [
                 "showWatermark",
@@ -72,6 +82,28 @@ class ClippingBase(BaseModel):
                     elif isinstance(val, bool):
                         data["show_watermark"] = val
                         break
+                        
+            # Check for inner borders toggles
+            border_keys = [
+                "showInnerBorders",
+                "show_inner_borders",
+                "innerBorders",
+                "inner_borders"
+            ]
+            for key in border_keys:
+                if key in data:
+                    val = data[key]
+                    if isinstance(val, str):
+                        if val.lower() in ("false", "0", "off", "no"):
+                            data["show_inner_borders"] = False
+                            break
+                        elif val.lower() in ("true", "1", "on", "yes"):
+                            data["show_inner_borders"] = True
+                            break
+                    elif isinstance(val, bool):
+                        data["show_inner_borders"] = val
+                        break
+
         return data
 
     @model_validator(mode="before")
@@ -105,7 +137,6 @@ class ClippingBase(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def clean_human_readable_inputs(cls, data: Any) -> Any:
-        import re
         if isinstance(data, dict):
             # Extract Hex codes from color strings (e.g., "Classic Red #CC2222")
             def extract_hex(val: Any) -> Any:
@@ -201,7 +232,7 @@ class Clipping(BaseModel):
     png_url: Optional[str] = Field(None, alias="previewUrl")
     pdf_url: Optional[str] = None
     status: str
-    layout_columns: int = Field(3, alias="layoutColumns")
+    layout_columns: Optional[Any] = Field("auto", alias="layoutColumns")
     font_family: str = Field("playfair", alias="fontFamily")
     created_at: datetime = Field(alias="createdAt")
 

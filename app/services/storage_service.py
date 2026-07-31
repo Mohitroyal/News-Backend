@@ -62,18 +62,29 @@ class StorageService:
         except Exception as e:
             raise Exception(f"Supabase connection/permissions failed for bucket '{self.bucket}': {e}")
 
-    def upload_file(self, file_path: str, destination_path: str) -> str:
+    def upload_file(self, file_path: str, destination_path: str, content_type: str | None = None) -> str:
         """
         Upload a file to Supabase Storage and return its guaranteed-absolute public URL.
         Raises an exception if the upload fails to ensure silent failures do not happen.
         """
         self.validate_storage()
+        if not content_type:
+            if destination_path.endswith(".png"):
+                content_type = "image/png"
+            elif destination_path.endswith(".pdf"):
+                content_type = "application/pdf"
+            else:
+                content_type = "application/octet-stream"
         try:
             with open(file_path, "rb") as f:
                 self.supabase.storage.from_(self.bucket).upload(
                     path=destination_path,
                     file=f,
-                    file_options={"x-upsert": "true"},
+                    file_options={
+                        "x-upsert": "true",
+                        "content-type": content_type,
+                        "cache-control": "public, max-age=3600"
+                    },
                 )
             # Always build URL ourselves — SDK version-agnostic
             url = _supabase_public_url(destination_path)

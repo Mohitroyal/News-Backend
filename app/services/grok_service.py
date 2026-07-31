@@ -74,7 +74,14 @@ class GrokService:
             "max_tokens": 2500
         }
 
+<<<<<<< HEAD
         models_to_try = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"] if (self.api_key and self.api_key.startswith("gsk_")) else ["grok-2-1212", "grok-2", "grok-beta", "llama-3.1-8b-instant"]
+=======
+        if self.api_key and self.api_key.startswith("gsk_"):
+            models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+        else:
+            models_to_try = ["grok-2-latest", "grok-2", "grok-beta"]
+>>>>>>> origin/main
 
         normalized = None
         import asyncio
@@ -128,6 +135,13 @@ class GrokService:
                 "summary": clean_sum,
                 "bullet_points": clean_bps
             }
+                "dateline": "",
+                "byline": "",
+                "image_captions": ["ఈవెంట్ యొక్క ముఖ్య క్షణాన్ని బంధించే ఫోటో.", "తాజా పరిణామంపై అదనపు దృశ్యం."],
+                "summary": clean_sum,
+                "bullet_points": clean_bps
+            }
+>>>>>>> origin/main
 
         # Post-process target language compliance
         lang_key = language.lower()
@@ -144,15 +158,24 @@ class GrokService:
             sum_val = normalized.get("summary", "")
             bp_val = normalized.get("bullet_points", [])
             
+<<<<<<< HEAD
             if self._is_mostly_english(sum_val) or self._is_mostly_english(bp_val):
                 clean_sum, clean_bps = self._extract_summary_and_bullets(sec_text)
                 if self._is_mostly_english(sum_val):
                     normalized["summary"] = clean_sum
                 if self._is_mostly_english(bp_val):
+=======
+            if self._is_mostly_english(sum_val, lang_key) or self._is_mostly_english(bp_val, lang_key):
+                clean_sum, clean_bps = self._extract_summary_and_bullets(sec_text)
+                if self._is_mostly_english(sum_val, lang_key):
+                    normalized["summary"] = clean_sum
+                if self._is_mostly_english(bp_val, lang_key):
+>>>>>>> origin/main
                     normalized["bullet_points"] = clean_bps
 
         return normalized
 
+<<<<<<< HEAD
     def _is_mostly_english(self, data: Any) -> bool:
         """Returns True if the data contains 3 or more English words."""
         if isinstance(data, list):
@@ -219,6 +242,140 @@ class GrokService:
                     bullets.append(bullets[0])
             else:
                 bullets.append(summary[:100] + "...")
+
+        return summary, bullets[:5]
+=======
+        # Smart extraction of summary and key takeaways directly from article content (NO ERROR STRINGS)
+        summary_fallback, bullet_points_fallback = self._extract_summary_and_bullets(content)
+
+        # Localized image captions fallback
+        caption_fallbacks = {
+            "te": ["ఈవెంట్ యొక్క ముఖ్య క్షణాన్ని బంధించే ఫోటో.", "తాజా పరిణామంపై అదనపు దృశ్యం."],
+            "hi": ["इवेंट के मुख्य क्षण की फोटो।", "नवीनतम विकास पर अतिरिक्त दृष्टिकोण।"],
+            "kn": ["ಕಾರ್ಯಕ್ರಮದ ಪ್ರಮುಖ ಕ್ಷಣವನ್ನು ಸೆರೆಹಿಡಿಯುವ ಫೋಟೋ.", "ಇತ್ತೀಚಿನ ಬೆಳವಣಿಗೆಯ ಕುರಿತು ಹೆಚ್ಚುವರಿ ನೋಟ."],
+            "ta": ["நிகழ்வின் முக்கிய தருணத்தை படம்பிடிக்கும் புகைப்படம்.", "சமீபத்திய வளர்ச்சியின் கூடுதல் பார்வை."],
+            "ml": ["ഇവന്റിന്റെ പ്രധാന നിമിഷം പകർത്തുന്ന ഫോട്ടോ.", "സമീപകാല വികസനത്തെക്കുറിച്ചുള്ള അധിക കാഴ്ചപ്പാട്."],
+            "en": ["Photo capturing the key moment of the event.", "Additional perspective on the recent development."]
+        }
+        
+        lang_key = language.lower()
+        reverse_map = {v.lower(): k for k, v in language_map.items()}
+        if lang_key in reverse_map:
+            lang_key = reverse_map[lang_key]
+        if lang_key not in caption_fallbacks:
+            lang_key = "en"
+            
+        return {
+            "headline": headline_fallback,
+            "subheadline": subheadline_fallback,
+            "sections": body_sections,
+            "dateline": "",
+            "byline": "",
+            "image_captions": caption_fallbacks[lang_key],
+            "summary": summary_fallback,
+            "bullet_points": bullet_points_fallback
+        }
+>>>>>>> origin/main
+
+    def _is_mostly_english(self, data: Any, target_lang: str = "en") -> bool:
+        """Returns True ONLY if Latin ASCII characters overwhelmingly dominate the text for a non-English target language."""
+        if target_lang.lower() in ["en", "english"]:
+            return False
+        if isinstance(data, list):
+            text = " ".join(str(item) for item in data)
+        else:
+            text = str(data or "")
+        text = text.strip()
+        if not text:
+            return False
+        
+        latin_chars = len(re.findall(r'[a-zA-Z]', text))
+        non_latin_chars = len(re.findall(r'[^\x00-\x7F]', text))
+        
+        if non_latin_chars == 0:
+            return latin_chars > 8
+            
+        return latin_chars > (non_latin_chars * 2)
+
+    def _extract_summary_and_bullets(self, content: str) -> tuple:
+        """Extracts clean, meaningful summary and key takeaways by filtering out header artifacts, equals lines and datelines."""
+        raw_text = content.replace("\r", "\n").strip()
+        
+        # 1. Clean out divider lines, equals signs, datelines and empty artifacts
+        lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
+        clean_paragraphs = []
+        
+        for l in lines:
+            if re.search(r'^[=\-_.\s]{3,}$', l):
+                continue
+            clean_l = re.sub(r'[=\-_]{2,}', '', l).strip()
+            if len(clean_l) < 30 and ("ప్రతినిధి" in clean_l or "రిపోర్టర్" in clean_l or "నాయక్" in clean_l):
+                continue
+            if clean_l:
+                clean_paragraphs.append(clean_l)
+
+        full_clean_text = " ".join(clean_paragraphs)
+        
+        # Protect abbreviation dots
+        protected_text = re.sub(r'(\b[^\s\.]{1,4})\.\s+', r'\1_DOT_ ', full_clean_text)
+        protected_text = re.sub(r'(\d+)\.(\d+)', r'\1_NUMDOT_\2', protected_text)
+        
+        raw_chunks = [c.replace('_DOT_', '.').replace('_NUMDOT_', '.').strip() for c in re.split(r'[\.!\?।\n]+', protected_text) if c.strip()]
+        sentences = []
+        for s in raw_chunks:
+            clean_s = re.sub(r'[=\-_]{2,}', '', s).strip()
+            if len(clean_s) > 25 and not clean_s.startswith("సంగారెడ్డి జిల్లా : ప్రతినిధి"):
+                sentences.append(clean_s)
+                
+        if not sentences:
+            sentences = [full_clean_text[:150]] if full_clean_text else ["తాజా సమాచారం ప్రకారం వివరాలు సిద్ధమవుతున్నాయి."]
+
+        # Summary: Take substantial body sentences (up to ~300 chars)
+        summary_sentences = []
+        total_len = 0
+        for s in sentences:
+            if total_len + len(s) <= 320:
+                summary_sentences.append(s.rstrip('.') + '.')
+                total_len += len(s)
+            else:
+                if not summary_sentences:
+                    summary_sentences.append(s[:315].rsplit(' ', 1)[0] + '...')
+                break
+                
+        summary = " ".join(summary_sentences)
+
+        # Bullet Points: Extract 4-5 concise key takeaway clauses (max 85 chars each)
+        bullets = []
+        for s in sentences:
+            sub_parts = re.split(r'[,;—–-]', s)
+            for p in sub_parts:
+                clean_p = p.strip()
+                clean_p = re.sub(r'^[•\-\*\d\.\s]+', '', clean_p)
+                if 20 <= len(clean_p) <= 85:
+                    if not clean_p.endswith(('.', '।')):
+                        clean_p += "."
+                    if clean_p not in bullets:
+                        bullets.append(clean_p)
+                elif len(clean_p) > 85:
+                    truncated = clean_p[:82].rsplit(' ', 1)[0] + "..."
+                    if truncated not in bullets:
+                        bullets.append(truncated)
+                if len(bullets) >= 5:
+                    break
+            if len(bullets) >= 5:
+                break
+
+        # Fallback to ensure 4 to 5 bullet points
+        if len(bullets) < 4:
+            for s in sentences:
+                clean_s = s.strip()
+                clean_s = re.sub(r'^[•\-\*\d\.\s]+', '', clean_s)
+                if len(clean_s) > 85:
+                    clean_s = clean_s[:82].rsplit(' ', 1)[0] + "..."
+                if clean_s and clean_s not in bullets:
+                    bullets.append(clean_s)
+                if len(bullets) >= 4:
+                    break
 
         return summary, bullets[:5]
 

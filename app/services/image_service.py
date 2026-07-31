@@ -18,12 +18,11 @@ class ImageService:
         logger.info(f"[MEMORY] {stage}: {mem_mb:.2f} MB")
 
     @staticmethod
-    def process_and_resize(image_url: str, max_width: int = 1200, max_height: int = 1200) -> str:
+    def process_and_resize(image_url: str, max_width: int = 2400, max_height: int = 2400) -> str:
         """Download, resize, possibly convert, and upload an image.
 
-        - Max dimensions 1200x1200, preserving aspect ratio.
-        - JPEG quality 90.
-        - Convert large PNGs to JPEG to save space.
+        - Max dimensions 2400x2400, preserving high aspect ratio resolution.
+        - JPEG quality 98 for ultra-crisp image rendering.
         - Dispose image objects promptly and trigger GC.
         """
         if not image_url or not image_url.startswith("http"):
@@ -65,14 +64,11 @@ class ImageService:
             else:
                 logger.info("[ImageService] Image within size limits, no resize performed")
 
-            # Decide final format – convert PNG to JPEG if image is large
+            # Preserve format
             final_format = orig_format
-            if orig_format == "PNG" and (img.width > max_width or img.height > max_height):
-                final_format = "JPEG"
-                logger.info("[ImageService] Converting PNG to JPEG to reduce size")
 
             # Ensure RGB mode for JPEG
-            if final_format == "JPEG" and img.mode in ("RGBA", "LA", "P"):
+            if final_format in ("JPEG", "JPG") and img.mode in ("RGBA", "LA", "P"):
                 background = Image.new("RGB", img.size, (255, 255, 255))
                 if img.mode in ("RGBA", "LA"):
                     background.paste(img, mask=img.split()[-1])
@@ -91,7 +87,7 @@ class ImageService:
             if ext == "jpeg":
                 ext = "jpg"
             temp_filename = f"temp_resized_{uuid.uuid4().hex}.{ext}"
-            img.save(temp_filename, format=final_format, quality=90)
+            img.save(temp_filename, format=final_format, quality=98)
             img.close()
             gc.collect()
             logger.info(f"[ImageService] Saved temporary file: {temp_filename}")
