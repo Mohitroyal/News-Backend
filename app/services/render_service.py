@@ -580,8 +580,6 @@ class RenderService:
             canvas.style.width = '100%';
             canvas.style.boxSizing = 'border-box';
 
-<<<<<<< HEAD
-=======
             let langStr = (data.language || data.language_name || 'en').toLowerCase();
             let langKey = 'en';
             if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
@@ -590,8 +588,8 @@ class RenderService:
             else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
             else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
 
-            let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுருக்கம்', 'ml': 'సంగ్రహం', 'en': 'SUMMARY' };
-            let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ముఖ్యాంశాలు', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'ప్రధాన వివరాలు', 'en': 'KEY TAKEAWAYS' };
+            let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுருக்கம்', 'ml': 'സംഗ్రహం', 'en': 'SUMMARY' };
+            let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ಮುಖ್ಯಾంశాలు', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'ప్రధాన వివరాలు', 'en': 'KEY TAKEAWAYS' };
 
             let sumTitle = sumLabels[langKey] || 'SUMMARY';
             let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
@@ -667,19 +665,8 @@ class RenderService:
                             measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
                             measureContainer.style.fontSize = '15px';
                             measureContainer.style.lineHeight = '1.6';
-<<<<<<< HEAD
-                            let langStr = (data.language || data.language_name || 'en').toLowerCase();
-                            let langKey = 'en';
-                            if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
-                            else if (langStr.includes('hindi') || langStr === 'hi') langKey = 'hi';
-                            else if (langStr.includes('kannada') || langStr === 'kn') langKey = 'kn';
-                            else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
-                            else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
-
                             let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுരുக்கம்', 'ml': 'സംഗ്രഹം', 'en': 'SUMMARY' };
                             let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ಮುಖ್ಯಾಂಶಗಳು', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'പ്രധാന വിവരങ്ങൾ', 'en': 'KEY TAKEAWAYS' };
-=======
->>>>>>> origin/main
 
                             let sumTitle = sumLabels[langKey] || 'SUMMARY';
                             let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
@@ -776,11 +763,7 @@ class RenderService:
                         
                         isPatternB_centered = true;
                     } else {
-<<<<<<< HEAD
                         h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.50, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
-=======
-                        h0 = Math.min(h0, 460, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
->>>>>>> origin/main
                     }
                     
                     obstacles.push({
@@ -889,47 +872,6 @@ class RenderService:
                             h: Math.round(h2)
                         });
                     }
-<<<<<<< HEAD
-=======
-
-                    if (isArticleStyle) {
-                        let maxY = 0;
-                        obstacles.forEach(o => {
-                            if (o.y + o.h > maxY) maxY = o.y + o.h;
-                        });
-                        
-                        let measureContainer = document.createElement('div');
-                        measureContainer.style.position = 'absolute';
-                        measureContainer.style.visibility = 'hidden';
-                        measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
-                        measureContainer.style.fontSize = '15px';
-                        measureContainer.style.lineHeight = '1.6';
-                        measureContainer.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
-                        measureContainer.style.padding = '24px';
-                        measureContainer.style.boxSizing = 'border-box';
-                        
-                        // Measure Summary
-                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${sumTitle}</h4><p style="margin: 0;">${data.summary || ''}</p>`;
-                        document.body.appendChild(measureContainer);
-                        let sumH = measureContainer.offsetHeight;
-                        
-                        // Measure Bullets
-                        let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
-                        measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${bulTitle}</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
-                        let bulH = measureContainer.offsetHeight;
-                        document.body.removeChild(measureContainer);
-                        
-                        let summaryH = Math.max(120, sumH, bulH);
-                        
-                        obstacles.push({
-                            type: 'summary_bullets',
-                            x: 0,
-                            y: maxY > 0 ? maxY + 30 : 0,
-                            w: W_canvas,
-                            h: summaryH
-                        });
-                    }
->>>>>>> origin/main
                 }
                 return obstacles;
             }
@@ -958,60 +900,7 @@ class RenderService:
                 if (isFinal) {
                     obstacles.forEach(obs => {
                         if (obs.type === 'summary_bullets') {
-<<<<<<< HEAD
                             renderSummaryBulletsBox(obs.y);
-=======
-                            const containerEl = document.createElement('div');
-                            containerEl.className = 'nc-absolute-summary';
-                            containerEl.style.position = 'absolute';
-                            containerEl.style.left = `${obs.x}px`;
-                            containerEl.style.top = `${obs.y}px`;
-                            containerEl.style.width = `${obs.w}px`;
-                            containerEl.style.height = `${obs.h}px`;
-                            containerEl.style.boxSizing = 'border-box';
-                            containerEl.style.display = 'flex';
-                            containerEl.style.flexDirection = 'row';
-                            containerEl.style.gap = '24px';
-                            containerEl.style.zIndex = '5';
-                            containerEl.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
-                            
-                            let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
-                            
-                            let sumBg = data.summary_bg || '#FFF4CC';
-                            let bulBg = data.bullet_bg || '#00A79D';
-                            let sumHeadingColor = '#B28600';
-                            let sumTextColor = '#333333';
-                            let bulHeadingColor = '#CCF2F0';
-                            let bulTextColor = '#FFFFFF';
-                            let listStyle = 'disc';
-                            let sumBorder = '#FFE066';
-                            let bulBorder = '#008C83';
-                            
-                            if (data.template_id === 'custom') {
-                                sumBg = '#F8E71C'; // Bright yellow
-                                bulBg = '#00B7C6'; // Bright cyan
-                                sumHeadingColor = '#000000';
-                                sumTextColor = '#000000';
-                                bulHeadingColor = '#FFFFFF';
-                                listStyle = '"✦  "';
-                                sumBorder = 'transparent';
-                                bulBorder = 'transparent';
-                            }
-                            
-                            containerEl.innerHTML = `
-                                <div style="flex: 1; background-color: ${sumBg}; padding: 24px; border-radius: 12px; border: 1px solid ${sumBorder}; display: flex; flex-direction: column; justify-content: center;">
-                                    <h4 style="margin: 0 0 12px 0; color: ${sumHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${sumTitle}</h4>
-                                    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: ${sumTextColor};">${data.summary || ''}</p>
-                                </div>
-                                <div style="flex: 1; background-color: ${bulBg}; padding: 24px; border-radius: 12px; border: 1px solid ${bulBorder}; display: flex; flex-direction: column; justify-content: center;">
-                                    <h4 style="margin: 0 0 12px 0; color: ${bulHeadingColor}; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">${bulTitle}</h4>
-                                    <ul style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: ${bulTextColor}; list-style-type: ${listStyle};">
-                                        ${bpHtml}
-                                    </ul>
-                                </div>
-                            `;
-                            canvas.appendChild(containerEl);
->>>>>>> origin/main
                             return;
                         }
                         const imgEl = document.createElement('div');
@@ -1489,11 +1378,7 @@ class RenderService:
                     }
                 }
 
-<<<<<<< HEAD
                 let low = Math.max(300, Math.round(maxObstacleY + 30));
-=======
-                let low = Math.max(500, Math.round(maxObstacleY + 120));
->>>>>>> origin/main
                 let high = H_avail;
                 let H_best = H_avail;
 
@@ -1624,7 +1509,7 @@ class RenderService:
                 window.__LAYOUT_DONE__ = true;
             }
 
-            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 15000);
+            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 3000);
             executeLayout().then(() => {
                 window.__LAYOUT_DONE__ = true;
             }).catch(err => {
@@ -1754,7 +1639,11 @@ class RenderService:
                     page.on("console", handle_console)
                     page.set_default_timeout(300000)
 
-                    if html_content.startswith("http"): await page.goto(html_content, wait_until="commit", timeout=300000)
+                    if html_content.startswith("http"):
+                        await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
+                    else:
+                        await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
+
                     try:
                         await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
                     except Exception:
