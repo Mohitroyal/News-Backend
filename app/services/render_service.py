@@ -782,7 +782,7 @@ class RenderService:
                     let hasSummary = data.summary && String(data.summary).trim();
                     let hasBullets = data.bullet_points && data.bullet_points.length > 0;
                     if ((hasSummary || hasBullets) && urls.length === 1 && isPatternB_centered) {
-                        let summaryH = renderSummaryBulletsBox(-9999);
+                        let summaryH = renderSummaryBulletsBox(Math.round(h0 + 45));
                         let tempBox = canvas.querySelector('.nc-absolute-summary');
                         if (tempBox) canvas.removeChild(tempBox);
 
@@ -791,7 +791,7 @@ class RenderService:
                             x: 0,
                             y: Math.round(h0 + 45),
                             w: W_canvas,
-                            h: summaryH
+                            h: summaryH + 30
                         });
                     }
                     
