@@ -782,43 +782,14 @@ class RenderService:
                     let hasSummary = data.summary && String(data.summary).trim();
                     let hasBullets = data.bullet_points && data.bullet_points.length > 0;
                     if ((hasSummary || hasBullets) && urls.length === 1 && isPatternB_centered) {
-                        let measureContainer = document.createElement('div');
-                        measureContainer.style.position = 'absolute';
-                        measureContainer.style.visibility = 'hidden';
-                        measureContainer.style.width = Math.round(W_canvas) + 'px';
-                        measureContainer.style.boxSizing = 'border-box';
-                        measureContainer.style.display = 'flex';
-                        measureContainer.style.flexDirection = 'row';
-                        measureContainer.style.gap = '24px';
-                        measureContainer.style.fontFamily = 'var(--primary-font, "Playfair Display", serif)';
-                        
-                        let langStr = (data.language || data.language_name || 'en').toLowerCase();
-                        let langKey = 'en';
-                        if (langStr.includes('telugu') || langStr === 'te') langKey = 'te';
-                        else if (langStr.includes('hindi') || langStr === 'hi') langKey = 'hi';
-                        else if (langStr.includes('kannada') || langStr === 'kn') langKey = 'kn';
-                        else if (langStr.includes('tamil') || langStr === 'ta') langKey = 'ta';
-                        else if (langStr.includes('malayalam') || langStr === 'ml') langKey = 'ml';
-
-                        let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுருக்கம்', 'ml': 'സംഗ్రహం', 'en': 'SUMMARY' };
-                        let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ಮುಖ్యాಂಶలు', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'ప్రధాన വിവരాలు', 'en': 'KEY TAKEAWAYS' };
-
-                        let sumTitle = sumLabels[langKey] || 'SUMMARY';
-                        let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
-
-                        let sumHtml = hasSummary ? `<div style="flex: 1; padding: 20px; box-sizing: border-box;"><div style="font-weight: 800; font-size: 15px; margin-bottom: 8px;">${sumTitle}</div><div style="font-size: 14px; line-height: 1.6;">${data.summary}</div></div>` : '';
-                        let bpHtml = hasBullets ? (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('') : '';
-                        let bulHtml = hasBullets ? `<div style="flex: 1; padding: 20px; box-sizing: border-box;"><div style="font-weight: 800; font-size: 15px; margin-bottom: 8px;">${bulTitle}</div><ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">${bpHtml}</ul></div>` : '';
-
-                        measureContainer.innerHTML = sumHtml + bulHtml;
-                        document.body.appendChild(measureContainer);
-                        let summaryH = Math.max(120, measureContainer.offsetHeight);
-                        document.body.removeChild(measureContainer);
+                        let summaryH = renderSummaryBulletsBox(-9999);
+                        let tempBox = canvas.querySelector('.nc-absolute-summary');
+                        if (tempBox) canvas.removeChild(tempBox);
 
                         obstacles.push({
                             type: 'summary_bullets',
                             x: 0,
-                            y: Math.round(h0 + 16),
+                            y: Math.round(h0 + 45),
                             w: W_canvas,
                             h: summaryH
                         });
@@ -1197,7 +1168,7 @@ class RenderService:
                     let maxY = 0;
                     regions.forEach(r => {
                         if (r.rBox.lastElementChild && r.rBox.innerText.trim() !== '') {
-                            const contentHeight = Math.max(r.height, r.rBox.scrollHeight);
+                            const contentHeight = r.rBox.scrollHeight;
                             r.rBox.style.height = `${contentHeight}px`;
                             r.rBox.style.overflow = 'visible';
                             maxY = Math.max(maxY, r.y + contentHeight);
@@ -1727,7 +1698,7 @@ class RenderService:
                     final_h_px = None
                     if png_path:
                         await page.locator('.newspaper-container').first.screenshot(path=png_path, type="png")
-                        final_h_px = layout_info.get('height', 1600)
+                        final_h_px = self._auto_crop_png(png_path) or layout_info.get('height', 1600)
                         
                     if pdf_path:
                         pdf_h = (final_h_px / 2.0) if final_h_px else layout_info.get('height', 1600)
