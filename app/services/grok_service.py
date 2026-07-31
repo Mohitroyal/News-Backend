@@ -28,6 +28,10 @@ class GrokService:
             "Content-Type": "application/json"
         }
 
+    async def format_article(self, content: str, language: str = "te", image_count: int = 1) -> Dict[str, Any]:
+        """Formats and structures news article text."""
+        return await self.process_text_with_grok(content, language, image_count)
+
     async def process_text_with_grok(self, content: str, language: str = "te", image_count: int = 1) -> Dict[str, Any]:
         """
         Processes news text to extract structured fields and translate if needed.
