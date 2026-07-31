@@ -141,10 +141,20 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 print(f"{'='*70}")
                 sys.stdout.flush()
 
+                def update_stage(s_name: str):
+                    try:
+                        c_dict = dict(clipping.custom_layout or {})
+                        c_dict["current_stage"] = s_name
+                        clipping.custom_layout = c_dict
+                        db.commit()
+                    except Exception as _e:
+                        pass
+
                 # --- [2] Image Processing ---
                 stage = "Image Processing"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
+                update_stage(stage)
                 from app.services.image_service import image_service
                 safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
                 safe_image_urls = [image_service.process_and_resize(u) for u in (clipping.image_urls or [])]
@@ -154,6 +164,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 stage = "Translation" if clipping.language and clipping.language.lower() != "en" else "Content Generation"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
+                update_stage(stage)
                 formatted = await grok_service.format_article(clipping.article_content, clipping.language)
                 clipping.content_formatted = formatted
                 print(f"[COMPLETED] {stage}"); sys.stdout.flush()
@@ -162,7 +173,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 stage = "Database Save (rendering)"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
-                print("START status update"); sys.stdout.flush()
+                update_stage(stage)
                 clipping.status = "rendering"
                 db.commit()
                 print("END status update"); sys.stdout.flush()
@@ -172,6 +183,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 stage = "Template Selection"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
+                update_stage(stage)
                 template_id = clipping.template_id or "classic"
                 
                 original_template_id = str(clipping.template_id or "classic").strip()
@@ -209,6 +221,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 stage = "HTML Generation"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
+                update_stage(stage)
                 owner = db.query(User).filter(User.id == clipping.user_id).first()
                 is_premium = owner and owner.subscription_plan in ["pro", "enterprise"]
 
@@ -243,9 +256,10 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
                 print(f"[COMPLETED] {stage} -> html len={len(html) if isinstance(html, str) else 'URL'}"); sys.stdout.flush()
                 # --- [9] PNG & PDF Asset Generation ---
-                stage = "Asset Generation"
+                stage = "PNG Screenshot Creation"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
+                update_stage(stage)
                 temp_png = f"temp_{clipping_id}.png"
                 temp_pdf = f"temp_{clipping_id}.pdf"
                 print(f"TEMP FILES CREATED: {temp_png}, {temp_pdf}"); sys.stdout.flush()
@@ -275,6 +289,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 stage = "Supabase Upload (PNG)"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
+                update_stage(stage)
                 try:
                     png_url = storage_service.upload_file(temp_png, f"clippings/{clipping_id}_{timestamp}.png")
                     if os.path.exists(temp_png):
@@ -291,6 +306,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 stage = "Supabase Upload (PDF)"
                 last_failed_stage = stage
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
+                update_stage(stage)
                 try:
                     pdf_url = storage_service.upload_file(temp_pdf, f"clippings/{clipping_id}_{timestamp}.pdf")
                     if os.path.exists(temp_pdf):
