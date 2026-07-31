@@ -93,53 +93,6 @@ class RenderService:
         # 1. Headline safety fallback
         if not data.get("headline"):
             data["headline"] = "NEWSFLASH: Special Report"
-
-<<<<<<< HEAD
-        # 2. Article raw text preservation (prioritize raw user input over AI formatted sections)
-        raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content")
-        if raw_text_input and isinstance(raw_text_input, str) and raw_text_input.strip():
-            raw_clean = raw_text_input.strip()
-            split_p = [p.strip() for p in re.split(r'\n+|\r\n', raw_clean) if p.strip()]
-            data["sections"] = split_p if split_p else [raw_clean]
-        elif isinstance(data.get("sections"), str):
-            data["sections"] = [data["sections"]]
-        elif not data.get("sections") or len(data.get("sections", [])) == 0:
-            data["sections"] = ["No article content was provided for this clipping. This is a fallback placeholder to ensure the template layout is preserved."]
-
-        # 2a. Normalize punctuation spacing & split long single-paragraph inputs
-        processed_sections = []
-        for sec in data["sections"]:
-            if not isinstance(sec, str):
-                continue
-            # Ensure space after punctuation (.,!?:;) if followed directly by a letter/glyph
-            clean_sec = re.sub(r'([.,!?:;])([^\s\d])', r'\1 \2', sec)
-            # If section is longer than 350 chars and has multiple sentences, split into paragraphs
-            if len(clean_sec) > 350 and re.search(r'[.,!?]\s+', clean_sec):
-                sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', clean_sec) if s.strip()]
-                curr_p = []
-                curr_len = 0
-                for s in sentences:
-                    curr_p.append(s)
-                    curr_len += len(s)
-                    if curr_len >= 250:
-                        processed_sections.append(" ".join(curr_p))
-                        curr_p = []
-                        curr_len = 0
-                if curr_p:
-                    processed_sections.append(" ".join(curr_p))
-            else:
-                processed_sections.append(clean_sec)
-        data["sections"] = processed_sections if processed_sections else data["sections"]
-
-        # 2b. Clean sections list ensuring raw text is preserved without duplication or leading bullet markers
-        if isinstance(data.get("sections"), list):
-            clean_sections = []
-            for sec in data["sections"]:
-                if isinstance(sec, str) and sec.strip():
-                    cleaned_p = re.sub(r'^[*\-•]\s*', '', sec.strip())
-                    clean_sections.append(cleaned_p)
-            data["sections"] = clean_sections if clean_sections else data["sections"]
-=======
         # 2. Section & Raw Text Handling - Preserve AI-formatted sections if available!
         existing_sections = data.get("sections")
         raw_text_input = data.get("article_text") or data.get("raw_content") or data.get("article_content") or ""
@@ -162,6 +115,7 @@ class RenderService:
                 continue
             # Replace non-breaking spaces & zero-width spaces with standard spaces
             clean_sec = sec.replace('\u00a0', ' ').replace('\u200b', ' ').strip()
+            clean_sec = re.sub(r'^[*\-•]\s*', '', clean_sec)
             if not clean_sec:
                 continue
             # Ensure space after punctuation (.,!?:;।) if followed directly by a letter/glyph
@@ -226,7 +180,6 @@ class RenderService:
 
         if data.get("summary") and len(str(data["summary"])) > 320:
             data["summary"] = str(data["summary"])[:315].rsplit(' ', 1)[0] + "..."
->>>>>>> origin/main
 
         # 3. Image safety fallback
         if not data.get("image_url") and not data.get("image_urls"):
@@ -643,7 +596,6 @@ class RenderService:
             let sumTitle = sumLabels[langKey] || 'SUMMARY';
             let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
 
->>>>>>> origin/main
             function resolveColumns(colVal, charLen) {
                 const s = String(colVal === undefined || colVal === null ? "auto" : colVal).toLowerCase().trim();
                 const p = parseInt(s);
@@ -1803,10 +1755,7 @@ class RenderService:
                     page.set_default_timeout(300000)
 
                     if html_content.startswith("http"): await page.goto(html_content, wait_until="commit", timeout=300000)
-                    else: await page.set_content(html_content, wait_until="commit", timeout=300000)
-
                     try:
-<<<<<<< HEAD
                         await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
                     except Exception:
                         pass
@@ -1817,18 +1766,6 @@ class RenderService:
                         if is_done:
                             break
                         await asyncio.sleep(0.5)
-
-                    try:
-                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
-                    except Exception:
-                        pass
-=======
-                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
-                    except Exception:
-                        pass
-
-                    await page.wait_for_function("window.__LAYOUT_DONE__ === true", timeout=25000)
->>>>>>> origin/main
 
                     try:
                         await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
