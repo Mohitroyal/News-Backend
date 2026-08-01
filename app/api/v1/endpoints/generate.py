@@ -226,12 +226,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "custom" in str(clipping.logo_id or "").lower()
                 )
 
-                if getattr(clipping, "show_summary", None) is False:
-                    should_show_summary = False
-                elif is_custom_template or getattr(clipping, "show_summary", None) is True:
-                    should_show_summary = True
-                else:
-                    should_show_summary = False
+                # Summary & Key Takeaways boxes MUST ONLY appear for custom template
+                should_show_summary = True if is_custom_template else False
 
                 custom = clipping.custom_layout or {}
                 render_data = {
