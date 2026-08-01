@@ -658,21 +658,6 @@ class RenderService:
                             for (let i = 0; i < count; i++) {
                                 obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH) });
                             }
-                            obstacles.push({
-                                type: 'summary_bullets',
-                                x: 0,
-                                y: Math.round(maxH + 30),
-                                w: W_canvas,
-                                h: summaryH
-                            });
-                        } else {
-                            obstacles.push({
-                                type: 'summary_bullets',
-                                x: 0,
-                                y: 0,
-                                w: W_canvas,
-                                h: 200
-                            });
                         }
                         return obstacles;
                     }
