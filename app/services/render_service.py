@@ -805,11 +805,20 @@ class RenderService:
                 let S_img = S || 1.0;
                 const obstacles = getObstacles(W_canvas, S_img, imgHeightPx, H_canvas);
 
+                // Render summary box early to measure its exact dynamic height from DOM
+                const sumObs = obstacles.find(o => o.type === 'summary_bullets');
+                if (sumObs) {
+                    const measuredH = renderSummaryBulletsBox(sumObs.y);
+                    if (measuredH > 0) {
+                        sumObs.h = measuredH;
+                    }
+                }
+
                 // Render absolute images onto canvas if it's the final pass
                 if (isFinal) {
                     obstacles.forEach(obs => {
                         if (obs.type === 'summary_bullets') {
-                            renderSummaryBulletsBox(obs.y);
+                            // Already rendered above during dynamic height measurement
                             return;
                         }
                         const imgEl = document.createElement('div');
