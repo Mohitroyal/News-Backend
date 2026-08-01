@@ -1357,8 +1357,9 @@ class RenderService:
                     let canvasRect = canvas.getBoundingClientRect();
                     let actualContentHeight = contentMaxY - canvasRect.top;
                     
+                    let isCustomTemplate = (data.template_id === 'custom');
                     let hasSummaryObstacle = obstacles.some(o => o.type === 'summary_bullets');
-                    if (!hasSummaryObstacle) {
+                    if (isCustomTemplate && !hasSummaryObstacle) {
                         let sumBoxH = renderSummaryBulletsBox(actualContentHeight + 20);
                         if (sumBoxH > 0) {
                             actualContentHeight += 20 + sumBoxH;
