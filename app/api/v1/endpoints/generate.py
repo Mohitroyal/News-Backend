@@ -653,7 +653,13 @@ def get_clipping(
         raise HTTPException(status_code=404, detail="Clipping not found")
 
     if clipping.status in ("processing", "rendering") and clipping.created_at:
-        time_diff = (datetime.utcnow() - clipping.created_at).total_seconds()
+        created_at = clipping.created_at
+        if getattr(created_at, "tzinfo", None) is not None:
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
+        else:
+            now = datetime.utcnow()
+        time_diff = (now - created_at).total_seconds()
         if time_diff > 180:
             print(f"[STALE TASK AUTO-FAIL] Task {id} stuck in '{clipping.status}' for {time_diff:.1f}s. Marking FAILED.")
             clipping.status = "failed"
