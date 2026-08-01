@@ -765,7 +765,7 @@ class RenderService:
                     }
                 }
                 const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                const isSummaryTemplate = (data.template_id === 'custom' || data.template_id === 'rti_express' || rawLayoutStr.includes('patternb') || data.show_summary === true);
+                const isSummaryTemplate = (data.template_id === 'custom' || data.template_id === 'rti_express' || rawLayoutStr.includes('patterng') || rawLayoutStr.includes('patternb') || data.show_summary === true);
                 if (isSummaryTemplate && (data.summary || (data.bullet_points && data.bullet_points.length > 0))) {
                     let maxImgY = 0;
                     obstacles.forEach(o => {
