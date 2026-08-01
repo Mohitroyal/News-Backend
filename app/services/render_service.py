@@ -1529,7 +1529,15 @@ class RenderService:
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--js-flags=--max-old-space-size=256",
+                "--js-flags=--max-old-space-size=128",
+                "--renderer-process-limit=1",
+                "--disable-extensions",
+                "--disable-component-update",
+                "--disable-background-networking",
+                "--disable-sync",
+                "--disable-translate",
+                "--mute-audio",
+                "--no-first-run",
                 "--disable-web-security",
                 "--allow-file-access-from-files"
             ],
@@ -1539,10 +1547,11 @@ class RenderService:
         max_attempts = 2
         for attempt in range(max_attempts):
             browser = None
+            page = None
             try:
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
-                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3)
+                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
                     def handle_console(msg):
                         if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                             return
@@ -1644,12 +1653,26 @@ class RenderService:
                         pdf_h = (final_h_px / 2.0) if final_h_px else layout_info.get('height', 1600)
                         await page.pdf(path=pdf_path, width=f"{layout_info.get('width', 1060)/96.0}in", height=f"{(pdf_h+15)/96.0}in", print_background=True, margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"})
 
-                    await browser.close()
+                    try:
+                        if page: await page.close()
+                    except Exception:
+                        pass
+                    try:
+                        if browser: await browser.close()
+                    except Exception:
+                        pass
                     return
             except Exception as e:
                 if attempt == max_attempts - 1: raise
             finally:
-                if browser: await browser.close()
+                try:
+                    if page: await page.close()
+                except Exception:
+                    pass
+                try:
+                    if browser: await browser.close()
+                except Exception:
+                    pass
                 gc.collect()
 
     async def generate_png(self, html_content: str, output_path: str):
