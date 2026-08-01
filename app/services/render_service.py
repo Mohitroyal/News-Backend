@@ -587,6 +587,10 @@ class RenderService:
                 H_canvas = H_canvas || 1200;
                 const TARGET_MAX_HEIGHT = H_canvas;
                 const obstacles = [];
+                const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom");
+
                 if (urls.length > 0) {
                     let S_scale = S_img;
                     let gap = 60;
@@ -686,11 +690,12 @@ class RenderService:
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width (covers sides as requested)
                         
-                        // Height matches aspect ratio with a cap to guarantee vertical room for text below
+                        // Height matches aspect ratio with a dynamic cap to guarantee vertical room for large legible body text
                         let dynamicH = imgVisW / aspect0;
                         
-                        // Cap hero image height to 460px max so ample vertical column space remains for article text
-                        h0 = Math.min(dynamicH, 460);
+                        let hasSummaryBox = isCustom && (data.summary || (data.bullet_points && data.bullet_points.length > 0)) && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
+                        let maxHeroH = hasSummaryBox ? 320 : (totalChars > 1500 ? 350 : 380);
+                        h0 = Math.min(dynamicH, maxHeroH);
                         
                         isPatternB_centered = true;
                     } else {
@@ -760,10 +765,6 @@ class RenderService:
                     }
                 }
                 }
-                const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom");
-                
                 if (isCustom && (data.summary || (data.bullet_points && data.bullet_points.length > 0)) && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false") {
                     let maxImgY = 0;
                     obstacles.forEach(o => {
