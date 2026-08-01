@@ -604,14 +604,13 @@ class RenderService:
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
                     const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                     const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
-                    let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || isArticleStyle;
-                    const isSinglePatternC = rawLayout.includes('patternc') && urls.length === 1;
-                    const isSinglePatternA = rawLayout.includes('patterna') && urls.length === 1;
+                    let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || isArticleStyle || isCustom;
+                    const isSinglePatternC = !isCustom && rawLayout.includes('patternc') && urls.length === 1;
+                    const isSinglePatternA = !isCustom && rawLayout.includes('patterna') && urls.length === 1;
                     if (isSinglePatternC || isSinglePatternA) {
                         isPatternB = false;
                     }
-                    
-                    if (rawLayout === "default" || rawLayout === "" || rawLayout === "auto") {
+                    if (isCustom || rawLayout === "default" || rawLayout === "" || rawLayout === "auto") {
                         isPatternB = true;
                     }
                     const isDoublePatternB = (isPatternB && urls.length === 2) && (rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout === "default");
@@ -693,10 +692,8 @@ class RenderService:
                         
                         // Height matches aspect ratio with a dynamic cap to guarantee vertical room for large legible body text
                         let dynamicH = imgVisW / aspect0;
-                        
-                        let hasSummaryBox = isCustom && (data.summary || (data.bullet_points && data.bullet_points.length > 0)) && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
-                        let maxHeroH = hasSummaryBox ? 320 : (totalChars > 1500 ? 350 : 380);
-                        h0 = Math.min(dynamicH, maxHeroH);
+                        let targetCap = isCustom ? (totalChars > 1200 ? 260 : 290) : (totalChars > 1500 ? 350 : 380);
+                        h0 = Math.min(dynamicH, targetCap);
                         
                         isPatternB_centered = true;
                     } else {
@@ -773,6 +770,11 @@ class RenderService:
                             // Ensure top image obstacles span full width in custom template so text columns start below image
                             o.w = W_canvas;
                             o.x = 0;
+                            // Dynamically cap top image height to 260px-290px based on text content length
+                            const targetImgCap = (totalChars > 1200) ? 260 : 290;
+                            if (o.h > targetImgCap) {
+                                o.h = targetImgCap;
+                            }
                             maxImgY = Math.max(maxImgY, o.y + o.h);
                         }
                     });
