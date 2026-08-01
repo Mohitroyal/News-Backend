@@ -761,8 +761,8 @@ class RenderService:
                 }
                 }
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isFixedLegacy = (templateIdStr === 'rtiexpress' || templateIdStr === 'bharathreporter' || templateIdStr === 'nationalnews' || templateIdStr === 'classic') && (data.show_summary === false || String(data.show_summary).toLowerCase() === 'false');
-                const isCustom = !isFixedLegacy;
+                const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom");
                 
                 if (isCustom && (data.summary || (data.bullet_points && data.bullet_points.length > 0)) && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false") {
                     let maxImgY = 0;
@@ -1151,8 +1151,8 @@ class RenderService:
 
             function renderSummaryBulletsBox(yTop) {
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isFixedLegacy = (templateIdStr === 'rtiexpress' || templateIdStr === 'bharathreporter' || templateIdStr === 'nationalnews' || templateIdStr === 'classic') && (data.show_summary === false || String(data.show_summary).toLowerCase() === 'false');
-                const isCustom = !isFixedLegacy;
+                const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom");
                 if (!isCustom) {
                     return 0;
                 }
