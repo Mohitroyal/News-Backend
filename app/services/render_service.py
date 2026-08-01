@@ -693,9 +693,9 @@ class RenderService:
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width (covers sides as requested)
                         
-                        // Height matches aspect ratio with a dynamic cap to guarantee vertical room for large legible body text
+                        // Height matches aspect ratio with a dynamic cap to guarantee vertical room for body text
                         let dynamicH = imgVisW / aspect0;
-                        let targetCap = isCustom ? (totalChars > 1200 ? 260 : 290) : (totalChars > 1500 ? 350 : 380);
+                        let targetCap = isCustom ? (totalChars > 1800 ? 360 : 420) : (totalChars > 1500 ? 380 : 450);
                         h0 = Math.min(dynamicH, targetCap);
                         
                         isPatternB_centered = true;
@@ -712,8 +712,8 @@ class RenderService:
                         h: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: isCustom ? 'contain' : 'cover',
-                        objectPosition: isCustom ? 'center center' : (isPatternB ? 'top center' : 'center center')
+                        objectFit: 'cover',
+                        objectPosition: 'center center'
                     });
 
                     if (urls.length > 1) {
@@ -773,8 +773,8 @@ class RenderService:
                             // Ensure top image obstacles span full width in custom template so text columns start below image
                             o.w = W_canvas;
                             o.x = 0;
-                            // Dynamically cap top image height to 260px-290px based on text content length
-                            const targetImgCap = (totalChars > 1200) ? 260 : 290;
+                            // Dynamically cap top image height to 360px-420px based on text content length
+                            const targetImgCap = (totalChars > 1800) ? 360 : 420;
                             if (o.h > targetImgCap) {
                                 o.h = targetImgCap;
                             }
