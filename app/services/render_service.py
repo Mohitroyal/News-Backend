@@ -589,8 +589,8 @@ class RenderService:
                 const obstacles = [];
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom");
-                const showSummary = isCustom && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
+                const showSummary = data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
+                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom") || showSummary;
 
                 if (urls.length > 0) {
                     let S_scale = S_img;
@@ -1161,10 +1161,7 @@ class RenderService:
             }
 
             function renderSummaryBulletsBox(yTop) {
-                const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom");
-                const showSummary = isCustom && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
+                const showSummary = data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
                 if (!showSummary) {
                     return 0;
                 }
