@@ -219,12 +219,26 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 safe_image_url = _rewrite_to_absolute(safe_image_url)
                 safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
 
+                is_custom_template = (
+                    str(clipping.template_id or "").lower().strip() == "custom" or
+                    str(clipping.logo_id or "").lower().strip() == "custom" or
+                    "custom" in str(clipping.template_id or "").lower() or
+                    "custom" in str(clipping.logo_id or "").lower()
+                )
+
+                if getattr(clipping, "show_summary", None) is False:
+                    should_show_summary = False
+                elif is_custom_template or getattr(clipping, "show_summary", None) is True:
+                    should_show_summary = True
+                else:
+                    should_show_summary = False
+
                 custom = clipping.custom_layout or {}
                 render_data = {
                     **formatted,
                     "id": str(clipping_id),
                     "template_id": template_id,
-                    "show_summary": getattr(clipping, "show_summary", None) if getattr(clipping, "show_summary", None) is not None else (template_id == "custom"),
+                    "show_summary": should_show_summary,
                     "article_text": clipping.article_content,
                     "raw_content": clipping.article_content,
                     "article_content": clipping.article_content,

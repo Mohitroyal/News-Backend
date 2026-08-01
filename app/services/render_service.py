@@ -838,16 +838,23 @@ class RenderService:
                         imgEl.style.background = 'var(--bg-color, #F5F1E8)';
                         imgEl.style.zIndex = '5';
                         
+                        let cleanCap = obs.caption;
+                        if (typeof cleanCap === 'object' && cleanCap !== null) {
+                            cleanCap = cleanCap.caption || cleanCap.text || cleanCap.title || '';
+                        }
+                        let capStr = String(cleanCap || '').trim();
+                        if (capStr === '[object Object]') capStr = '';
+
                         let captionHeight = 0;
-                        if (obs.caption) {
+                        if (capStr) {
                             const wrapW = obs.isCentered ? obs.visW : obs.w;
                             const charsPerLine = Math.max(1, Math.floor(wrapW / 6.5));
-                            const lines = Math.ceil(obs.caption.length / charsPerLine);
+                            const lines = Math.ceil(capStr.length / charsPerLine);
                             captionHeight = lines * 15;
                         }
                         const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
                         
-                            let captionHtml = obs.caption ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${obs.caption}</div>` : '';
+                        let captionHtml = capStr ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${capStr}</div>` : '';
                             if (obs.isCentered) {
                                 const isFullBleed = (obs.visW >= obs.w);
                                 imgEl.style.display = 'flex';
