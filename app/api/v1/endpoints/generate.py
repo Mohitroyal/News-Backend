@@ -219,11 +219,23 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 safe_image_url = _rewrite_to_absolute(safe_image_url)
                 safe_image_urls = [_rewrite_to_absolute(u) for u in safe_image_urls]
 
-                # Enable Summary & Key Takeaways boxes by default unless explicitly disabled
-                if getattr(clipping, "show_summary", None) is False:
-                    should_show_summary = False
-                else:
-                    should_show_summary = True
+                original_tid = str(clipping.template_id or "").lower().strip()
+                original_lid = str(clipping.logo_id or "").lower().strip()
+                custom_dict = clipping.custom_layout or {}
+
+                # Custom template detection: true if template/logo is custom or if custom_layout options are set
+                is_custom_template = (
+                    original_tid == "custom" or
+                    original_lid == "custom" or
+                    "custom" in original_tid or
+                    "custom" in original_lid or
+                    bool(custom_dict.get("image_layout")) or
+                    bool(custom_dict.get("heading_bg")) or
+                    getattr(clipping, "show_summary", None) is True
+                )
+
+                # Summary & Key Takeaways boxes MUST appear ONLY for Custom Template
+                should_show_summary = True if is_custom_template else False
 
                 custom = clipping.custom_layout or {}
                 render_data = {
