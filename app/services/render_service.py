@@ -108,7 +108,7 @@ class RenderService:
         else:
             sections_input = ["భోగాపురం మండలంలో వైఎస్ఆర్ కాంగ్రెస్ పార్టీ అధినేత వైఎస్ జగన్ మోహన్ రెడ్డి పర్యటనకు ప్రజల నుండి విశేష స్పందన లభించింది. పర్యటన పొడవునా వేలాదిగా తరలివచ్చిన ప్రజలు మరియు కార్యకర్తలు ఆయనకు ఘన స్వాగతం పలికారు."]
 
-        # 2a. Clean unicode non-breaking spaces (\u00a0, \u200b), normalize punctuation & split long blocks
+        # 2a. Clean unicode non-breaking spaces (\u00a0, \u200b), normalize punctuation & preserve full paragraphs
         processed_sections = []
         for sec in sections_input:
             if not isinstance(sec, str):
@@ -120,30 +120,7 @@ class RenderService:
                 continue
             # Ensure space after punctuation (.,!?:;।) if followed directly by a letter/glyph
             clean_sec = re.sub(r'([.,!?:;।])([^\s\d])', r'\1 \2', clean_sec)
-            
-            # If section is longer than 100 chars, split into readable paragraph blocks
-            if len(clean_sec) > 100:
-                sentences = [s.strip() for s in re.split(r'(?<=[.!?।,;])\s+|\n+', clean_sec) if s.strip()]
-                if len(sentences) > 1:
-                    for s in sentences:
-                        if len(s) > 10:
-                            words = s.split()
-                            if len(words) > 20:
-                                chunk_size = 14
-                                for i in range(0, len(words), chunk_size):
-                                    processed_sections.append(" ".join(words[i:i + chunk_size]))
-                            else:
-                                processed_sections.append(s)
-                else:
-                    words = clean_sec.split()
-                    if len(words) > 14:
-                        chunk_size = 14
-                        for i in range(0, len(words), chunk_size):
-                            processed_sections.append(" ".join(words[i:i + chunk_size]))
-                    else:
-                        processed_sections.append(clean_sec)
-            else:
-                processed_sections.append(clean_sec)
+            processed_sections.append(clean_sec)
                 
         if not processed_sections:
             processed_sections = ["ఈ పత్రికా క్లిప్పింగ్ కోసం శీర్షిక మరియు వివరాలు విజయవంతంగా రూపొందించబడ్డాయి."]

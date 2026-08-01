@@ -133,8 +133,24 @@ class GrokService:
             
         sec_list = normalized.get("sections", [])
         sec_text = "\n\n".join(sec_list) if isinstance(sec_list, list) else str(sec_list)
-        if not sec_text.strip():
-            sec_text = content
+        raw_clean = content.replace("\r", "\n").strip()
+
+        # Enforce 100% raw content preservation if AI omitted sentences from sections
+        if len(sec_text.strip()) < len(raw_clean) * 0.90:
+            print(f"[PRESERVATION ENFORCER] AI model omitted text ({len(sec_text.strip())} < {len(raw_clean)} chars). Restoring 100% raw content.")
+            raw_paras = [p.strip() for p in raw_clean.split("\n\n") if p.strip()]
+            if len(raw_paras) <= 1:
+                s_chunks = [s.strip() for s in re.split(r'[\.!\?।]+', raw_clean) if s.strip()]
+                new_paras = []
+                chunk_size = max(2, len(s_chunks) // 3)
+                for i in range(0, len(s_chunks), chunk_size):
+                    piece = ". ".join(s_chunks[i:i+chunk_size]).strip()
+                    if piece:
+                        new_paras.append(piece + ".")
+                normalized["sections"] = new_paras if new_paras else [raw_clean]
+            else:
+                normalized["sections"] = raw_paras
+            sec_text = "\n\n".join(normalized["sections"])
             
         sum_val = normalized.get("summary", "")
         bp_val = normalized.get("bullet_points", [])
