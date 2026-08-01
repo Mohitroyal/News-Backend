@@ -658,32 +658,6 @@ class RenderService:
                             for (let i = 0; i < count; i++) {
                                 obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH) });
                             }
-                            
-                            let measureContainer = document.createElement('div');
-                            measureContainer.style.position = 'absolute';
-                            measureContainer.style.visibility = 'hidden';
-                            measureContainer.style.width = Math.round(W_canvas / 2) + 'px';
-                            measureContainer.style.fontSize = '15px';
-                            measureContainer.style.lineHeight = '1.6';
-                            let sumLabels = { 'te': 'సారాంశం', 'hi': 'सारांश', 'kn': 'ಸಾರಾಂಶ', 'ta': 'சுരുக்கம்', 'ml': 'സംഗ്രഹം', 'en': 'SUMMARY' };
-                            let bulLabels = { 'te': 'ముఖ్య అంశాలు', 'hi': 'मुख्य बिंदु', 'kn': 'ಪ್ರಮುಖ ಮುಖ್ಯಾಂಶಗಳು', 'ta': 'முக்கிய அம்சங்கள்', 'ml': 'പ്രധാന വിവരങ്ങൾ', 'en': 'KEY TAKEAWAYS' };
-
-                            let sumTitle = sumLabels[langKey] || 'SUMMARY';
-                            let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
-
-                            // Measure Summary
-                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${sumTitle}</h4><p style="margin: 0;">${data.summary || ''}</p>`;
-                            document.body.appendChild(measureContainer);
-                            let sumH = measureContainer.offsetHeight;
-                            
-                            // Measure Bullets
-                            let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
-                            measureContainer.innerHTML = `<h4 style="margin: 0 0 12px 0; font-size: 18px;">${bulTitle}</h4><ul style="margin: 0; padding-left: 20px;">${bpHtml}</ul>`;
-                            let bulH = measureContainer.offsetHeight;
-                            document.body.removeChild(measureContainer);
-                            
-                            let summaryH = Math.max(120, sumH, bulH);
-                            
                             obstacles.push({
                                 type: 'summary_bullets',
                                 x: 0,
@@ -779,22 +753,6 @@ class RenderService:
                         objectPosition: isPatternB ? 'top center' : 'center center'
                     });
 
-                    let hasSummary = data.summary && String(data.summary).trim();
-                    let hasBullets = data.bullet_points && data.bullet_points.length > 0;
-                    if ((hasSummary || hasBullets) && urls.length === 1 && isPatternB_centered) {
-                        let summaryH = renderSummaryBulletsBox(Math.round(h0 + 45));
-                        let tempBox = canvas.querySelector('.nc-absolute-summary');
-                        if (tempBox) canvas.removeChild(tempBox);
-
-                        obstacles.push({
-                            type: 'summary_bullets',
-                            x: 0,
-                            y: Math.round(h0 + 45),
-                            w: W_canvas,
-                            h: summaryH + 30
-                        });
-                    }
-                    
                     if (urls.length > 1) {
                         if (isDoublePatternB) {
                             let h1 = window.__db_sharedH;
