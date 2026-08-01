@@ -42,12 +42,12 @@ class GrokService:
         Analyze the following raw news article and reformat it into a structured newspaper layout object.
         Language required for output: {full_lang}.
         
-        You MUST provide:
-        1. "headline": Catchy, impactful main headline (in {full_lang}, maximum 120 characters).
-        2. "subheadline": Subheading or context tag (in {full_lang}, maximum 90 characters).
-        3. "sections": Array of body text paragraphs (in {full_lang}). Split long text into 3 to 5 logical paragraphs.
-        4. "dateline": Location/Date tag (e.g., "హైదరాబాద్:").
-        5. "byline": Reporter/Source tag (e.g., "న్యూస్‌క్రాఫ్ట్ బ్యూరో").
+        CRITICAL CONTENT PRESERVATION RULES:
+        1. "sections": Array of body text paragraphs (in {full_lang}). You MUST preserve 100% of the raw article text! Do NOT summarize, shorten, condense, or omit any sentences, names, figures (e.g. 8000 కోట్లు), or facts. Split the COMPLETE text into 3 to 5 logical paragraphs without deleting any original words.
+        2. "headline": Catchy, impactful main headline (in {full_lang}, maximum 120 characters).
+        3. "subheadline": Subheading or context tag (in {full_lang}, maximum 90 characters).
+        4. "dateline": Location/Date tag (e.g., "సంగారెడ్డి:").
+        5. "byline": Reporter/Source tag (e.g., "భారత్ రిపోర్టర్").
         6. "image_captions": Array of {image_count} photo captions (in {full_lang}, 1 caption per image).
         7. "summary": A comprehensive 2-3 sentence executive summary of the article (in {full_lang}, ~250-350 characters).
         8. "bullet_points": Array of exactly 4 to 5 concise key takeaways/highlights from the article (in {full_lang}, max 85 chars per point).
@@ -58,7 +58,7 @@ class GrokService:
         
         payload = {
             "messages": [
-                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST translate and write EVERYTHING strictly in {full_lang}. Do NOT use any other language for any field. Summary and bullet_points MUST be written in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
+                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST preserve 100% of the user's raw article text inside 'sections' without summarizing, omitting, or deleting any text. Translate and write EVERYTHING strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},
