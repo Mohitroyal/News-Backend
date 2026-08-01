@@ -764,7 +764,9 @@ class RenderService:
                         });
                     }
                 }
-                if (data.template_id === 'custom' && (data.summary || (data.bullet_points && data.bullet_points.length > 0))) {
+                const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const isCustom = templateIdStr.includes("custom") || String(data.logo_id || "").toLowerCase().includes("custom");
+                if (isCustom && (data.summary || (data.bullet_points && data.bullet_points.length > 0))) {
                     let maxImgY = 0;
                     obstacles.forEach(o => {
                         if (o.type !== 'summary_bullets') {
@@ -1138,7 +1140,9 @@ class RenderService:
             }
 
             function renderSummaryBulletsBox(yTop) {
-                if (data.template_id !== 'custom') {
+                const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const isCustom = templateIdStr.includes("custom") || String(data.logo_id || "").toLowerCase().includes("custom");
+                if (!isCustom) {
                     return 0;
                 }
                 if ((!data.summary || !String(data.summary).trim()) && (!data.bullet_points || data.bullet_points.length === 0)) {
