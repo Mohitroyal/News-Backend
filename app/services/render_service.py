@@ -589,8 +589,10 @@ class RenderService:
                 const obstacles = [];
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
                 const showSummaryFlag = data.show_summary === true || String(data.show_summary).toLowerCase() === "true";
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom") || showSummaryFlag;
+                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom") || isArticleStyle || showSummaryFlag;
                 const showSummary = isCustom && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
 
                 if (urls.length > 0) {
@@ -1164,8 +1166,10 @@ class RenderService:
             function renderSummaryBulletsBox(yTop) {
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
                 const showSummaryFlag = data.show_summary === true || String(data.show_summary).toLowerCase() === "true";
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom") || showSummaryFlag;
+                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom") || isArticleStyle || showSummaryFlag;
                 const showSummary = isCustom && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
                 if (!showSummary) {
                     return 0;
