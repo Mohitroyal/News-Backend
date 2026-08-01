@@ -764,7 +764,9 @@ class RenderService:
                         });
                     }
                 }
-                if (data.template_id === 'custom' && (data.summary || (data.bullet_points && data.bullet_points.length > 0))) {
+                const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                const isSummaryTemplate = (data.template_id === 'custom' || data.template_id === 'rti_express' || rawLayoutStr.includes('patternb') || data.show_summary === true);
+                if (isSummaryTemplate && (data.summary || (data.bullet_points && data.bullet_points.length > 0))) {
                     let maxImgY = 0;
                     obstacles.forEach(o => {
                         maxImgY = Math.max(maxImgY, o.y + o.h);
@@ -1541,7 +1543,7 @@ class RenderService:
             try:
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
-                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
+                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3)
                     def handle_console(msg):
                         if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                             return
