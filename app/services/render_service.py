@@ -761,7 +761,8 @@ class RenderService:
                 }
                 }
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isCustom = templateIdStr.includes("custom") || String(data.logo_id || "").toLowerCase().includes("custom");
+                const isFixedLegacy = (templateIdStr === 'rtiexpress' || templateIdStr === 'bharathreporter' || templateIdStr === 'nationalnews' || templateIdStr === 'classic') && (data.show_summary === false || String(data.show_summary).toLowerCase() === 'false');
+                const isCustom = !isFixedLegacy;
                 
                 if (isCustom && (data.summary || (data.bullet_points && data.bullet_points.length > 0)) && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false") {
                     let maxImgY = 0;
@@ -770,7 +771,7 @@ class RenderService:
                             // Ensure top image obstacles span full width in custom template so text columns start below image
                             o.w = W_canvas;
                             o.x = 0;
-                            if (o.h > 360) o.h = 360; // Cap image height dynamically to prevent vertical text crowding
+                            if (o.h > 320) o.h = 320; // Cap image height dynamically to prevent vertical text crowding
                             maxImgY = Math.max(maxImgY, o.y + o.h);
                         }
                     });
@@ -1142,8 +1143,8 @@ class RenderService:
 
             function renderSummaryBulletsBox(yTop) {
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom");
+                const isFixedLegacy = (templateIdStr === 'rtiexpress' || templateIdStr === 'bharathreporter' || templateIdStr === 'nationalnews' || templateIdStr === 'classic') && (data.show_summary === false || String(data.show_summary).toLowerCase() === 'false');
+                const isCustom = !isFixedLegacy;
                 if (!isCustom) {
                     return 0;
                 }
