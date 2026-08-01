@@ -888,6 +888,15 @@ class RenderService:
                     }
                 }
 
+                // Collect top obstacle bottom boundaries to break intervals so text flows under images smoothly
+                const splitYSet = new Set();
+                inflatedObstacles.forEach(obs => {
+                    if (obs.y < 50 && obs.h > 50) {
+                        splitYSet.add(Math.round(obs.y + obs.h));
+                    }
+                });
+                const splitYList = Array.from(splitYSet).sort((a, b) => a - b);
+
                 // Flow layout function
                 const regions = [];
                 for (let c = 0; c < N; c++) {
@@ -969,6 +978,20 @@ class RenderService:
                         intervals = nextIntervals;
                     });
                     
+                    // Split intervals at image bottom boundaries so text flows under side images naturally
+                    splitYList.forEach(sY => {
+                        const nextInts = [];
+                        intervals.forEach(int => {
+                            if (sY > int.yStart + 20 && sY < int.yEnd - 20) {
+                                nextInts.push({ yStart: int.yStart, yEnd: sY, xOffset: int.xOffset, w: int.w });
+                                nextInts.push({ yStart: sY, yEnd: int.yEnd, xOffset: int.xOffset, w: int.w });
+                            } else {
+                                nextInts.push(int);
+                            }
+                        });
+                        intervals = nextInts;
+                    });
+
                     intervals.forEach(int => {
                         const h = int.yEnd - int.yStart;
                         if (h < 24 || int.w < 40) return;
@@ -994,9 +1017,16 @@ class RenderService:
                         }
                         colDiv.appendChild(rBox);
                         
-                        regions.push({ rBox, height: h, y: int.yStart });
+                        regions.push({ rBox, height: h, y: int.yStart, col: c });
                     });
                 }
+                
+                // Sort regions primarily by top Y position (yStart) so text fills upper spaces before flowing under images
+                regions.sort((a, b) => {
+                    const yDiff = a.y - b.y;
+                    if (Math.abs(yDiff) > 15) return yDiff;
+                    return a.col - b.col;
+                });
                 
                 let paragraphs = [];
                 for (const sec of (data.sections || [])) {
