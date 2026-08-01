@@ -764,12 +764,12 @@ class RenderService:
                         });
                     }
                 }
-                const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                const isSummaryTemplate = (data.template_id === 'custom' || data.template_id === 'rti_express' || rawLayoutStr.includes('patterng') || rawLayoutStr.includes('patternb') || data.show_summary === true);
-                if (isSummaryTemplate && (data.summary || (data.bullet_points && data.bullet_points.length > 0))) {
+                if (data.summary || (data.bullet_points && data.bullet_points.length > 0)) {
                     let maxImgY = 0;
                     obstacles.forEach(o => {
-                        maxImgY = Math.max(maxImgY, o.y + o.h);
+                        if (o.type !== 'summary_bullets') {
+                            maxImgY = Math.max(maxImgY, o.y + o.h);
+                        }
                     });
                     obstacles.push({
                         type: 'summary_bullets',
@@ -1344,15 +1344,6 @@ class RenderService:
                     let canvasRect = canvas.getBoundingClientRect();
                     let actualContentHeight = contentMaxY - canvasRect.top;
                     
-                    let rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                    let isCustomTemplate = (data.template_id === 'custom' || rawLayoutStr.includes('patterng') || data.show_summary === true);
-                    let hasSummaryObstacle = obstacles.some(o => o.type === 'summary_bullets');
-                    if (isCustomTemplate && !hasSummaryObstacle) {
-                        let sumBoxH = renderSummaryBulletsBox(actualContentHeight + 20);
-                        if (sumBoxH > 0) {
-                            actualContentHeight += 20 + sumBoxH;
-                        }
-                    }
                     actualContentHeight += 2;
                     
                     // CUSTOM TEMPLATE ENHANCEMENT: Thick border + RTI Footer
