@@ -128,7 +128,7 @@ async def preflight_handler(full_path: str):
     return {"ok": True}
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return {
         "message": "Welcome to NewsCraft AI API",
@@ -137,13 +137,13 @@ def root():
     }
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     """Render health-check endpoint."""
     return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v4_bulletproof"}
 
 
-@app.get("/health/generator")
+@app.api_route("/health/generator", methods=["GET", "HEAD"])
 async def health_generator():
     """
     Diagnostic endpoint to verify all components for NewsCraft Generation are healthy.
