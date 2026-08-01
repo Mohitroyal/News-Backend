@@ -771,7 +771,6 @@ class RenderService:
                             // Ensure top image obstacles span full width in custom template so text columns start below image
                             o.w = W_canvas;
                             o.x = 0;
-                            if (o.h > 320) o.h = 320; // Cap image height dynamically to prevent vertical text crowding
                             maxImgY = Math.max(maxImgY, o.y + o.h);
                         }
                     });
@@ -780,7 +779,7 @@ class RenderService:
                         x: 0,
                         y: Math.round(maxImgY + 16),
                         w: W_canvas,
-                        h: 220
+                        h: 260
                     });
                 }
                 return obstacles;
@@ -1181,7 +1180,7 @@ class RenderService:
                 let sumTitle = sumLabels[langKey] || 'SUMMARY';
                 let bulTitle = bulLabels[langKey] || 'KEY TAKEAWAYS';
 
-                let bpHtml = (data.bullet_points || []).map(bp => `<li style="margin-bottom: 8px;">${bp}</li>`).join('');
+                let bpHtml = (data.bullet_points || []).slice(0, 4).map(bp => `<li style="margin-bottom: 6px;">${bp}</li>`).join('');
                 
                 let sumBg = data.summary_bg || '#FFF4CC';
                 let bulBg = data.bullet_bg || '#00A79D';

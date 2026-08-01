@@ -244,7 +244,7 @@ class GrokService:
                     clean_b += "."
                 if clean_b not in bullets:
                     bullets.append(clean_b)
-                if len(bullets) >= 5:
+                if len(bullets) >= 4:
                     break
 
         # Fallback if fewer than 4 bullet points (e.g. text only had 1-2 long sentences):
@@ -261,9 +261,9 @@ class GrokService:
                         clean_c += "."
                     if clean_c not in bullets:
                         bullets.append(clean_c)
-                    if len(bullets) >= 5:
+                    if len(bullets) >= 4:
                         break
 
-        return summary, bullets[:5]
+        return summary, bullets[:4]
 
 grok_service = GrokService()
