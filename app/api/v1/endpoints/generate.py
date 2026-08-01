@@ -224,7 +224,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     **formatted,
                     "id": str(clipping_id),
                     "template_id": template_id,
-                    "show_summary": getattr(clipping, "show_summary", True) if getattr(clipping, "show_summary", None) is not None else True,
+                    "show_summary": getattr(clipping, "show_summary", None) if getattr(clipping, "show_summary", None) is not None else (template_id == "custom"),
                     "article_text": clipping.article_content,
                     "raw_content": clipping.article_content,
                     "article_content": clipping.article_content,
