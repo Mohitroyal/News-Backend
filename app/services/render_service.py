@@ -1339,16 +1339,11 @@ class RenderService:
                 
                 // Precision shrink-wrap canvas exactly to the lowest content pixel
                 let rBoxBottoms = [];
-                document.querySelectorAll('.nc-text-region-box, .nc-absolute-image, .nc-absolute-summary').forEach(el => {
-                    if (el.classList.contains('nc-text-region-box')) {
-                        if (el.clientHeight === 0) return;
-                        if (el.innerText.trim() === '') return;
+                document.querySelectorAll('.nc-text-region-box p, .nc-absolute-image, .nc-image-caption').forEach(el => {
+                    let rect = el.getBoundingClientRect();
+                    if (rect.height > 0 && rect.bottom > 0) {
+                        rBoxBottoms.push(rect.bottom);
                     }
-                    let bottom = el.getBoundingClientRect().bottom;
-                    if (bottom > 500) {
-                        console.log("[LAYOUT DEBUG] Large element found: classes=" + el.className + ", clientHeight=" + el.clientHeight + ", innerText length=" + (el.innerText ? el.innerText.trim().length : 0) + ", bottom=" + bottom);
-                    }
-                    rBoxBottoms.push(bottom);
                 });
                 
                 let contentMaxY = rBoxBottoms.length > 0 ? Math.max(...rBoxBottoms) : 0;
