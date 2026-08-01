@@ -42,15 +42,17 @@ class GrokService:
         Analyze the following raw news article and reformat it into a structured newspaper layout object.
         Language required for output: {full_lang}.
         
-        CRITICAL CONTENT PRESERVATION RULES:
-        1. "sections": Array of body text paragraphs (in {full_lang}). You MUST preserve 100% of the raw article text! Do NOT summarize, shorten, condense, or omit any sentences, names, figures (e.g. 8000 కోట్లు), or facts. Split the COMPLETE text into 3 to 5 logical paragraphs without deleting any original words.
+        CRITICAL CONTENT PRESERVATION & FULL KEY TAKEAWAYS RULES:
+        1. "sections": Array of body text paragraphs (in {full_lang}). You MUST preserve 100% of the raw article text! Do NOT summarize, shorten, condense, or omit any sentences, names, figures (e.g. 8000 కోట్లు), or facts. Split the COMPLETE raw text into 3 to 5 logical paragraphs without deleting any original words or content.
         2. "headline": Catchy, impactful main headline (in {full_lang}, maximum 120 characters).
         3. "subheadline": Subheading or context tag (in {full_lang}, maximum 90 characters).
         4. "dateline": Location/Date tag (e.g., "సంగారెడ్డి:").
         5. "byline": Reporter/Source tag (e.g., "భారత్ రిపోర్టర్").
         6. "image_captions": Array of {image_count} photo captions (in {full_lang}, 1 caption per image).
         7. "summary": A comprehensive 2-3 sentence executive summary of the article (in {full_lang}, ~250-350 characters).
-        8. "bullet_points": Array of exactly 4 to 5 concise key takeaways/highlights from the article (in {full_lang}, max 85 chars per point).
+        8. "bullet_points": Array of exactly 4 to 5 complete, clear key takeaways/highlights from the article (in {full_lang}, max 130 chars per point). Each key takeaway point MUST be a complete, meaningful sentence.
+
+        ABSOLUTE MANDATE: You MUST include BOTH the 100% complete body text inside 'sections' AND 4 to 5 complete key takeaways inside 'bullet_points'. NEVER omit or reduce 'sections' text to make room for bullet points, and NEVER omit or shorten key takeaways when providing body content.
 
         Raw Article Text:
         {content}
@@ -58,7 +60,7 @@ class GrokService:
         
         payload = {
             "messages": [
-                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST preserve 100% of the user's raw article text inside 'sections' without summarizing, omitting, or deleting any text. Translate and write EVERYTHING strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
+                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST preserve 100% of the user's raw article text inside 'sections' without summarizing, omitting, or deleting any text, AND generate 4 to 5 complete key takeaways inside 'bullet_points'. Translate and write EVERYTHING strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},
@@ -182,10 +184,12 @@ class GrokService:
         if not clean_text_no_header.strip():
             clean_text_no_header = clean_text
 
-        # Protect abbreviation dots
-        protected_text = re.sub(r'(\b[^\s\.]{1,4})\.\s+', r'\1_DOT_ ', clean_text_no_header)
-        protected_text = re.sub(r'(\d+)\.(\d+)', r'\1_NUMDOT_\2', protected_text)
+        # Protect decimal numbers and single-letter/known abbreviations (e.g. M. Rajeshwar, 14.06.2026)
+        protected_text = re.sub(r'(\d+)\.(\d+)', r'\1_NUMDOT_\2', clean_text_no_header)
+        protected_text = re.sub(r'(\b[A-Za-zఅ-హ]\.)\s*', r'\1_DOT_ ', protected_text)
+        protected_text = re.sub(r'\b(Dr|Mr|Mrs|Prof|No|Vol|vs|శ్రీ)\.\s*', r'\1_DOT_ ', protected_text, flags=re.IGNORECASE)
         
+        # Split strictly into whole sentences (by period, question mark, exclamation mark, purna viram, or newline)
         raw_chunks = [c.replace('_DOT_', '.').replace('_NUMDOT_', '.').strip() for c in re.split(r'[\.!\?।\n]+', protected_text) if c.strip()]
         sentences = []
         for s in raw_chunks:
@@ -196,54 +200,53 @@ class GrokService:
         if not sentences:
             sentences = [clean_text_no_header[:150]] if clean_text_no_header else ["తాజా సమాచారం ప్రకారం వివరాలు సిద్ధమవుతున్నాయి."]
 
-        # Summary: Take substantial body sentences (up to ~300 chars)
+        # Summary: Take first 2-3 substantial sentences (up to ~350 chars)
         summary_sentences = []
         total_len = 0
         for s in sentences:
-            if total_len + len(s) <= 320:
-                summary_sentences.append(s.rstrip('.') + '.')
-                total_len += len(s)
+            clean_stmt = s.rstrip('.') + '.'
+            if total_len + len(clean_stmt) <= 350:
+                summary_sentences.append(clean_stmt)
+                total_len += len(clean_stmt)
             else:
                 if not summary_sentences:
-                    summary_sentences.append(s[:315].rsplit(' ', 1)[0] + '...')
+                    summary_sentences.append(clean_stmt)
                 break
                 
         summary = " ".join(summary_sentences)
 
-        # Bullet Points: Extract 4-5 concise key takeaway clauses (max 85 chars each)
+        # Bullet Points: Use complete, clean sentences as bullet points (4 to 5 points)
         bullets = []
-        # Split by punctuation AND common Telugu conjunctions / connectors
-        raw_clauses = re.split(r'[\.!\?।\n,;—–]|\b(?:మరియు|అదేవిధంగా|ఈ విధంగా|కాగా|అలాగే|వీటివల్ల|అందువల్ల)\b', clean_text_no_header)
-        for c in raw_clauses:
-            clean_c = c.strip()
-            clean_c = re.sub(r'^[•\-\*\d\.\s]+', '', clean_c)
-            clean_c = re.sub(r'^[:\s]+', '', clean_c)
-            if len(clean_c) >= 18:
-                if len(clean_c) > 85:
-                    clean_c = clean_c[:82].rsplit(' ', 1)[0] + "..."
-                elif not clean_c.endswith(('.', '।')):
-                    clean_c += "."
-                if clean_c not in bullets:
-                    bullets.append(clean_c)
+        for s in sentences:
+            clean_b = s.strip()
+            clean_b = re.sub(r'^[•\-\*\d\.\s]+', '', clean_b)
+            clean_b = re.sub(r'^[:\s]+', '', clean_b)
+            if len(clean_b) >= 15:
+                if len(clean_b) > 130:
+                    clean_b = clean_b[:127].rsplit(' ', 1)[0] + "..."
+                elif not clean_b.endswith(('.', '।')):
+                    clean_b += "."
+                if clean_b not in bullets:
+                    bullets.append(clean_b)
                 if len(bullets) >= 5:
                     break
 
-        # Fallback to ensure 4 to 5 bullet points by chunking text if clauses were too few
+        # Fallback if fewer than 4 bullet points (e.g. text only had 1-2 long sentences):
         if len(bullets) < 4:
-            words = clean_text_no_header.split()
-            chunk_size = max(6, len(words) // 4)
-            for i in range(0, len(words), chunk_size):
-                chunk = " ".join(words[i:i+chunk_size]).strip()
-                chunk = re.sub(r'^[•\-\*\d\.\s]+', '', chunk)
-                if len(chunk) >= 15:
-                    if len(chunk) > 85:
-                        chunk = chunk[:82].rsplit(' ', 1)[0] + "..."
-                    elif not chunk.endswith(('.', '।')):
-                        chunk += "."
-                    if chunk not in bullets:
-                        bullets.append(chunk)
-                if len(bullets) >= 5:
-                    break
+            raw_clauses = re.split(r'[;—–\n]', clean_text_no_header)
+            for c in raw_clauses:
+                clean_c = c.strip()
+                clean_c = re.sub(r'^[•\-\*\d\.\s]+', '', clean_c)
+                clean_c = re.sub(r'^[:\s]+', '', clean_c)
+                if len(clean_c) >= 15:
+                    if len(clean_c) > 130:
+                        clean_c = clean_c[:127].rsplit(' ', 1)[0] + "..."
+                    elif not clean_c.endswith(('.', '।')):
+                        clean_c += "."
+                    if clean_c not in bullets:
+                        bullets.append(clean_c)
+                    if len(bullets) >= 5:
+                        break
 
         return summary, bullets[:5]
 
