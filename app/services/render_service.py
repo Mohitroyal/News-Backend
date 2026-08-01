@@ -636,10 +636,7 @@ class RenderService:
                                 obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH) });
                             }
                         }
-                        return obstacles;
-                    }
-                    
-                    if (isTriplePatternB) {
+                    } else if (isTriplePatternB) {
                         // Pattern E style with 3 images: Large hero on top, two smaller side-by-side below
                         let w0 = W_canvas;
                         let h0 = Math.min(w0 / aspect0, W_canvas * 0.6);
@@ -657,9 +654,7 @@ class RenderService:
                         obstacles.push({ url: urls[0], caption: captions[0] || '', x: 0, y: 0, w: Math.round(w0), h: Math.round(h0) });
                         obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
                         obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
-                        
-                        return obstacles;
-                    }
+                    } else {
                     
                     let w0 = (isSinglePatternC || isSinglePatternA || !isPatternB)
                         ? Math.round((W_canvas - 24) * 0.48)
@@ -763,6 +758,7 @@ class RenderService:
                             h: Math.round(h2)
                         });
                     }
+                }
                 }
                 if ((data.summary || (data.bullet_points && data.bullet_points.length > 0)) && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false") {
                     let maxImgY = 0;
