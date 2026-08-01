@@ -693,10 +693,9 @@ class RenderService:
                         imgY = 0; // Image must appear immediately before the article text
                         imgVisW = W_canvas; // 100% of content width (covers sides as requested)
                         
-                        // Height matches aspect ratio with a dynamic cap to guarantee vertical room for body text
+                        // For custom template, maintain exact natural image aspect ratio so zero image cropping occurs
                         let dynamicH = imgVisW / aspect0;
-                        let targetCap = isCustom ? (totalChars > 1800 ? 360 : 420) : (totalChars > 1500 ? 380 : 450);
-                        h0 = Math.min(dynamicH, targetCap);
+                        h0 = isCustom ? dynamicH : Math.min(dynamicH, totalChars > 1500 ? 380 : 450);
                         
                         isPatternB_centered = true;
                     } else {
@@ -712,7 +711,7 @@ class RenderService:
                         h: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: 'cover',
+                        objectFit: isCustom ? 'contain' : 'cover',
                         objectPosition: 'center center'
                     });
 
@@ -773,11 +772,6 @@ class RenderService:
                             // Ensure top image obstacles span full width in custom template so text columns start below image
                             o.w = W_canvas;
                             o.x = 0;
-                            // Dynamically cap top image height to 360px-420px based on text content length
-                            const targetImgCap = (totalChars > 1800) ? 360 : 420;
-                            if (o.h > targetImgCap) {
-                                o.h = targetImgCap;
-                            }
                             maxImgY = Math.max(maxImgY, o.y + o.h);
                         }
                     });
