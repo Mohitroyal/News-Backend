@@ -1521,8 +1521,10 @@ class RenderService:
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--js-flags=--max-old-space-size=128",
+                "--single-process",
+                "--js-flags=--max-old-space-size=96",
                 "--renderer-process-limit=1",
+                "--disable-v8-idle-tasks",
                 "--disable-extensions",
                 "--disable-component-update",
                 "--disable-background-networking",
@@ -1543,7 +1545,7 @@ class RenderService:
             try:
                 async with async_playwright() as p:
                     browser = await p.chromium.launch(**launch_kwargs)
-                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3)
+                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
                     def handle_console(msg):
                         if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                             return
@@ -1653,6 +1655,7 @@ class RenderService:
                         if browser: await browser.close()
                     except Exception:
                         pass
+                    gc.collect()
                     return
             except Exception as e:
                 if attempt == max_attempts - 1: raise
@@ -1665,6 +1668,7 @@ class RenderService:
                     if browser: await browser.close()
                 except Exception:
                     pass
+                gc.collect()
                 gc.collect()
 
     async def generate_png(self, html_content: str, output_path: str):
