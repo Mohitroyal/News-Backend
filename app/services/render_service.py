@@ -764,6 +764,19 @@ class RenderService:
                         });
                     }
                 }
+                if (data.template_id === 'custom' && (data.summary || (data.bullet_points && data.bullet_points.length > 0))) {
+                    let maxImgY = 0;
+                    obstacles.forEach(o => {
+                        maxImgY = Math.max(maxImgY, o.y + o.h);
+                    });
+                    obstacles.push({
+                        type: 'summary_bullets',
+                        x: 0,
+                        y: Math.round(maxImgY + 16),
+                        w: W_canvas,
+                        h: 220
+                    });
+                }
                 return obstacles;
             }
 
