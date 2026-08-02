@@ -329,11 +329,17 @@ class RenderService:
             override_css = f"""
             {local_fonts_css}
             <style id="indic-font-enforcer">
-                /* High-DPI font smoothing & crisp text rendering */
+                /* High-DPI font smoothing & crisp text/image rendering */
                 html, body, .newspaper-container, div, p, span, h1, h2, h3, h4 {{
                     -webkit-font-smoothing: antialiased !important;
                     -moz-osx-font-smoothing: grayscale !important;
                     text-rendering: optimizeLegibility !important;
+                }}
+                img, .nc-absolute-image img {{
+                    image-rendering: -webkit-optimize-contrast !important;
+                    image-rendering: crisp-edges !important;
+                    -webkit-backface-visibility: hidden !important;
+                    transform: translateZ(0) !important;
                 }}
                 /* Force Indic font first, fallback to Latin */
                 .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption, .nc-image-caption, .byline-section, .byline, .nc-absolute-summary, .nc-absolute-summary h4, .nc-absolute-summary p, .nc-absolute-summary ul, .nc-absolute-summary li {{
