@@ -109,8 +109,10 @@ def _flush_error(stage: str, e: Exception) -> dict:
 async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
     """Core asynchronous logic - full debug mode with raw exception exposure."""
     print("GENERATION STARTED"); sys.stdout.flush()
+    acquired_lock = False
     try:
         await asyncio.wait_for(_semaphore.acquire(), timeout=5.0)
+        acquired_lock = True
         print("LOCK ACQUIRED"); sys.stdout.flush()
     except Exception:
         print("[WARNING] Semaphore acquire timed out or deadlocked. Proceeding with generation.")
@@ -145,9 +147,19 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 print(f"{'='*70}")
                 sys.stdout.flush()
 
+                def update_stage_heartbeat(stg: str):
+                    try:
+                        cur_layout = dict(clipping.custom_layout or {})
+                        cur_layout["current_stage"] = stg
+                        clipping.custom_layout = cur_layout
+                        db.commit()
+                    except Exception as hb_err:
+                        print(f"[HEARTBEAT WARN] {hb_err}")
+
                 # --- [2] Image Processing ---
                 stage = "Image Processing"
                 last_failed_stage = stage
+                update_stage_heartbeat(stage)
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
                 from app.services.image_service import image_service
                 safe_image_url = image_service.process_and_resize(clipping.image_url) if clipping.image_url else ""
@@ -157,6 +169,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 # --- [4] Content Generation & Translation ---
                 stage = "Translation" if clipping.language and clipping.language.lower() != "en" else "Content Generation"
                 last_failed_stage = stage
+                update_stage_heartbeat(stage)
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
                 formatted = await grok_service.format_article(clipping.article_content, clipping.language)
                 clipping.content_formatted = formatted
@@ -165,6 +178,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 # --- Save to rendering ---
                 stage = "Database Save (rendering)"
                 last_failed_stage = stage
+                update_stage_heartbeat(stage)
                 print(f"[STARTED] {stage}"); sys.stdout.flush()
                 print("START status update"); sys.stdout.flush()
                 clipping.status = "rendering"
@@ -460,8 +474,9 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
 
 
     finally:
-        _semaphore.release()
-        print("LOCK RELEASED"); sys.stdout.flush()
+        if acquired_lock:
+            _semaphore.release()
+            print("LOCK RELEASED"); sys.stdout.flush()
         print("GENERATION COMPLETED"); sys.stdout.flush()
         gc.collect()
 
@@ -676,6 +691,26 @@ def get_clipping(
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
 
+    # Auto-recovery: If stuck in processing/rendering for > 180 seconds, mark as failed so polling finishes cleanly
+    if clipping.status in ("processing", "rendering") and clipping.updated_at:
+        if (datetime.utcnow() - clipping.updated_at).total_seconds() > 180:
+            clipping.status = "failed"
+            cur_layout = dict(clipping.custom_layout or {})
+            cur_layout.update({
+                "stage": "Generation Timeout",
+                "error_type": "TimeoutError",
+                "message": "Generation did not complete within 3 minutes. The backend may have timed out.",
+                "error": "Generation timed out after 180 seconds.",
+                "details": "The generation process took longer than expected. Please tap Retry to attempt again.",
+                "traceback": ""
+            })
+            clipping.custom_layout = cur_layout
+            try:
+                db.commit()
+                db.refresh(clipping)
+            except Exception:
+                db.rollback()
+
     resp_data = jsonable_encoder(clipping)
     resp_data = _enrich_clipping_response(clipping, resp_data)
 
@@ -695,6 +730,25 @@ def get_clipping_public(
     clipping = db.query(Clipping).filter(Clipping.id == id).first()
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")
+
+    if clipping.status in ("processing", "rendering") and clipping.updated_at:
+        if (datetime.utcnow() - clipping.updated_at).total_seconds() > 180:
+            clipping.status = "failed"
+            cur_layout = dict(clipping.custom_layout or {})
+            cur_layout.update({
+                "stage": "Generation Timeout",
+                "error_type": "TimeoutError",
+                "message": "Generation did not complete within 3 minutes. The backend may have timed out.",
+                "error": "Generation timed out after 180 seconds.",
+                "details": "The generation process took longer than expected. Please tap Retry to attempt again.",
+                "traceback": ""
+            })
+            clipping.custom_layout = cur_layout
+            try:
+                db.commit()
+                db.refresh(clipping)
+            except Exception:
+                db.rollback()
         
     resp_data = jsonable_encoder(clipping)
     resp_data = _enrich_clipping_response(clipping, resp_data)

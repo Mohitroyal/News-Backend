@@ -663,20 +663,17 @@ class RenderService:
                         obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
                     } else {
                     
-                    let w0 = (isSinglePatternC || isSinglePatternA || !isPatternB)
-                        ? Math.round((W_canvas - 24) * 0.48)
-                        : W_canvas * Math.max(0.40, Math.min(0.60, 0.55 * S_scale));
-                    
+                    let w0 = Math.round((W_canvas - 24) * 0.48); // ~48% width for side-by-side layout with text
                     let isPatternB_centered = false;
                     let imgVisW = w0;
-                    let h0 = w0 / aspect0;
-                    let imgX = isSinglePatternC ? 0 : Math.round(W_canvas - w0);
-                    let imgY = 0;
+                    let h0 = Math.min(w0 / aspect0, 360); // Constrain height so image matches text column height
+                    let imgX = Math.round(W_canvas - w0); // Position on right side at y = 0
+                    let imgY = 0; // Starts at top, same height as text!
                     
                     if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
                         let a1 = aspectRatios[1] || 1.0;
-                        let sharedH = (W_canvas - 24) / (a0 + a1);
+                        let sharedH = Math.min((W_canvas - 24) / (a0 + a1), 320);
                         w0 = sharedH * a0;
                         h0 = sharedH;
                         imgX = 0;
@@ -687,19 +684,21 @@ class RenderService:
                         // Save sharedH for the second image
                         window.__db_sharedH = sharedH;
                         window.__db_a1 = a1;
-                    } else if (isPatternB) {
-                        w0 = W_canvas; // Full width obstacle to break text horizontally across all columns
+                    } else if (rawLayout.includes('single') || rawLayout.includes('hero')) {
+                        w0 = W_canvas;
                         imgX = 0;
-                        imgY = 0; // Image must appear immediately before the article text
-                        imgVisW = W_canvas; // 100% of content width (covers sides as requested)
-                        
-                        // For custom template, maintain exact natural image aspect ratio so zero image cropping occurs
+                        imgY = 0;
+                        imgVisW = W_canvas;
                         let dynamicH = imgVisW / aspect0;
-                        h0 = isCustom ? dynamicH : Math.min(dynamicH, totalChars > 1500 ? 380 : 450);
-                        
+                        h0 = Math.min(dynamicH, 350);
                         isPatternB_centered = true;
+                    } else if (isSinglePatternA || rawLayout.includes('patterna')) {
+                        imgX = 0; // Left side
+                        isPatternB_centered = false;
                     } else {
-                        h0 = Math.min(h0, TARGET_MAX_HEIGHT * 0.50, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                        // Default / Pattern B / Custom with 1 image: Right side side-by-side with text
+                        imgX = Math.round(W_canvas - w0);
+                        isPatternB_centered = false;
                     }
                     
                     obstacles.push({
@@ -711,7 +710,7 @@ class RenderService:
                         h: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: isCustom ? 'contain' : 'cover',
+                        objectFit: 'cover',
                         objectPosition: 'center center'
                     });
 
@@ -769,16 +768,15 @@ class RenderService:
                     let maxImgY = 0;
                     obstacles.forEach(o => {
                         if (o.type !== 'summary_bullets') {
-                            // Ensure top image obstacles span full width in custom template so text columns start below image
-                            o.w = W_canvas;
-                            o.x = 0;
                             maxImgY = Math.max(maxImgY, o.y + o.h);
                         }
                     });
+                    // Position summary box cleanly below top image & text column area
+                    let summaryY = Math.max(maxImgY, 350) + 16;
                     obstacles.push({
                         type: 'summary_bullets',
                         x: 0,
-                        y: Math.round(maxImgY + 16),
+                        y: Math.round(summaryY),
                         w: W_canvas,
                         h: 260
                     });
@@ -1535,139 +1533,152 @@ class RenderService:
         async with self.semaphore:
             _log_memory("generate_clipping_assets: Enter")
             chrome_path = _get_chromium_executable()
-        launch_kwargs = {
-            "headless": True,
-            "args": [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--single-process",
-                "--js-flags=--max-old-space-size=96",
-                "--renderer-process-limit=1",
-                "--disable-v8-idle-tasks",
-                "--disable-extensions",
-                "--disable-component-update",
-                "--disable-background-networking",
-                "--disable-sync",
-                "--disable-translate",
-                "--mute-audio",
-                "--no-first-run",
-                "--disable-web-security",
-                "--allow-file-access-from-files"
-            ],
-        }
-        if chrome_path: launch_kwargs["executable_path"] = chrome_path
+            launch_kwargs = {
+                "headless": True,
+                "args": [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--single-process",
+                    "--js-flags=--max-old-space-size=96",
+                    "--renderer-process-limit=1",
+                    "--disable-v8-idle-tasks",
+                    "--disable-extensions",
+                    "--disable-component-update",
+                    "--disable-background-networking",
+                    "--disable-sync",
+                    "--disable-translate",
+                    "--mute-audio",
+                    "--no-first-run",
+                    "--disable-web-security",
+                    "--allow-file-access-from-files"
+                ],
+            }
+            if chrome_path: launch_kwargs["executable_path"] = chrome_path
 
-        max_attempts = 2
-        for attempt in range(max_attempts):
-            browser = None
-            page = None
-            try:
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(**launch_kwargs)
-                    page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
-                    def handle_console(msg):
-                        if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
-                            return
-                        print(f"[BROWSER] {msg.type.upper()}: {msg.text}")
-                    page.on("console", handle_console)
-                    page.set_default_timeout(300000)
+            max_attempts = 2
+            for attempt in range(max_attempts):
+                browser = None
+                page = None
+                try:
+                    async with async_playwright() as p:
+                        browser = await p.chromium.launch(**launch_kwargs)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
+                        def handle_console(msg):
+                            if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
+                                return
+                            print(f"[BROWSER] {msg.type.upper()}: {msg.text}")
+                        page.on("console", handle_console)
+                        page.set_default_timeout(300000)
 
-                    if html_content.startswith("http"):
-                        await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
-                    else:
-                        await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
+                        if html_content.startswith("http"):
+                            await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
+                        else:
+                            await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
 
-                    try:
-                        await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
-                    except Exception:
-                        pass
+                        try:
+                            await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
+                        except Exception:
+                            pass
 
-                    for wait_i in range(15):
-                        is_done = await page.evaluate("window.__LAYOUT_DONE__ === true")
-                        print(f"[DEBUG LAYOUT POLL {wait_i}] is_done = {is_done}")
-                        if is_done:
-                            break
-                        await asyncio.sleep(0.5)
+                        for wait_i in range(15):
+                            is_done = await page.evaluate("window.__LAYOUT_DONE__ === true")
+                            print(f"[DEBUG LAYOUT POLL {wait_i}] is_done = {is_done}")
+                            if is_done:
+                                break
+                            await asyncio.sleep(0.5)
 
-                    try:
-                        await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
-                    except Exception:
-                        pass
+                        try:
+                            await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
+                        except Exception:
+                            pass
 
-                    layout_info = await page.evaluate("""() => {
-                        const canvas = document.getElementById('compositor-canvas');
-                        const cont = document.querySelector('.newspaper-container');
-                        
-                        if (canvas && cont) {
-                            // Find the absolute lowest point of any content in the canvas
-                            let realMaxY = 0;
-                            const computedAttr = canvas.getAttribute('data-computed-height');
-                            if (computedAttr) {
-                                realMaxY = parseFloat(computedAttr);
-                            } else {
-                                canvas.querySelectorAll('img, p, .image-caption, .nc-image-caption').forEach(el => {
-                                    const rect = el.getBoundingClientRect();
-                                    const canvasRect = canvas.getBoundingClientRect();
-                                    const bottom = rect.bottom - canvasRect.top;
-                                    if (bottom > realMaxY) {
-                                        realMaxY = bottom;
-                                    }
-                                });
+                        layout_info = await page.evaluate("""() => {
+                            const canvas = document.getElementById('compositor-canvas');
+                            const cont = document.querySelector('.newspaper-container');
+                            
+                            if (canvas && cont) {
+                                // Find the absolute lowest point of any content in the canvas
+                                let realMaxY = 0;
+                                const computedAttr = canvas.getAttribute('data-computed-height');
+                                if (computedAttr) {
+                                    realMaxY = parseFloat(computedAttr);
+                                } else {
+                                    canvas.querySelectorAll('img, p, .image-caption, .nc-image-caption').forEach(el => {
+                                        const rect = el.getBoundingClientRect();
+                                        const canvasRect = canvas.getBoundingClientRect();
+                                        const bottom = rect.bottom - canvasRect.top;
+                                        if (bottom > realMaxY) {
+                                            realMaxY = bottom;
+                                        }
+                                    });
+                                }
+                                
+                                if (realMaxY > 0) {
+                                    canvas.style.setProperty('flex', 'none', 'important');
+                                    canvas.style.setProperty('height', (realMaxY + 4) + 'px', 'important');
+                                    canvas.style.setProperty('min-height', '0px', 'important');
+                                    canvas.style.setProperty('max-height', (realMaxY + 4) + 'px', 'important');
+                                }
+                                
+                                // Eliminate all whitespace at the bottom
+                                cont.style.setProperty('padding-bottom', '0px', 'important');
+                                cont.style.setProperty('min-height', '0px', 'important');
+                                cont.style.setProperty('margin-bottom', '0px', 'important');
+                                
+                                // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom + padding & borders
+                                const canvasBottom = canvas.getBoundingClientRect().bottom;
+                                const contTop = cont.getBoundingClientRect().top;
+                                const contStyle = window.getComputedStyle(cont);
+                                const padBottom = parseFloat(contStyle.paddingBottom || '0');
+                                const borderBottom = parseFloat(contStyle.borderBottomWidth || '0');
+                                const exactHeight = Math.ceil(canvasBottom - contTop + padBottom + borderBottom + 12);
+                                cont.style.setProperty('height', exactHeight + 'px', 'important');
+                                cont.style.setProperty('max-height', exactHeight + 'px', 'important');
                             }
-                            
-                            if (realMaxY > 0) {
-                                canvas.style.setProperty('flex', 'none', 'important');
-                                canvas.style.setProperty('height', (realMaxY + 4) + 'px', 'important');
-                                canvas.style.setProperty('min-height', '0px', 'important');
-                                canvas.style.setProperty('max-height', (realMaxY + 4) + 'px', 'important');
+
+                            // Wait for any final reflows
+                            const finalCont = document.querySelector('.newspaper-container');
+                            if (finalCont) {
+                                // As per requirements: "finalHeight = wrapper.getBoundingClientRect().height + bottomPadding"
+                                const finalRect = finalCont.getBoundingClientRect();
+                                const finalHeight = Math.ceil(finalRect.height);
+                                
+                                // Apply the final exact calculated height to the container
+                                finalCont.style.setProperty('height', finalHeight + 'px', 'important');
+                                finalCont.style.setProperty('max-height', finalHeight + 'px', 'important');
+                                
+                                return { width: Math.ceil(finalRect.width), height: finalHeight };
                             }
-                            
-                            // Eliminate all whitespace at the bottom
-                            cont.style.setProperty('padding-bottom', '0px', 'important');
-                            cont.style.setProperty('min-height', '0px', 'important');
-                            cont.style.setProperty('margin-bottom', '0px', 'important');
-                            
-                            // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom + padding & borders
-                            const canvasBottom = canvas.getBoundingClientRect().bottom;
-                            const contTop = cont.getBoundingClientRect().top;
-                            const contStyle = window.getComputedStyle(cont);
-                            const padBottom = parseFloat(contStyle.paddingBottom || '0');
-                            const borderBottom = parseFloat(contStyle.borderBottomWidth || '0');
-                            const exactHeight = Math.ceil(canvasBottom - contTop + padBottom + borderBottom + 12);
-                            cont.style.setProperty('height', exactHeight + 'px', 'important');
-                            cont.style.setProperty('max-height', exactHeight + 'px', 'important');
-                        }
 
-                        // Wait for any final reflows
-                        const finalCont = document.querySelector('.newspaper-container');
-                        if (finalCont) {
-                            // As per requirements: "finalHeight = wrapper.getBoundingClientRect().height + bottomPadding"
-                            const finalRect = finalCont.getBoundingClientRect();
-                            const finalHeight = Math.ceil(finalRect.height);
-                            
-                            // Apply the final exact calculated height to the container
-                            finalCont.style.setProperty('height', finalHeight + 'px', 'important');
-                            finalCont.style.setProperty('max-height', finalHeight + 'px', 'important');
-                            
-                            return { width: Math.ceil(finalRect.width), height: finalHeight };
-                        }
-
-                        return { width: 1200, height: document.documentElement.scrollHeight };
-                    }""")
-                    
-                    await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 20})
-
-                    final_h_px = None
-                    if png_path:
-                        await page.locator('.newspaper-container').first.screenshot(path=png_path, type="png")
-                        final_h_px = self._auto_crop_png(png_path) or layout_info.get('height', 1600)
+                            return { width: 1200, height: document.documentElement.scrollHeight };
+                        }""")
                         
-                    if pdf_path:
-                        pdf_h = (final_h_px / 2.0) if final_h_px else layout_info.get('height', 1600)
-                        await page.pdf(path=pdf_path, width=f"{layout_info.get('width', 1060)/96.0}in", height=f"{(pdf_h+15)/96.0}in", print_background=True, margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"})
+                        await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 20})
 
+                        final_h_px = None
+                        if png_path:
+                            await page.locator('.newspaper-container').first.screenshot(path=png_path, type="png")
+                            final_h_px = self._auto_crop_png(png_path) or layout_info.get('height', 1600)
+                            
+                        if pdf_path:
+                            pdf_h = (final_h_px / 2.0) if final_h_px else layout_info.get('height', 1600)
+                            await page.pdf(path=pdf_path, width=f"{layout_info.get('width', 1060)/96.0}in", height=f"{(pdf_h+15)/96.0}in", print_background=True, margin={"top": "0px", "right": "0px", "bottom": "0px", "left": "0px"})
+
+                        try:
+                            if page: await page.close()
+                        except Exception:
+                            pass
+                        try:
+                            if browser: await browser.close()
+                        except Exception:
+                            pass
+                        gc.collect()
+                        return
+                except Exception as e:
+                    if attempt == max_attempts - 1: raise
+                finally:
                     try:
                         if page: await page.close()
                     except Exception:
@@ -1677,20 +1688,7 @@ class RenderService:
                     except Exception:
                         pass
                     gc.collect()
-                    return
-            except Exception as e:
-                if attempt == max_attempts - 1: raise
-            finally:
-                try:
-                    if page: await page.close()
-                except Exception:
-                    pass
-                try:
-                    if browser: await browser.close()
-                except Exception:
-                    pass
-                gc.collect()
-                gc.collect()
+                    gc.collect()
 
     async def generate_png(self, html_content: str, output_path: str):
         await self.generate_clipping_assets(html_content, png_path=output_path)
