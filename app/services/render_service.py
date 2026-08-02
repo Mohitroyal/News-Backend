@@ -329,17 +329,11 @@ class RenderService:
             override_css = f"""
             {local_fonts_css}
             <style id="indic-font-enforcer">
-                /* High-DPI font smoothing & crisp text/image rendering */
+                /* High-DPI font smoothing & crisp text rendering */
                 html, body, .newspaper-container, div, p, span, h1, h2, h3, h4 {{
                     -webkit-font-smoothing: antialiased !important;
                     -moz-osx-font-smoothing: grayscale !important;
                     text-rendering: optimizeLegibility !important;
-                }}
-                img, .nc-absolute-image img {{
-                    image-rendering: -webkit-optimize-contrast !important;
-                    image-rendering: high-quality !important;
-                    -webkit-backface-visibility: hidden !important;
-                    transform: translateZ(0) !important;
                 }}
                 /* Force Indic font first, fallback to Latin */
                 .headline, .subheadline, .subtitle, h1, h2, h3, .article-content p, .paragraph, .nc-text-region-box p, .dateline, .image-caption, .nc-image-caption, .byline-section, .byline, .nc-absolute-summary, .nc-absolute-summary h4, .nc-absolute-summary p, .nc-absolute-summary ul, .nc-absolute-summary li {{
@@ -1570,7 +1564,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
