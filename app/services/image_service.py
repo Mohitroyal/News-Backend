@@ -61,6 +61,23 @@ class ImageService:
                 img.close()
                 img = resized_img
                 logger.info(f"[ImageService] Resized to: {new_w}x{new_h}")
+            elif img.width < 1200 or img.height < 1200:
+                # Enhance small / cropped images so they render ultra-crisp in high-DPI outputs
+                orig_w, orig_h = img.width, img.height
+                upscale_factor = min(3.0, max(1200 / orig_w, 1200 / orig_h))
+                if upscale_factor > 1.0:
+                    target_w = int(round(orig_w * upscale_factor))
+                    target_h = int(round(orig_h * upscale_factor))
+                    logger.info(f"[ImageService] Enhancing small/cropped image from {orig_w}x{orig_h} to {target_w}x{target_h}")
+                    upscaled_img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+                    img.close()
+                    img = upscaled_img
+                    try:
+                        from PIL import ImageEnhance
+                        enhancer = ImageEnhance.Sharpness(img)
+                        img = enhancer.enhance(1.25)
+                    except Exception as sharp_err:
+                        logger.warning(f"[ImageService] Sharpness enhancement failed: {sharp_err}")
             else:
                 logger.info("[ImageService] Image within size limits, no resize performed")
 
@@ -87,10 +104,14 @@ class ImageService:
             if ext == "jpeg":
                 ext = "jpg"
             temp_filename = f"temp_resized_{uuid.uuid4().hex}.{ext}"
-            img.save(temp_filename, format=final_format, quality=98)
+            
+            save_kwargs = {"quality": 100}
+            if final_format in ("JPEG", "JPG"):
+                save_kwargs["subsampling"] = 0
+            img.save(temp_filename, format=final_format, **save_kwargs)
             img.close()
             gc.collect()
-            logger.info(f"[ImageService] Saved temporary file: {temp_filename}")
+            logger.info(f"[ImageService] Saved temporary file with ultra-high quality: {temp_filename}")
 
             # Upload to Supabase (or storage service)
             from app.services.storage_service import storage_service
