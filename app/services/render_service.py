@@ -684,7 +684,7 @@ class RenderService:
                         // Save sharedH for the second image
                         window.__db_sharedH = sharedH;
                         window.__db_a1 = a1;
-                    } else if (rawLayout.includes('patternb') || rawLayout.includes('single') || rawLayout.includes('hero')) {
+                    } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero')) {
                         w0 = W_canvas;
                         imgX = 0;
                         imgY = 0;
@@ -734,11 +734,12 @@ class RenderService:
                             let h1 = w1 / aspect1;
                             h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
                             let y1 = h0 + gap; // Spacing below Hero
+                            let x1 = W_canvas - w1; // Align secondary image on right side below Hero
                             
                             obstacles.push({
                                 url: urls[1],
                                 caption: captions[1] || '',
-                                x: 0,
+                                x: Math.round(x1),
                                 y: Math.round(y1),
                                 w: Math.round(w1),
                                 h: Math.round(h1)
@@ -881,7 +882,7 @@ class RenderService:
                 });
                 
                 const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                if (rawLayoutStr.includes('patternb') && urls.length === 2) {
+                if (urls.length === 2 && (rawLayoutStr.includes('patternc') || rawLayoutStr.includes('patterna') || rawLayoutStr.includes('patternb') || rawLayoutStr === 'default' || rawLayoutStr === '')) {
                     let maxH = 0;
                     obstacles.forEach(o => {
                         if (o.y === 0 && o.h > maxH && o.type !== 'summary_bullets') {
