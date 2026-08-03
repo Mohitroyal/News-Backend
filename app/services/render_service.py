@@ -684,7 +684,7 @@ class RenderService:
                         // Save sharedH for the second image
                         window.__db_sharedH = sharedH;
                         window.__db_a1 = a1;
-                    } else if (rawLayout.includes('single') || rawLayout.includes('hero')) {
+                    } else if (rawLayout.includes('patternb') || rawLayout.includes('single') || rawLayout.includes('hero')) {
                         w0 = W_canvas;
                         imgX = 0;
                         imgY = 0;
@@ -696,7 +696,7 @@ class RenderService:
                         imgX = 0; // Left side
                         isPatternB_centered = false;
                     } else {
-                        // Default / Pattern B / Custom with 1 image: Right side side-by-side with text
+                        // Default / Custom with 1 image: Right side side-by-side with text
                         imgX = Math.round(W_canvas - w0);
                         isPatternB_centered = false;
                     }
