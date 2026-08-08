@@ -19,15 +19,10 @@ class ImageService:
 
     @staticmethod
     def process_and_resize(image_url: str, max_width: int = 3600, max_height: int = 3600) -> str:
-        """Download, resize, possibly convert, and upload an image.
-
-        - Max dimensions 3600x3600, preserving high aspect ratio resolution.
-        - Maximum quality for ultra-crisp image rendering.
-        - Dispose image objects promptly and trigger GC.
-        """
-        if not image_url or not image_url.startswith("http"):
-            logger.info(f"[ImageService] Skipping non‑HTTP URL: {image_url}")
-            return image_url
+        """Returns the raw image URL provided by the user directly without re-cropping or re-scaling."""
+        if not image_url:
+            return ""
+        return image_url
 
         try:
             logger.info(f"[ImageService] Downloading image: {image_url}")
