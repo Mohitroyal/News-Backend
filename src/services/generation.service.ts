@@ -15,9 +15,14 @@ function log(stage: string, detail?: string) {
  */
 export async function compressImage(
   file: File,
-  maxWidthPx = 1600,
-  quality = 0.82
+  maxWidthPx = 3600,
+  quality = 1.0
 ): Promise<File> {
+  // If file size is under 15MB, keep 100% full raw uncompressed quality
+  if (file.size < 15 * 1024 * 1024) {
+    log("Raw Image Preserved", `${(file.size / 1024).toFixed(0)} KB - No compression applied`);
+    return file;
+  }
   return new Promise((resolve) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -31,16 +36,18 @@ export async function compressImage(
       canvas.width  = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d")!;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, w, h);
 
       canvas.toBlob(
         (blob) => {
           if (!blob) { resolve(file); return; }
-          const compressed = new File([blob], file.name, { type: "image/jpeg" });
-          log("Image Compressed", `${(file.size / 1024).toFixed(0)} KB → ${(compressed.size / 1024).toFixed(0)} KB (${w}×${h})`);
+          const compressed = new File([blob], file.name, { type: "image/png" });
+          log("Image Prepared", `${(file.size / 1024).toFixed(0)} KB → ${(compressed.size / 1024).toFixed(0)} KB (${w}×${h})`);
           resolve(compressed);
         },
-        "image/jpeg",
+        "image/png",
         quality
       );
     };

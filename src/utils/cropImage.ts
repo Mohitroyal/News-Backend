@@ -19,19 +19,28 @@ export default async function getCroppedImg(
     throw new Error('No 2d context')
   }
 
-  canvas.width = pixelCrop.width
-  canvas.height = pixelCrop.height
+  const scaleX = image.naturalWidth / image.width || 1
+  const scaleY = image.naturalHeight / image.height || 1
+
+  const cropWidth = Math.round(pixelCrop.width * scaleX)
+  const cropHeight = Math.round(pixelCrop.height * scaleY)
+
+  canvas.width = cropWidth || pixelCrop.width
+  canvas.height = cropHeight || pixelCrop.height
+
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   ctx.drawImage(
     image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
+    pixelCrop.x * scaleX,
+    pixelCrop.y * scaleY,
+    cropWidth,
+    cropHeight,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    cropWidth,
+    cropHeight
   )
 
   return new Promise((resolve, reject) => {
@@ -41,6 +50,6 @@ export default async function getCroppedImg(
         return
       }
       resolve(blob)
-    }, 'image/jpeg')
+    }, 'image/png')
   })
 }

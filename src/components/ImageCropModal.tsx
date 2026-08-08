@@ -44,25 +44,31 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
     try {
       const image = imgRef.current;
       const canvas = document.createElement('canvas');
-      const scaleX = image.naturalWidth / image.width;
-      const scaleY = image.naturalHeight / image.height;
+      const scaleX = image.naturalWidth / image.width || 1;
+      const scaleY = image.naturalHeight / image.height || 1;
       
-      canvas.width = completedCrop.width;
-      canvas.height = completedCrop.height;
+      const cropWidth = Math.round(completedCrop.width * scaleX);
+      const cropHeight = Math.round(completedCrop.height * scaleY);
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
       
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('No 2d context');
       
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
       ctx.drawImage(
         image,
         completedCrop.x * scaleX,
         completedCrop.y * scaleY,
-        completedCrop.width * scaleX,
-        completedCrop.height * scaleY,
+        cropWidth,
+        cropHeight,
         0,
         0,
-        completedCrop.width,
-        completedCrop.height,
+        cropWidth,
+        cropHeight,
       );
       
       canvas.toBlob((blob) => {
@@ -70,7 +76,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
           throw new Error('Canvas is empty');
         }
         onCropComplete(blob);
-      }, 'image/jpeg', 0.95);
+      }, 'image/png');
       
     } catch (e) {
       console.error(e);
