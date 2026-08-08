@@ -1565,7 +1565,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3.5)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
@@ -1577,6 +1577,21 @@ class RenderService:
                             await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
                         else:
                             await page.set_content(html_content, wait_until="domcontentloaded", timeout=300000)
+
+                        try:
+                            await page.add_style_tag(content="""
+                                * {
+                                    -webkit-font-smoothing: antialiased !important;
+                                    -moz-osx-font-smoothing: grayscale !important;
+                                    text-rendering: optimizeLegibility !important;
+                                }
+                                img, svg, canvas {
+                                    image-rendering: -webkit-optimize-contrast !important;
+                                    image-rendering: high-quality !important;
+                                }
+                            """)
+                        except Exception:
+                            pass
 
                         try:
                             await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
