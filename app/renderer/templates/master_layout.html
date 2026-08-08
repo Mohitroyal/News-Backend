@@ -440,7 +440,9 @@
             object-fit: contain;
             object-position: center top;
             border: 1px solid var(--border-color);
-            filter: grayscale(20%) contrast(110%);
+            filter: none !important;
+            image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: crisp-edges !important;
         }
 
         .featured-image-container.images-1 .featured-image {

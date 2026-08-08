@@ -1551,7 +1551,10 @@ class RenderService:
                     "--mute-audio",
                     "--no-first-run",
                     "--disable-web-security",
-                    "--allow-file-access-from-files"
+                    "--allow-file-access-from-files",
+                    "--force-device-scale-factor=3.0",
+                    "--high-dpi-support=1",
+                    "--enable-use-zoom-for-dsf=true"
                 ],
             }
             if chrome_path: launch_kwargs["executable_path"] = chrome_path
@@ -1563,7 +1566,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2.5)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3.0)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
@@ -1583,9 +1586,11 @@ class RenderService:
                                     -moz-osx-font-smoothing: grayscale !important;
                                     text-rendering: optimizeLegibility !important;
                                 }
-                                img, svg, canvas {
+                                img, .featured-image, .logo-img, svg, canvas, picture {
                                     image-rendering: -webkit-optimize-contrast !important;
+                                    image-rendering: crisp-edges !important;
                                     image-rendering: high-quality !important;
+                                    filter: none !important;
                                 }
                             """)
                         except Exception:
