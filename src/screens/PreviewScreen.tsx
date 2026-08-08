@@ -481,6 +481,7 @@ export const PreviewScreen = () => {
                   src={generation.png_url}
                   alt="Newspaper Preview"
                   className="w-full h-full object-contain bg-white transition-transform duration-700 ease-out hover:scale-[1.02]"
+                  style={{ imageRendering: 'crisp-edges' as any }}
                 />
              </div>
 

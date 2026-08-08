@@ -47,8 +47,10 @@ echo.
 
 REM Step 2: Sign using jarsigner
 echo [2/4] Signing APK with jarsigner...
-if exist "%SIGNED_APK%" del "%SIGNED_APK%"
-copy "%UNSIGNED_APK%" "%SIGNED_APK%" >nul
+if exist "%UNSIGNED_APK%" (
+    if exist "%SIGNED_APK%" del "%SIGNED_APK%"
+    copy "%UNSIGNED_APK%" "%SIGNED_APK%" >nul
+)
 
 "%JARSIGNER%" -verbose ^
     -sigalg SHA256withRSA ^

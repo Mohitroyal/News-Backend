@@ -201,26 +201,10 @@ export const GenerateScreen = () => {
       };
       setConfig(configToSave); setStageIndex(1);
 
-      let finalContent = content;
-      if (language !== 'en') {
-        try {
-          const res  = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${language}&dt=t&q=${encodeURIComponent(content)}`);
-          if (res.ok) {
-            const json = await res.json();
-            if (json && json[0] && Array.isArray(json[0])) {
-              const translated = json[0].map((x: any) => (x && x[0]) ? x[0] : '').join('');
-              if (translated.trim()) {
-                finalContent = translated;
-              }
-            }
-          }
-        } catch (e) { console.warn('[GEN] Translation failed', e); }
-      }
-
       const payload: any = { 
         ...configToSave, 
         language, 
-        articleContent: finalContent, 
+        articleContent: content, 
         imageUrls, 
         imageUrl: imageUrls[0] || '', 
         generateHeadline: false, 
