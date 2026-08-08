@@ -1492,13 +1492,12 @@ class RenderService:
                 # If no clear bottom border found, fallback to 4px
                 if border_height == 0: border_height = 4
                 
-                # 2. Find the actual content, ignoring the bottom border region and side borders
+                # 2. Find the actual content, ignoring the bottom border region
                 last_content_row = 0
-                # Scan avoiding side borders dynamically using 8% margin!
-                margin_x = max(50, int(width * 0.08))
+                margin_x = max(15, int(width * 0.02))
                 for y in range(height - border_height - 1, -1, -1):
                     has_content = False
-                    for x in range(margin_x, width - margin_x, 4): 
+                    for x in range(margin_x, width - margin_x, 2): 
                         r, g, b = pixels[x, y]
                         if not is_bg(r, g, b):
                             has_content = True
@@ -1507,12 +1506,12 @@ class RenderService:
                         last_content_row = y
                         break
                 
-                # Calculate how much whitespace we can remove
-                whitespace_start = last_content_row + 15
+                # Calculate whitespace removal with generous 40px safety margin
+                whitespace_start = min(height - border_height, last_content_row + 40)
                 whitespace_end = height - border_height
                 
-                # Only squash if there is a significant amount of whitespace (e.g. > 10px)
-                if whitespace_end > whitespace_start + 10:
+                # Only crop if there is a massive chunk of empty whitespace (> 30px)
+                if whitespace_end > whitespace_start + 30:
                     new_height = whitespace_start + border_height
                     top_part = img.crop((0, 0, width, whitespace_start))
                     bottom_part = img.crop((0, height - border_height, width, height))
@@ -1564,7 +1563,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1000, "height": 1400}, device_scale_factor=1.2)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2.5)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
