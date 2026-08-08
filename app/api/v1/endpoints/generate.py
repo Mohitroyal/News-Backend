@@ -692,8 +692,9 @@ def get_clipping(
         raise HTTPException(status_code=404, detail="Clipping not found")
 
     # Auto-recovery: If stuck in processing/rendering for > 180 seconds, mark as failed so polling finishes cleanly
-    if clipping.status in ("processing", "rendering") and clipping.updated_at:
-        if (datetime.utcnow() - clipping.updated_at).total_seconds() > 180:
+    clipping_time = getattr(clipping, "updated_at", None) or getattr(clipping, "created_at", None)
+    if clipping.status in ("processing", "rendering") and clipping_time:
+        if (datetime.utcnow() - clipping_time.replace(tzinfo=None)).total_seconds() > 180:
             clipping.status = "failed"
             cur_layout = dict(clipping.custom_layout or {})
             cur_layout.update({

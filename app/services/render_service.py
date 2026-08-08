@@ -1494,11 +1494,11 @@ class RenderService:
                 
                 # 2. Find the actual content, ignoring the bottom border region and side borders
                 last_content_row = 0
-                # Scan avoiding the left and right 20 pixels to bypass side borders!
+                # Scan avoiding side borders dynamically using 8% margin!
+                margin_x = max(50, int(width * 0.08))
                 for y in range(height - border_height - 1, -1, -1):
                     has_content = False
-                    # Step by 2 for speed, starting past the left border and ending before the right border
-                    for x in range(20, width - 20, 2): 
+                    for x in range(margin_x, width - margin_x, 4): 
                         r, g, b = pixels[x, y]
                         if not is_bg(r, g, b):
                             has_content = True
@@ -1514,7 +1514,6 @@ class RenderService:
                 # Only squash if there is a significant amount of whitespace (e.g. > 10px)
                 if whitespace_end > whitespace_start + 10:
                     new_height = whitespace_start + border_height
-                    # Crop original image, not the converted RGB one, to preserve original format/colors
                     top_part = img.crop((0, 0, width, whitespace_start))
                     bottom_part = img.crop((0, height - border_height, width, height))
                     
@@ -1565,7 +1564,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3.5)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
