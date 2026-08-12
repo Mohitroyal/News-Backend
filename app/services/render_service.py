@@ -1519,7 +1519,7 @@ class RenderService:
                     new_img = Image.new(img.mode, (width, new_height))
                     new_img.paste(top_part, (0, 0))
                     new_img.paste(bottom_part, (0, whitespace_start))
-                    new_img.save(image_path, "PNG")
+                    new_img.save(image_path, "PNG", optimize=True)
                     return new_height
                 
                 return height
@@ -1586,11 +1586,14 @@ class RenderService:
                                     -moz-osx-font-smoothing: grayscale !important;
                                     text-rendering: optimizeLegibility !important;
                                 }
-                                img, .featured-image, .logo-img, svg, canvas, picture {
+                                img, .featured-image, .article-image, .logo-img, svg, canvas, picture {
                                     image-rendering: -webkit-optimize-contrast !important;
-                                    image-rendering: crisp-edges !important;
                                     image-rendering: high-quality !important;
+                                    image-rendering: smooth !important;
                                     filter: none !important;
+                                    -webkit-backface-visibility: hidden !important;
+                                    backface-visibility: hidden !important;
+                                    transform: translateZ(0) !important;
                                 }
                             """)
                         except Exception:
