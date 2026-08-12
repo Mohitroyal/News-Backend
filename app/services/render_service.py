@@ -1552,7 +1552,7 @@ class RenderService:
                     "--no-first-run",
                     "--disable-web-security",
                     "--allow-file-access-from-files",
-                    "--force-device-scale-factor=4.0",
+                    "--force-device-scale-factor=3.2",
                     "--high-dpi-support=1",
                     "--enable-use-zoom-for-dsf=true"
                 ],
@@ -1566,7 +1566,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=4.0)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3.2)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
