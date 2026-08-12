@@ -1599,15 +1599,21 @@ class RenderService:
                             pass
 
                         try:
-                            await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
+                            await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 2000))])")
                         except Exception:
                             pass
 
-                        for wait_i in range(40):
+                        for wait_i in range(15):
                             is_done = await page.evaluate("window.__LAYOUT_DONE__ === true")
+                            print(f"[DEBUG LAYOUT POLL {wait_i}] is_done = {is_done}")
                             if is_done:
                                 break
-                            await asyncio.sleep(0.25)
+                            await asyncio.sleep(0.5)
+
+                        try:
+                            await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
+                        except Exception:
+                            pass
 
                         layout_info = await page.evaluate("""() => {
                             const canvas = document.getElementById('compositor-canvas');

@@ -22,7 +22,6 @@ def _supabase_public_url(destination_path: str) -> str:
     return f"{base}/storage/v1/object/public/{bucket}/{destination_path}"
 
 
-@router.post("/image")
 @router.post("/uploads/image")
 async def upload_image(
     file: UploadFile = File(...),

@@ -694,14 +694,14 @@ def get_clipping(
     # Auto-recovery: If stuck in processing/rendering for > 180 seconds, mark as failed so polling finishes cleanly
     clipping_time = getattr(clipping, "updated_at", None) or getattr(clipping, "created_at", None)
     if clipping.status in ("processing", "rendering") and clipping_time:
-        if (datetime.utcnow() - clipping_time.replace(tzinfo=None)).total_seconds() > 600:
+        if (datetime.utcnow() - clipping_time.replace(tzinfo=None)).total_seconds() > 180:
             clipping.status = "failed"
             cur_layout = dict(clipping.custom_layout or {})
             cur_layout.update({
                 "stage": "Generation Timeout",
                 "error_type": "TimeoutError",
-                "message": "Generation did not complete within 10 minutes. The backend may have timed out.",
-                "error": "Generation timed out after 600 seconds.",
+                "message": "Generation did not complete within 3 minutes. The backend may have timed out.",
+                "error": "Generation timed out after 180 seconds.",
                 "details": "The generation process took longer than expected. Please tap Retry to attempt again.",
                 "traceback": ""
             })
