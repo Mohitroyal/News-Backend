@@ -1552,7 +1552,7 @@ class RenderService:
                     "--no-first-run",
                     "--disable-web-security",
                     "--allow-file-access-from-files",
-                    "--force-device-scale-factor=2.5",
+                    "--force-device-scale-factor=4.0",
                     "--high-dpi-support=1",
                     "--enable-use-zoom-for-dsf=true"
                 ],
@@ -1566,7 +1566,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2.5)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=4.0)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
@@ -1599,20 +1599,15 @@ class RenderService:
                             pass
 
                         try:
-                            await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 300))])")
+                            await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 200))])")
                         except Exception:
                             pass
 
-                        for wait_i in range(30):
+                        for wait_i in range(25):
                             is_done = await page.evaluate("window.__LAYOUT_DONE__ === true")
                             if is_done:
                                 break
                             await asyncio.sleep(0.05)
-
-                        try:
-                            await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
-                        except Exception:
-                            pass
 
                         layout_info = await page.evaluate("""() => {
                             const canvas = document.getElementById('compositor-canvas');
