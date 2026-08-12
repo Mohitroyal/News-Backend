@@ -1599,15 +1599,15 @@ class RenderService:
                             pass
 
                         try:
-                            await page.evaluate("Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise(r => setTimeout(r, 200))])")
+                            await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
                         except Exception:
                             pass
 
-                        for wait_i in range(25):
+                        for wait_i in range(40):
                             is_done = await page.evaluate("window.__LAYOUT_DONE__ === true")
                             if is_done:
                                 break
-                            await asyncio.sleep(0.05)
+                            await asyncio.sleep(0.25)
 
                         layout_info = await page.evaluate("""() => {
                             const canvas = document.getElementById('compositor-canvas');
