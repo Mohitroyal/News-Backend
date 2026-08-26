@@ -673,17 +673,21 @@ class RenderService:
                     if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
                         let a1 = aspectRatios[1] || 1.0;
-                        let sharedH = Math.min((W_canvas - 24) / (a0 + a1), 320);
-                        w0 = sharedH * a0;
+                        let gap = 20;
+                        let availW = W_canvas - gap;
+                        let sumAspect = a0 + a1;
+                        w0 = Math.round(availW * (a0 / sumAspect));
+                        let sharedH = Math.min(Math.round(availW / sumAspect), 380);
                         h0 = sharedH;
                         imgX = 0;
                         imgY = 0; // Both images at the top
                         imgVisW = w0;
                         isPatternB_centered = false;
                         
-                        // Save sharedH for the second image
+                        // Save parameters for the second image
                         window.__db_sharedH = sharedH;
-                        window.__db_a1 = a1;
+                        window.__db_w0 = w0;
+                        window.__db_gap = gap;
                     } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero')) {
                         w0 = W_canvas;
                         imgX = 0;
@@ -717,8 +721,10 @@ class RenderService:
                     if (urls.length > 1) {
                         if (isDoublePatternB) {
                             let h1 = window.__db_sharedH;
-                            let w1 = h1 * window.__db_a1;
-                            let x1 = W_canvas - w1; // Right aligned
+                            let w0 = window.__db_w0;
+                            let gap = window.__db_gap;
+                            let x1 = w0 + gap;
+                            let w1 = W_canvas - x1; // Stretches cleanly to right edge
                             let y1 = 0; // Top aligned
                             obstacles.push({
                                 url: urls[1],
