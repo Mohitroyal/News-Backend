@@ -1104,7 +1104,7 @@ class RenderService:
                                 const rem = chars.slice(cIdx).join('');
                                 if (rem.trim().length > 0) paragraphs.splice(pIdx, 1, rem); else pIdx++;
                             } else {
-                                pIdx++;
+                                // 0 chars fit in this small region: do NOT drop paragraph, preserve for next region
                             }
                         }
                         currentRegionIdx++;
@@ -1432,7 +1432,7 @@ class RenderService:
                 window.__LAYOUT_DONE__ = true;
             }
 
-            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 3000);
+            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 10000);
             executeLayout().then(() => {
                 window.__LAYOUT_DONE__ = true;
             }).catch(err => {
@@ -1603,7 +1603,7 @@ class RenderService:
                         except Exception:
                             pass
 
-                        for wait_i in range(15):
+                        for wait_i in range(30):
                             is_done = await page.evaluate("window.__LAYOUT_DONE__ === true")
                             print(f"[DEBUG LAYOUT POLL {wait_i}] is_done = {is_done}")
                             if is_done:
