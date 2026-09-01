@@ -238,17 +238,12 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 custom_dict = clipping.custom_layout or {}
                 raw_image_layout = str(custom_dict.get("image_layout") or getattr(clipping, "image_layout", "") or "").lower().replace("_", "").replace("-", "")
 
-                # Custom template detection: true if template/logo is custom or pattern_g/article style or if custom_layout options are set
+                # Custom template detection: true only if user explicitly selected Custom Template
                 is_custom_template = (
                     original_tid == "custom" or
                     original_lid == "custom" or
-                    "custom" in original_tid or
-                    "custom" in original_lid or
-                    "patterng" in raw_image_layout or
-                    "patterng" in original_tid or
-                    "articlestyle" in raw_image_layout or
-                    bool(custom_dict.get("image_layout")) or
-                    bool(custom_dict.get("heading_bg")) or
+                    (original_tid and "custom" in original_tid) or
+                    (original_lid and "custom" in original_lid) or
                     getattr(clipping, "show_summary", None) is True
                 )
 

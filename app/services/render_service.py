@@ -596,9 +596,8 @@ class RenderService:
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
                 const showSummaryFlag = data.show_summary === true || String(data.show_summary).toLowerCase() === "true";
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom") || isArticleStyle || showSummaryFlag;
+                const isCustom = (templateIdStr.includes("custom") || logoIdStr.includes("custom")) && showSummaryFlag;
                 const showSummary = isCustom && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
 
                 if (urls.length > 0) {
@@ -611,8 +610,7 @@ class RenderService:
                         gap = 30;
                     }
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
-                    const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                    const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
+                    const isArticleStyle = rawLayout.includes('articlestyle');
                     let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || isArticleStyle || isCustom;
                     const isSinglePatternC = !isCustom && rawLayout.includes('patternc') && urls.length === 1;
                     const isSinglePatternA = !isCustom && rawLayout.includes('patterna') && urls.length === 1;
@@ -1188,9 +1186,8 @@ class RenderService:
                 const templateIdStr = String(data.template_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const logoIdStr = String(data.logo_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
                 const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                const isArticleStyle = rawLayout.includes('articlestyle') || rawLayout.includes('patterng');
                 const showSummaryFlag = data.show_summary === true || String(data.show_summary).toLowerCase() === "true";
-                const isCustom = templateIdStr.includes("custom") || logoIdStr.includes("custom") || isArticleStyle || showSummaryFlag;
+                const isCustom = (templateIdStr.includes("custom") || logoIdStr.includes("custom")) && showSummaryFlag;
                 const showSummary = isCustom && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
                 if (!showSummary) {
                     return 0;
