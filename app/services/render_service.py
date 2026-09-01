@@ -601,6 +601,7 @@ class RenderService:
                 const showSummary = isCustom && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false";
 
                 if (urls.length > 0) {
+                    const aspect0 = (aspectRatios && aspectRatios.length > 0 && aspectRatios[0]) ? aspectRatios[0] : 1.33;
                     let S_scale = S_img;
                     let gap = 60;
                     // Dynamically rescale images based on text content size to prevent overflowing short articles
