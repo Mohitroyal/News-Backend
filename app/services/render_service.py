@@ -628,9 +628,9 @@ class RenderService:
                     const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
                     
                     if (isSingleLeft75) {
-                        // Single image: Left 75% coverage with remaining content flowing on right & bottom
-                        let w0 = Math.round(W_canvas * 0.75);
-                        let h0 = Math.min(Math.round(w0 / aspect0), 550);
+                        // Single image: Left side covering 75% height, remaining content flows on right column & bottom 25%
+                        let w0 = Math.round((W_canvas - 24) * 0.48);
+                        let h0 = Math.round(H_canvas * 0.75);
                         obstacles.push({
                             url: urls[0],
                             caption: captions[0] || '',
