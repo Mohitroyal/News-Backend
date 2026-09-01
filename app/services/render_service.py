@@ -626,9 +626,14 @@ class RenderService:
                     const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
                     
                     if (isSingleLeft75) {
-                        // Single image: Left side covering 75% height, remaining content flows on right column & bottom 25%
-                        let w0 = Math.round((W_canvas - 24) * 0.48);
+                        // Single image: Left side covering 75% height, width dynamically adjusted to aspect ratio
+                        let a0 = aspectRatios[0] || 1.2;
                         let h0 = Math.round(H_canvas * 0.75);
+                        let desiredW = Math.round(h0 * a0 * 0.60);
+                        let minW = Math.round(W_canvas * 0.38);
+                        let maxW = Math.round(W_canvas * 0.52);
+                        let w0 = Math.max(minW, Math.min(maxW, desiredW));
+                        
                         obstacles.push({
                             url: urls[0],
                             caption: captions[0] || '',
@@ -1035,6 +1040,20 @@ class RenderService:
                     });
                 }
                 
+                // Intelligently order regions: top-row regions (alongside image) first, then bottom-row regions (across full width below image)
+                regions.sort((a, b) => {
+                    const thresholdY = (obstacles.length > 0) ? obstacles[0].h * 0.75 : 120;
+                    const isTopA = a.y < thresholdY;
+                    const isTopB = b.y < thresholdY;
+                    if (isTopA !== isTopB) {
+                        return isTopA ? -1 : 1;
+                    }
+                    if (Math.abs(a.y - b.y) > 60) {
+                        return a.y - b.y;
+                    }
+                    return a.col - b.col;
+                });
+                
                 let paragraphs = [];
                 for (const sec of (data.sections || [])) {
                     const cleanSec = String(sec || '').replace(/[\u00a0\u200b]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1338,7 +1357,9 @@ class RenderService:
                     }
                 }
 
-                let low = Math.max(300, Math.round(maxObstacleY + 30));
+                const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                const isSingleLeft75Layout = (urls.length === 1) && (rawLayoutStr.includes('patterng') || rawLayoutStr.includes('left75') || rawLayoutStr.includes('pattern75') || rawLayoutStr.includes('75left') || rawLayoutStr.includes('75'));
+                let low = isSingleLeft75Layout ? Math.max(300, Math.round(H_avail * 0.35)) : Math.max(300, Math.round(maxObstacleY + 30));
                 let high = H_avail;
                 let H_best = H_avail;
 
