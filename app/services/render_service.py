@@ -1430,15 +1430,15 @@ class RenderService:
                         st.innerHTML += `
                             .newspaper-container { 
                                 border: 15px solid ${customBorderColor} !important; 
-                                padding-bottom: 75px !important;
+                                padding-bottom: 15px !important;
                             }
                         `;
                         
                         // Build the RTI footer
                         const footerEl = document.createElement('div');
-                        footerEl.style.position = 'absolute';
-                        footerEl.style.bottom = '0';
-                        footerEl.style.left = '0';
+                        footerEl.className = 'rti-custom-footer';
+                        footerEl.style.position = 'relative';
+                        footerEl.style.marginTop = '15px';
                         footerEl.style.width = '100%';
                         footerEl.style.height = '60px';
                         footerEl.style.backgroundColor = customBorderColor;
@@ -1465,7 +1465,7 @@ class RenderService:
                             </div>
                         `;
                         
-                        // Append directly to container so it sits at the absolute bottom
+                        // Append directly to container below canvas
                         container.appendChild(footerEl);
                     }
                     
@@ -1689,18 +1689,21 @@ class RenderService:
                                     canvas.style.setProperty('max-height', (realMaxY + 4) + 'px', 'important');
                                 }
                                 
-                                // Eliminate all whitespace at the bottom
-                                cont.style.setProperty('padding-bottom', '0px', 'important');
+                                const customFooter = cont.querySelector('.rti-custom-footer');
+                                if (!customFooter) {
+                                    cont.style.setProperty('padding-bottom', '0px', 'important');
+                                }
                                 cont.style.setProperty('min-height', '0px', 'important');
                                 cont.style.setProperty('margin-bottom', '0px', 'important');
                                 
-                                // AGGRESSIVE SHRINK WRAP: Force container height to match canvas bottom + padding & borders
-                                const canvasBottom = canvas.getBoundingClientRect().bottom;
+                                // AGGRESSIVE SHRINK WRAP: Force container height to match bottom of content + borders
+                                const bottomTarget = customFooter || canvas;
+                                const targetBottom = bottomTarget.getBoundingClientRect().bottom;
                                 const contTop = cont.getBoundingClientRect().top;
                                 const contStyle = window.getComputedStyle(cont);
-                                const padBottom = parseFloat(contStyle.paddingBottom || '0');
+                                const padBottom = customFooter ? 15 : parseFloat(contStyle.paddingBottom || '0');
                                 const borderBottom = parseFloat(contStyle.borderBottomWidth || '0');
-                                const exactHeight = Math.ceil(canvasBottom - contTop + padBottom + borderBottom + 12);
+                                const exactHeight = Math.ceil(targetBottom - contTop + padBottom + borderBottom + 6);
                                 cont.style.setProperty('height', exactHeight + 'px', 'important');
                                 cont.style.setProperty('max-height', exactHeight + 'px', 'important');
                             }
