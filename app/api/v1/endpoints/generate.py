@@ -280,6 +280,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "heading_bg": custom.get("heading_bg", None),
                     "border_color": custom.get("border_color", None),
                     "primary_color": custom.get("primary_color", None),
+                    "reporter_name": custom.get("reporter_name") or getattr(clipping, "reporter_name", None) or (owner.full_name if owner else None),
+                    "reporter_image": custom.get("reporter_image") or getattr(clipping, "reporter_image", None),
                 }
 
                 html = await render_service.render_html(render_data, f"{clipping.template_id}.html")
@@ -577,7 +579,9 @@ async def create_clipping(
             "image_layout": clipping_in.image_layout,
             "heading_bg": clipping_in.heading_bg,
             "border_color": clipping_in.border_color,
-            "primary_color": getattr(clipping_in, "primary_color", None)
+            "primary_color": getattr(clipping_in, "primary_color", None),
+            "reporter_name": getattr(clipping_in, "reporter_name", None) or current_user.full_name,
+            "reporter_image": getattr(clipping_in, "reporter_image", None)
         },
         status="processing"
     )

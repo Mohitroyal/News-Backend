@@ -9,6 +9,18 @@
 </head>
 <body>
     <div class="newspaper-container">
+        <!-- Reporter Info Badge (Top Left Corner) -->
+        {% if reporter_name or reporter_image %}
+        <div class="reporter-badge" style="position: absolute; top: 12px; left: 16px; z-index: 15; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none;">
+            {% if reporter_image %}
+                <img src="{{ reporter_image }}" alt="Reporter" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-color, #111111); display: block; margin: 0 auto 3px auto; box-shadow: 0 2px 6px rgba(0,0,0,0.15);" />
+            {% endif %}
+            {% if reporter_name %}
+                <span class="reporter-name" style="font-size: 11px; font-weight: 700; color: var(--text-color, #111111); font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.15; max-width: 90px; text-align: center; word-break: break-word;">{{ reporter_name }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Watermark -->
         {% if show_watermark and show_watermark != false and show_watermark|string|lower != 'false' %}
         <div class="watermark" style="position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%) scale(1.0); opacity: 0.05; pointer-events: none; z-index: 0; width: 65%; display: flex; justify-content: center; align-items: center; filter: none !important;">

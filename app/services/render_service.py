@@ -222,6 +222,12 @@ class RenderService:
         }
         data["language_name"] = lang_map.get(data.get("language", "en"), "English")
 
+        # Extract reporter details for top-left embedding
+        if not data.get("reporter_name"):
+            data["reporter_name"] = data.get("author") or data.get("author_name") or data.get("reporter") or data.get("byline") or data.get("user_name") or data.get("full_name") or ""
+        if not data.get("reporter_image"):
+            data["reporter_image"] = data.get("author_image") or data.get("reporter_photo") or data.get("avatar_url") or data.get("profile_image") or ""
+
         # ── Per-language primary font for logging ─────────────────────────────
         _lang_font_map = {
             "en": ("Playfair Display / Merriweather", "Latin + full Unicode"),

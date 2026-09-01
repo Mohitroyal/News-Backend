@@ -47,6 +47,8 @@ class ClippingBase(BaseModel):
     border_color: Optional[str] = Field(None, alias="borderColor")
     primary_color: Optional[str] = Field(None, alias="primaryColor")
     show_inner_borders: bool = Field(True, alias="showInnerBorders")
+    reporter_name: Optional[str] = Field(None, alias="reporterName")
+    reporter_image: Optional[str] = Field(None, alias="reporterImage")
 
     @model_validator(mode="before")
     @classmethod
@@ -202,8 +204,18 @@ class ClippingBase(BaseModel):
                         val = extract_hex(custom[key])
                         custom["primaryColor"] = val
                         custom["primary_color"] = val
-                        data["primaryColor"] = val
-                        data["primary_color"] = val
+            # Extract reporter details if present
+            if "reporter_name" not in data and "reporterName" not in data:
+                for r_key in ["reporter", "reporter_name", "reporterName", "author", "authorName", "author_name", "byline", "fullName", "full_name"]:
+                    if r_key in data and data[r_key]:
+                        data["reporter_name"] = str(data[r_key])
+                        data["reporterName"] = str(data[r_key])
+                        break
+            if "reporter_image" not in data and "reporterImage" not in data:
+                for img_key in ["reporter_photo", "reporterPhoto", "reporter_image", "reporterImage", "authorImage", "author_image", "avatar", "avatarUrl", "avatar_url", "profileImage", "profile_image"]:
+                    if img_key in data and data[img_key]:
+                        data["reporter_image"] = str(data[img_key])
+                        data["reporterImage"] = str(data[img_key])
                         break
 
         return data
