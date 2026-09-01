@@ -714,22 +714,44 @@ class RenderService:
                         window.__db_sharedH = sharedH;
                         window.__db_w0 = w0;
                         window.__db_gap = gap;
-                    } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero')) {
+                    } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
                         w0 = W_canvas;
                         imgX = 0;
                         imgY = 0;
-                        imgVisW = W_canvas;
-                        let dynamicH = imgVisW / aspect0;
-                        h0 = Math.min(dynamicH, 350);
+                        let dynamicH = Math.round(W_canvas / aspect0);
+                        let maxAllowedH = Math.round(H_canvas * 0.65);
+                        h0 = Math.min(dynamicH, maxAllowedH);
+                        if (dynamicH > maxAllowedH) {
+                            imgVisW = Math.round(maxAllowedH * aspect0);
+                        } else {
+                            imgVisW = W_canvas;
+                        }
                         isPatternB_centered = true;
                     } else if (isSinglePatternA || rawLayout.includes('patterna')) {
+                        let dynamicH = Math.round(w0 / aspect0);
+                        let maxAllowedH = Math.round(H_canvas * 0.55);
+                        h0 = Math.min(dynamicH, maxAllowedH);
+                        if (dynamicH > maxAllowedH) {
+                            w0 = Math.round(maxAllowedH * aspect0);
+                            imgVisW = w0;
+                        }
                         imgX = 0; // Left side
                         isPatternB_centered = false;
                     } else {
                         // Default / Custom with 1 image: Right side side-by-side with text
+                        let dynamicH = Math.round(w0 / aspect0);
+                        let maxAllowedH = Math.round(H_canvas * 0.55);
+                        h0 = Math.min(dynamicH, maxAllowedH);
+                        if (dynamicH > maxAllowedH) {
+                            w0 = Math.round(maxAllowedH * aspect0);
+                            imgVisW = w0;
+                        }
                         imgX = Math.round(W_canvas - w0);
                         isPatternB_centered = false;
                     }
+                    
+                    let cap0 = String(captions[0] || '').trim();
+                    let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
                     
                     obstacles.push({
                         url: urls[0],
@@ -737,10 +759,11 @@ class RenderService:
                         x: imgX,
                         y: imgY,
                         w: Math.round(w0),
-                        h: Math.round(h0),
+                        h: Math.round(h0 + capAllowance0),
+                        imgH: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: 'cover',
+                        objectFit: 'contain',
                         objectPosition: 'center center'
                     });
 
@@ -880,7 +903,7 @@ class RenderService:
                             const lines = Math.ceil(capStr.length / charsPerLine);
                             captionHeight = lines * 15;
                         }
-                        const imgH = obs.h - (captionHeight ? captionHeight + 8 : 8);
+                        const imgH = obs.imgH || (obs.h - (captionHeight ? captionHeight + 8 : 0));
                         
                         let captionHtml = capStr ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${capStr}</div>` : '';
                             if (obs.isCentered) {
@@ -896,9 +919,9 @@ class RenderService:
                                     ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
                                     : `width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
 
-                                imgEl.innerHTML = '<div style="' + innerStyle + '"><img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'cover') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
+                                imgEl.innerHTML = '<div style="' + innerStyle + '"><img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
                             } else {
-                                imgEl.innerHTML = '<img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'cover') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml;
+                                imgEl.innerHTML = '<img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml;
                             }
                         canvas.appendChild(imgEl);
                     });
