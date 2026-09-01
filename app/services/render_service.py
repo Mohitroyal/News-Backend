@@ -629,11 +629,15 @@ class RenderService:
                     if (isSingleLeft75) {
                         // Single image: Left side covering 75% height, width dynamically adjusted to aspect ratio
                         let a0 = aspectRatios[0] || 1.2;
-                        let h0 = Math.round(H_canvas * 0.75);
-                        let desiredW = Math.round(h0 * a0 * 0.60);
+                        let targetTotalH = Math.max(H_canvas, 1000);
+                        let h0 = Math.round(targetTotalH * 0.75);
+                        let desiredW = Math.round(h0 * a0 * 0.55);
                         let minW = Math.round(W_canvas * 0.38);
-                        let maxW = Math.round(W_canvas * 0.52);
+                        let maxW = Math.round(W_canvas * 0.50);
                         let w0 = Math.max(minW, Math.min(maxW, desiredW));
+                        
+                        let cap0 = String(captions[0] || '').trim();
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w0 / 6.5))) * 15 + 8 : 0;
                         
                         obstacles.push({
                             url: urls[0],
@@ -641,7 +645,8 @@ class RenderService:
                             x: 0,
                             y: 0,
                             w: w0,
-                            h: h0,
+                            h: Math.round(h0 + capAllowance0),
+                            imgH: Math.round(h0),
                             isCentered: false,
                             visW: w0,
                             objectFit: 'cover',
@@ -1383,7 +1388,7 @@ class RenderService:
 
                 const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                 const isSingleLeft75Layout = (urls.length === 1) && (rawLayoutStr.includes('patterng') || rawLayoutStr.includes('left75') || rawLayoutStr.includes('pattern75') || rawLayoutStr.includes('75left') || rawLayoutStr.includes('75'));
-                let low = isSingleLeft75Layout ? Math.max(300, Math.round(H_avail * 0.35)) : Math.max(300, Math.round(maxObstacleY + 30));
+                let low = isSingleLeft75Layout ? Math.max(1050, Math.round(maxObstacleY + 120)) : Math.max(300, Math.round(maxObstacleY + 30));
                 let high = H_avail;
                 let H_best = H_avail;
 
