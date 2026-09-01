@@ -625,9 +625,25 @@ class RenderService:
                     const isDoublePatternB = (isPatternB && urls.length === 2) && (rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout === "default");
                     const isTriplePatternB = isPatternB && urls.length >= 3;
 
-                    const aspect0 = aspectRatios[0] || 1.2;
+                    const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
                     
-                    if (rawLayout.includes('patterng')) {
+                    if (isSingleLeft75) {
+                        // Single image: Left 75% coverage with remaining content flowing on right & bottom
+                        let w0 = Math.round(W_canvas * 0.75);
+                        let h0 = Math.min(Math.round(w0 / aspect0), 550);
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: 0,
+                            y: 0,
+                            w: w0,
+                            h: h0,
+                            isCentered: false,
+                            visW: w0,
+                            objectFit: 'cover',
+                            objectPosition: 'center center'
+                        });
+                    } else if (rawLayout.includes('patterng')) {
                         // Pattern G ALWAYS forces a horizontal gallery of ALL images at the top!
                         let count = urls.length;
                         if (count > 0) {
