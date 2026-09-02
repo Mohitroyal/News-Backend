@@ -724,7 +724,7 @@ class RenderService:
                         imgX = 0;
                         imgY = 0;
                         let dynamicH = Math.round(W_canvas / aspect0);
-                        let maxAllowedH = Math.round(H_canvas * 0.65);
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.65);
                         h0 = Math.min(dynamicH, maxAllowedH);
                         if (dynamicH > maxAllowedH) {
                             imgVisW = Math.round(maxAllowedH * aspect0);
@@ -733,24 +733,20 @@ class RenderService:
                         }
                         isPatternB_centered = true;
                     } else if (isSinglePatternA || rawLayout.includes('patterna')) {
+                        w0 = Math.round((W_canvas - 24) * 0.48);
                         let dynamicH = Math.round(w0 / aspect0);
-                        let maxAllowedH = Math.round(H_canvas * 0.55);
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.75);
                         h0 = Math.min(dynamicH, maxAllowedH);
-                        if (dynamicH > maxAllowedH) {
-                            w0 = Math.round(maxAllowedH * aspect0);
-                            imgVisW = w0;
-                        }
+                        imgVisW = w0;
                         imgX = 0; // Left side
                         isPatternB_centered = false;
                     } else {
                         // Default / Custom with 1 image: Right side side-by-side with text
+                        w0 = Math.round((W_canvas - 24) * 0.48);
                         let dynamicH = Math.round(w0 / aspect0);
-                        let maxAllowedH = Math.round(H_canvas * 0.55);
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.75);
                         h0 = Math.min(dynamicH, maxAllowedH);
-                        if (dynamicH > maxAllowedH) {
-                            w0 = Math.round(maxAllowedH * aspect0);
-                            imgVisW = w0;
-                        }
+                        imgVisW = w0;
                         imgX = Math.round(W_canvas - w0);
                         isPatternB_centered = false;
                     }
@@ -1388,7 +1384,7 @@ class RenderService:
 
                 const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                 const isSingleLeft75Layout = (urls.length === 1) && (rawLayoutStr.includes('patterng') || rawLayoutStr.includes('left75') || rawLayoutStr.includes('pattern75') || rawLayoutStr.includes('75left') || rawLayoutStr.includes('75'));
-                let low = isSingleLeft75Layout ? Math.max(1050, Math.round(maxObstacleY + 120)) : Math.max(300, Math.round(maxObstacleY + 30));
+                let low = isSingleLeft75Layout ? Math.max(1050, Math.round(maxObstacleY + 120)) : Math.max(450, Math.round(maxObstacleY + 30));
                 let high = H_avail;
                 let H_best = H_avail;
 
