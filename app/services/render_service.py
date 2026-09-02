@@ -583,7 +583,12 @@ class RenderService:
                 if (!isNaN(p) && p >= 1 && p <= 4 && s !== "0" && s !== "auto") {
                     return p;
                 }
-                if (charLen < 600) {
+                const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                const isSingleSideLayout = (urls.length === 1) && (rawLayout.includes('patterna') || (!rawLayout.includes('patternb') && !rawLayout.includes('patternd') && !rawLayout.includes('single') && !rawLayout.includes('hero') && !rawLayout.includes('patternc') && !rawLayout.includes('patterng')));
+                if (isSingleSideLayout) {
+                    return 2;
+                }
+                if (charLen < 800) {
                     return 2;
                 }
                 return 3;
@@ -733,23 +738,19 @@ class RenderService:
                         }
                         isPatternB_centered = true;
                     } else if (isSinglePatternA || rawLayout.includes('patterna')) {
-                        const numCols = resolveColumns(data.layout_columns, totalChars);
-                        const singleColW = Math.round((W_canvas - (numCols - 1) * 24) / numCols);
-                        w0 = singleColW;
+                        w0 = Math.round((W_canvas - 24) * 0.48);
                         let dynamicH = Math.round(w0 / aspect0);
-                        let maxAllowedH = Math.min(dynamicH, (totalChars > 400) ? 350 : 420);
-                        h0 = maxAllowedH;
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
+                        h0 = Math.min(dynamicH, maxAllowedH);
                         imgVisW = w0;
-                        imgX = 0; // Left side (Column 0)
+                        imgX = 0; // Left side
                         isPatternB_centered = false;
                     } else {
                         // Default / Custom with 1 image: Right side side-by-side with text
-                        const numCols = resolveColumns(data.layout_columns, totalChars);
-                        const singleColW = Math.round((W_canvas - (numCols - 1) * 24) / numCols);
-                        w0 = singleColW;
+                        w0 = Math.round((W_canvas - 24) * 0.48);
                         let dynamicH = Math.round(w0 / aspect0);
-                        let maxAllowedH = Math.min(dynamicH, (totalChars > 400) ? 350 : 420);
-                        h0 = maxAllowedH;
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
+                        h0 = Math.min(dynamicH, maxAllowedH);
                         imgVisW = w0;
                         imgX = Math.round(W_canvas - w0);
                         isPatternB_centered = false;
@@ -1069,13 +1070,18 @@ class RenderService:
                     });
                 }
                 
-                // Natural newspaper column reading order:
-                // Column 0 (under left image) -> Column 1 (top to bottom) -> Column 2 (top to bottom / under right image)
+                // Intelligently order regions: top-row regions (alongside image) first, then bottom-row regions (across full width below image)
                 regions.sort((a, b) => {
-                    if (a.col !== b.col) {
-                        return a.col - b.col;
+                    const thresholdY = (obstacles.length > 0) ? obstacles[0].h * 0.75 : 120;
+                    const isTopA = a.y < thresholdY;
+                    const isTopB = b.y < thresholdY;
+                    if (isTopA !== isTopB) {
+                        return isTopA ? -1 : 1;
                     }
-                    return a.y - b.y;
+                    if (Math.abs(a.y - b.y) > 60) {
+                        return a.y - b.y;
+                    }
+                    return a.col - b.col;
                 });
                 
                 let paragraphs = [];
@@ -1383,9 +1389,7 @@ class RenderService:
 
                 const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                 const isSingleLeft75Layout = (urls.length === 1) && (rawLayoutStr.includes('patterng') || rawLayoutStr.includes('left75') || rawLayoutStr.includes('pattern75') || rawLayoutStr.includes('75left') || rawLayoutStr.includes('75'));
-                const isSingleColumnImageLayout = (urls.length === 1) && (rawLayoutStr.includes('patterna') || rawLayoutStr.includes('default') || rawLayoutStr === '' || isSingleLeft75Layout);
-                let minTextAllowance = (totalChars > 400) ? Math.min(240, Math.max(150, Math.round(totalChars * 0.20))) : 60;
-                let low = isSingleLeft75Layout ? Math.max(1050, Math.round(maxObstacleY + 120)) : (isSingleColumnImageLayout ? Math.max(540, Math.round(maxObstacleY + minTextAllowance)) : Math.max(450, Math.round(maxObstacleY + 30)));
+                let low = isSingleLeft75Layout ? Math.max(900, Math.round(maxObstacleY + 60)) : Math.max(300, Math.round(maxObstacleY + 30));
                 let high = H_avail;
                 let H_best = H_avail;
 
