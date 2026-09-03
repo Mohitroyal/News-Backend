@@ -699,12 +699,17 @@ class RenderService:
                         obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
                     } else {
                     
-                    let w0 = Math.round((W_canvas - 24) * 0.48); // ~48% width for side-by-side layout with text
+                    let N_layout_cols = resolveColumns(data.layout_columns, totalChars);
+                    let grid_gap = 24;
+                    let single_col_w = Math.round((W_canvas - (N_layout_cols - 1) * grid_gap) / N_layout_cols);
+                    let side_w = (N_layout_cols >= 3) ? single_col_w : Math.round((W_canvas - grid_gap) * 0.48);
+                    
+                    let w0 = side_w;
                     let isPatternB_centered = false;
                     let imgVisW = w0;
-                    let h0 = Math.min(w0 / aspect0, 360); // Constrain height so image matches text column height
-                    let imgX = Math.round(W_canvas - w0); // Position on right side at y = 0
-                    let imgY = 0; // Starts at top, same height as text!
+                    let h0 = Math.min(w0 / aspect0, 360);
+                    let imgX = Math.round(W_canvas - w0);
+                    let imgY = 0;
                     
                     if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
@@ -738,7 +743,7 @@ class RenderService:
                         }
                         isPatternB_centered = true;
                     } else if (isSinglePatternA || rawLayout.includes('patterna')) {
-                        w0 = Math.round((W_canvas - 24) * 0.48);
+                        w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
                         h0 = Math.min(dynamicH, maxAllowedH);
@@ -747,7 +752,7 @@ class RenderService:
                         isPatternB_centered = false;
                     } else {
                         // Default / Custom with 1 image: Right side side-by-side with text
-                        w0 = Math.round((W_canvas - 24) * 0.48);
+                        w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
                         h0 = Math.min(dynamicH, maxAllowedH);
@@ -1070,18 +1075,13 @@ class RenderService:
                     });
                 }
                 
-                // Intelligently order regions: top-row regions (alongside image) first, then bottom-row regions (across full width below image)
+                // Strict multi-column newspaper reading flow:
+                // Column by column (Column 0 -> Column 1 -> Column 2), and top-to-bottom within each column.
                 regions.sort((a, b) => {
-                    const thresholdY = (obstacles.length > 0) ? obstacles[0].h * 0.75 : 120;
-                    const isTopA = a.y < thresholdY;
-                    const isTopB = b.y < thresholdY;
-                    if (isTopA !== isTopB) {
-                        return isTopA ? -1 : 1;
+                    if (a.col !== b.col) {
+                        return a.col - b.col;
                     }
-                    if (Math.abs(a.y - b.y) > 60) {
-                        return a.y - b.y;
-                    }
-                    return a.col - b.col;
+                    return a.y - b.y;
                 });
                 
                 let paragraphs = [];
