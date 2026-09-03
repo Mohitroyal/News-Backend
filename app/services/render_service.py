@@ -714,11 +714,11 @@ class RenderService:
                     if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
                         let a1 = aspectRatios[1] || 1.0;
-                        let gap = 20;
+                        let gap = 12;
                         let availW = W_canvas - gap;
                         let sumAspect = a0 + a1;
                         w0 = Math.round(availW * (a0 / sumAspect));
-                        let sharedH = Math.min(Math.round(availW / sumAspect), 380);
+                        let sharedH = Math.min(Math.round(availW / sumAspect), 420);
                         h0 = sharedH;
                         imgX = 0;
                         imgY = 0; // Both images at the top
@@ -774,7 +774,7 @@ class RenderService:
                         imgH: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: 'contain',
+                        objectFit: isDoublePatternB ? 'cover' : 'contain',
                         objectPosition: 'center center'
                     });
 
@@ -786,13 +786,20 @@ class RenderService:
                             let x1 = w0 + gap;
                             let w1 = W_canvas - x1; // Stretches cleanly to right edge
                             let y1 = 0; // Top aligned
+                            let cap1 = String(captions[1] || '').trim();
+                            let capAllowance1 = cap1 ? Math.ceil(cap1.length / Math.max(1, Math.floor(w1 / 6.5))) * 15 + 8 : 0;
                             obstacles.push({
                                 url: urls[1],
                                 caption: captions[1] || '',
                                 x: Math.round(x1),
                                 y: Math.round(y1),
                                 w: Math.round(w1),
-                                h: Math.round(h1)
+                                h: Math.round(h1 + capAllowance1),
+                                imgH: Math.round(h1),
+                                isCentered: false,
+                                visW: Math.round(w1),
+                                objectFit: 'cover',
+                                objectPosition: 'center center'
                             });
                         } else {
                             const aspect1 = aspectRatios[1] || 1.0;
