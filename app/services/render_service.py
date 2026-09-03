@@ -717,10 +717,27 @@ class RenderService:
                         let gap = 12;
                         let availW = W_canvas - gap;
                         let sumAspect = a0 + a1;
-                        w0 = Math.round(availW * (a0 / sumAspect));
-                        let sharedH = Math.min(Math.round(availW / sumAspect), 420);
+                        
+                        let naturalH = availW / sumAspect;
+                        let maxH = Math.min(Math.max(H_canvas * 0.45, 480), 540);
+                        let sharedH = Math.round(Math.min(naturalH, maxH));
+                        
+                        w0 = Math.round(sharedH * a0);
+                        let w1 = Math.round(sharedH * a1);
+                        let totalImgsW = w0 + w1 + gap;
+                        
+                        let startX = 0;
+                        if (totalImgsW < W_canvas) {
+                            startX = Math.round((W_canvas - totalImgsW) / 2);
+                        } else {
+                            w0 = Math.round(availW * (a0 / sumAspect));
+                            w1 = availW - w0;
+                            sharedH = Math.round(w0 / a0);
+                            startX = 0;
+                        }
+                        
                         h0 = sharedH;
-                        imgX = 0;
+                        imgX = startX;
                         imgY = 0; // Both images at the top
                         imgVisW = w0;
                         isPatternB_centered = false;
@@ -728,6 +745,8 @@ class RenderService:
                         // Save parameters for the second image
                         window.__db_sharedH = sharedH;
                         window.__db_w0 = w0;
+                        window.__db_w1 = w1;
+                        window.__db_startX = startX;
                         window.__db_gap = gap;
                     } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
                         w0 = W_canvas;
@@ -774,7 +793,7 @@ class RenderService:
                         imgH: Math.round(h0),
                         isCentered: isPatternB_centered,
                         visW: Math.round(imgVisW),
-                        objectFit: isDoublePatternB ? 'cover' : 'contain',
+                        objectFit: 'contain',
                         objectPosition: 'center center'
                     });
 
@@ -782,9 +801,10 @@ class RenderService:
                         if (isDoublePatternB) {
                             let h1 = window.__db_sharedH;
                             let w0 = window.__db_w0;
+                            let w1 = window.__db_w1;
+                            let startX = window.__db_startX;
                             let gap = window.__db_gap;
-                            let x1 = w0 + gap;
-                            let w1 = W_canvas - x1; // Stretches cleanly to right edge
+                            let x1 = startX + w0 + gap;
                             let y1 = 0; // Top aligned
                             let cap1 = String(captions[1] || '').trim();
                             let capAllowance1 = cap1 ? Math.ceil(cap1.length / Math.max(1, Math.floor(w1 / 6.5))) * 15 + 8 : 0;
@@ -798,7 +818,7 @@ class RenderService:
                                 imgH: Math.round(h1),
                                 isCentered: false,
                                 visW: Math.round(w1),
-                                objectFit: 'cover',
+                                objectFit: 'contain',
                                 objectPosition: 'center center'
                             });
                         } else {
