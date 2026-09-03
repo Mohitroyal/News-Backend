@@ -22,6 +22,11 @@ export const PATTERN_GROUPS = [
         title: 'Pattern C',
         description: 'Center image · text below',
       },
+      {
+        patternId: 'G',
+        title: 'Pattern G',
+        description: 'Left side image covering 75% height · text flows on right and bottom',
+      },
     ],
   },
   {
@@ -67,6 +72,7 @@ export const PATTERN_TO_TEMPLATE_ID: Record<string, string> = {
   D: 'extra_news',
   E: 'bharath_reporter',
   F: 'extra_news',
+  G: 'rti_express',
 };
 
 interface PatternSelectionModalProps {
@@ -187,6 +193,23 @@ export const PatternSelectionModal: React.FC<PatternSelectionModalProps> = ({
                             </div>
                             <div className="w-full h-1 bg-gray-200" />
                             <div className="w-full h-1 bg-gray-200" />
+                          </>
+                        )}
+                        {pattern.patternId === 'G' && (
+                          <>
+                            <div className="w-full h-2.5 bg-gray-300 rounded-sm mb-0.5" />
+                            <div className="flex gap-1 flex-1">
+                              <div className="flex-1 flex flex-col gap-0.5">
+                                <div className="w-full h-[75%] bg-blue-200/70 rounded-sm flex items-center justify-center text-[6px] text-blue-700 font-bold">75% H</div>
+                                <div className="w-full h-1 bg-gray-200" />
+                              </div>
+                              <div className="flex-1 flex flex-col gap-1">
+                                <div className="w-full h-1 bg-gray-200" />
+                                <div className="w-full h-1 bg-gray-200" />
+                                <div className="w-full h-1 bg-gray-200" />
+                                <div className="w-3/4 h-1 bg-gray-200" />
+                              </div>
+                            </div>
                           </>
                         )}
                       </div>

@@ -195,6 +195,39 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
               </>
             )}
 
+            {patternId === 'G' && (
+              <>
+                 <div className="w-full p-1.5 mb-1.5" style={{ backgroundColor: headingBgColour }}>
+                   <div className="text-[10px] font-bold leading-tight font-serif text-black truncate">
+                     {headlineText || 'Headline text...'}
+                   </div>
+                 </div>
+                 <div className="flex gap-2 flex-1">
+                   {/* Left Column: 75% height image + remaining 25% text below */}
+                   <div className="flex-1 flex flex-col gap-1">
+                     <div className="w-full h-[75%] bg-blue-100/50 border border-blue-200 flex flex-col items-center justify-center rounded-sm">
+                       <ImageIcon className="w-4 h-4 text-blue-400" strokeWidth={1.5} />
+                       <span className="text-[7px] text-blue-600 font-bold">75% Height</span>
+                     </div>
+                     <div className="flex-1 flex flex-col gap-0.5 pt-0.5">
+                       <div className="w-full h-[2.5px] bg-gray-300 rounded-full" />
+                       <div className="w-4/5 h-[2.5px] bg-gray-300 rounded-full" />
+                     </div>
+                   </div>
+                   {/* Right Column: Full height text flow */}
+                   <div className="flex-1 flex flex-col gap-1 pt-0.5">
+                     <div className="w-full h-[3px] bg-gray-300 rounded-full" />
+                     <div className="w-full h-[3px] bg-gray-300 rounded-full" />
+                     <div className="w-5/6 h-[3px] bg-gray-300 rounded-full" />
+                     <div className="w-full h-[3px] bg-gray-300 rounded-full" />
+                     <div className="w-4/5 h-[3px] bg-gray-300 rounded-full" />
+                     <div className="w-full h-[3px] bg-gray-300 rounded-full" />
+                     <div className="w-3/4 h-[3px] bg-gray-300 rounded-full" />
+                   </div>
+                 </div>
+              </>
+            )}
+
           </div>
         </div>
       </div>

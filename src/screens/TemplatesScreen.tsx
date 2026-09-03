@@ -27,6 +27,11 @@ const PATTERN_GROUPS = [
         title: 'Pattern C',
         description: 'Center image · text below',
       },
+      {
+        patternId: 'G',
+        title: 'Pattern G',
+        description: 'Left 75% wide image · text flows on right',
+      },
     ],
   },
   {

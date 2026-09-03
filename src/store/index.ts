@@ -2,6 +2,36 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User, GenerationConfig, Generation } from "@/types";
 
+// ─── Permanent Reporter Photo Helpers ──────────────────────────────────────────
+export const getReporterPhoto = (email?: string): string => {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) return "";
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      const photo = localStorage.getItem(`spotnews_reporter_photo_${cleanEmail}`);
+      if (photo) return photo;
+    }
+    const lastPhoto = localStorage.getItem("spotnews_last_reporter_photo");
+    if (lastPhoto) return lastPhoto;
+  } catch (e) {
+    console.warn("[PhotoStore] Error reading reporter photo:", e);
+  }
+  return "";
+};
+
+export const saveReporterPhoto = (email: string | undefined, photoUrl: string): void => {
+  try {
+    if (!photoUrl || typeof window === "undefined" || !window.localStorage) return;
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      localStorage.setItem(`spotnews_reporter_photo_${cleanEmail}`, photoUrl);
+    }
+    localStorage.setItem("spotnews_last_reporter_photo", photoUrl);
+  } catch (e) {
+    console.warn("[PhotoStore] Error saving reporter photo:", e);
+  }
+};
+
 // ─── Auth Store ────────────────────────────────────────────────────────────────
 interface AuthStore {
   user: User | null;
@@ -20,14 +50,38 @@ export const useAuthStore = create<AuthStore>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      login: (user, token) =>
-        set({ user, token, isAuthenticated: true }),
+      login: (user, token) => {
+        const email = user?.email || (user as any)?.user_metadata?.email;
+        const storedPhoto = getReporterPhoto(email);
+        const existingPhoto =
+          user?.avatarUrl ||
+          (user as any)?.user_metadata?.avatar_url ||
+          (user as any)?.user_metadata?.picture ||
+          storedPhoto;
+
+        const enrichedUser: User = {
+          ...user,
+          avatarUrl: existingPhoto || "",
+        };
+
+        if (existingPhoto && email) {
+          saveReporterPhoto(email, existingPhoto);
+        }
+
+        set({ user: enrichedUser, token, isAuthenticated: true });
+      },
       logout: () =>
         set({ user: null, token: null, isAuthenticated: false }),
       updateUser: (partial) =>
-        set((state) => ({
-          user: state.user ? { ...state.user, ...partial } : null,
-        })),
+        set((state) => {
+          if (!state.user) return { user: null };
+          const updatedUser: User = { ...state.user, ...partial };
+          const email = updatedUser.email || (updatedUser as any)?.user_metadata?.email;
+          if (partial.avatarUrl) {
+            saveReporterPhoto(email, partial.avatarUrl);
+          }
+          return { user: updatedUser };
+        }),
       otpState: null,
       setOtpState: (otpState) => set({ otpState }),
     }),

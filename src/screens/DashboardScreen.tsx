@@ -1,5 +1,5 @@
 import { FilePlus, LayoutTemplate, Newspaper } from 'lucide-react';
-import { useGenerationStore, useAuthStore } from '@/store';
+import { useGenerationStore, useAuthStore, getReporterPhoto } from '@/store';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@/lib/i18n';
 
@@ -20,6 +20,7 @@ export const DashboardScreen = () => {
     'Journalist';
 
   const avatarLetter = displayName[0]?.toUpperCase() ?? 'J';
+  const userPhoto = user?.avatarUrl || getReporterPhoto(user?.email);
 
   return (
     <div className="w-full px-4 pb-[80px] pt-3">
@@ -45,10 +46,14 @@ export const DashboardScreen = () => {
           </p>
         </div>
         <div
-          className="w-[46px] h-[46px] rounded-full flex items-center justify-center text-white font-bold text-[18px] flex-shrink-0 shadow-md"
+          className="w-[46px] h-[46px] rounded-full flex items-center justify-center text-white font-bold text-[18px] flex-shrink-0 shadow-md overflow-hidden border-2 border-[#CC1E1E]"
           style={{ background: '#0D1B2A' }}
         >
-          {avatarLetter}
+          {userPhoto ? (
+            <img src={userPhoto} alt="Reporter" className="w-full h-full object-cover" />
+          ) : (
+            avatarLetter
+          )}
         </div>
       </div>
 

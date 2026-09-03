@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.newscraft.mobile',
-  appName: 'RTI EXPRESS 24x7',
+  appName: 'Spot News 24x7',
   webDir: 'dist',
   plugins: {
     GoogleAuth: {

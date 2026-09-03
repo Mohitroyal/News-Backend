@@ -48,8 +48,8 @@ export interface GenerationConfig {
   tone: Tone;
   templateId: string;      // brand/logo template (from logo selector)
   logoId?: string;         // brand/logo identity (from logo selector)
-  /** Layout pattern selected on the Templates page (A–F) */
-  layoutPattern?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+  /** Layout pattern selected on the Templates page (A–G) */
+  layoutPattern?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
   imageUrl?: string;
   imageUrls?: string[];
   publicationName: string;

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">RTI EXPRESS 24x7</string>
-    <string name="title_activity_main">RTI EXPRESS 24x7</string>
+    <string name="app_name">Spot News 24x7</string>
+    <string name="title_activity_main">Spot News 24x7</string>
     <string name="package_name">com.newscraft.mobile</string>
     <string name="custom_url_scheme">com.newscraft.mobile</string>
     <string name="server_client_id">831106920430-h8h1nj7a5j2iirgki34ve8ariuj8uroi.apps.googleusercontent.com</string>

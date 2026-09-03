@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useAuthStore, useUIStore, useGenerationStore } from '@/store';
+import { useState, useRef } from 'react';
+import { useAuthStore, useUIStore, useGenerationStore, saveReporterPhoto, getReporterPhoto } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle } from 'lucide-react';
+import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, Camera, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -68,8 +68,9 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 }
 
 export const SettingsScreen = () => {
-  const logout = useAuthStore((state) => state.logout);
+  const { user, logout, updateUser } = useAuthStore();
   const resetGenerations = useGenerationStore((state) => state.resetConfig);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   // Use persistent UI store
@@ -80,6 +81,35 @@ export const SettingsScreen = () => {
   const { t, language: activeLanguage } = useTranslation();
   const setLanguage = useUIStore((state) => state.setLanguage);
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = Math.min(img.width, img.height);
+        const targetSize = 250;
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const offsetX = (img.width - size) / 2;
+          const offsetY = (img.height - size) / 2;
+          ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          saveReporterPhoto(user?.email, dataUrl);
+          updateUser({ avatarUrl: dataUrl });
+          supabase.auth.updateUser({ data: { avatar_url: dataUrl } }).catch(() => {});
+          showToast('Reporter photo updated permanently!', 'success');
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const [notifications, setNotifications] = useState({
     emailGenerations: true,
@@ -163,29 +193,49 @@ export const SettingsScreen = () => {
   const [isTfaModalOpen, setIsTfaModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const [tfaEnabled, setTfaEnabled] = useState(false);
   const [tfaVerificationCode, setTfaVerificationCode] = useState("");
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert("New passwords do not match!");
+    setPasswordError("");
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters");
       return;
     }
-    setPasswordSuccess(true);
-    setTimeout(() => {
-      setPasswordSuccess(false);
-      setIsPasswordModalOpen(false);
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    }, 1500);
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match!");
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) throw error;
+
+      setPasswordSuccess(true);
+      showToast("Password updated successfully!", "success");
+      setTimeout(() => {
+        setPasswordSuccess(false);
+        setIsPasswordModalOpen(false);
+        setNewPassword("");
+        setConfirmPassword("");
+        setPasswordError("");
+      }, 1500);
+    } catch (err: any) {
+      setPasswordError(err.message || "Failed to update password");
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const handleTfaToggle = () => {
@@ -211,6 +261,53 @@ export const SettingsScreen = () => {
       </div>
 
       <div className="space-y-5">
+        {/* Reporter Profile & Photo Card */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl p-5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div
+              onClick={() => photoInputRef.current?.click()}
+              className="relative w-16 h-16 rounded-full border-2 border-[#CC1E1E] bg-[#EEF3F8] flex items-center justify-center cursor-pointer shadow-md overflow-hidden shrink-0 active:scale-95 transition-transform"
+              title="Change Reporter Photo"
+            >
+              {user?.avatarUrl || getReporterPhoto(user?.email) ? (
+                <img src={user?.avatarUrl || getReporterPhoto(user?.email)} alt="Reporter Photo" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-[#0D1B2A]">
+                  <UserIcon className="w-7 h-7 text-[#0D1B2A]/60" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            <input
+              type="file"
+              ref={photoInputRef}
+              onChange={handlePhotoUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                  {(user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter'}
+                </h3>
+                <span className="bg-[#CC1E1E]/10 text-[#CC1E1E] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                  Reporter
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user?.email || 'reporter@rtiexpress.com'}</p>
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                className="text-xs font-bold text-[#CC1E1E] hover:underline mt-1.5 flex items-center gap-1"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                {user?.avatarUrl ? 'Change Reporter Photo' : 'Upload Reporter Photo'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Appearance */}
         <SettingsSection title={t.appearance} icon={Moon}>
           <SettingsRow
@@ -397,6 +494,11 @@ export const SettingsScreen = () => {
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Change Password</h3>
               </div>
               <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4">
+                {passwordError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold text-center">
+                    {passwordError}
+                  </div>
+                )}
                 {passwordSuccess ? (
                   <div className="text-center py-6 space-y-2">
                     <div className="h-12 w-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
@@ -407,20 +509,11 @@ export const SettingsScreen = () => {
                 ) : (
                   <>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500">Current Password</label>
-                      <input
-                        type="password"
-                        required
-                        value={oldPassword}
-                        onChange={(e) => setOldPassword(e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
                       <label className="text-xs font-bold text-gray-500">New Password</label>
                       <input
                         type="password"
                         required
+                        placeholder="Min 6 characters"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
@@ -431,6 +524,7 @@ export const SettingsScreen = () => {
                       <input
                         type="password"
                         required
+                        placeholder="Re-enter new password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
@@ -439,6 +533,7 @@ export const SettingsScreen = () => {
                     <div className="flex gap-3 justify-end pt-2">
                       <button
                         type="button"
+                        disabled={passwordLoading}
                         onClick={() => setIsPasswordModalOpen(false)}
                         className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-xl w-full"
                       >
@@ -446,9 +541,10 @@ export const SettingsScreen = () => {
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl w-full"
+                        disabled={passwordLoading}
+                        className="px-4 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl w-full flex items-center justify-center disabled:opacity-60"
                       >
-                        Save
+                        {passwordLoading ? 'Updating…' : 'Save'}
                       </button>
                     </div>
                   </>

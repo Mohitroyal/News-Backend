@@ -55,10 +55,10 @@ export const LoginOtpScreen = () => {
 
       <div className="bg-[#0a2540] border-b-[3px] border-[#cc2222] flex items-center justify-center py-4 px-4 shrink-0 shadow-sm relative z-20">
          <div className="flex items-center gap-2">
-           <img src={logoUrl} alt="RTI" className="w-10 h-10 object-contain rounded-md shadow-sm" />
+           <img src={logoUrl} alt="Spot News" className="w-10 h-10 object-contain rounded-md shadow-sm" />
            <div className="flex flex-col">
-             <span className="text-white font-bold text-[18px] leading-tight tracking-wide font-serif">EXPRESS</span>
-             <span className="text-[#a0c4dc] text-[8px] uppercase tracking-widest font-semibold leading-none">News Generator</span>
+             <span className="text-white font-bold text-[18px] leading-tight tracking-wide font-serif">SPOT NEWS</span>
+             <span className="text-[#a0c4dc] text-[8px] uppercase tracking-widest font-semibold leading-none">24X7 News Generator</span>
            </div>
          </div>
       </div>

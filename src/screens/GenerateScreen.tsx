@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useGenerationStore, useUIStore } from '@/store';
+import { useGenerationStore, useUIStore, useAuthStore, getReporterPhoto } from '@/store';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Image as ImageIcon, X, Newspaper, CheckCircle2, Globe, Type } from 'lucide-react';
 import { generationService, compressImage } from '@/services/generation.service';
@@ -59,6 +59,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export const GenerateScreen = () => {
+  const user = useAuthStore((state) => state.user);
   const currentConfig   = useGenerationStore((state) => state.currentConfig);
   const addGeneration   = useGenerationStore((state) => state.addGeneration);
   const setConfig       = useGenerationStore((state) => state.setConfig);
@@ -189,6 +190,9 @@ export const GenerateScreen = () => {
     if (!headline || !content) return;
     setLoading(true); setStageIndex(0);
     try {
+      const reporterName = (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
+      const reporterImage = user?.avatarUrl || getReporterPhoto(user?.email) || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || '';
+
       const configToSave = {
         ...currentConfig, headline, articleContent: content, language, fontFamily,
         layoutColumns, imageUrls, imageUrl: imageUrls[0] || '',
@@ -198,6 +202,8 @@ export const GenerateScreen = () => {
         showWatermark: logoMode,
         showInnerBorders: showInnerBorders ?? true,
         publicationDate: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        reporterName,
+        reporterImage,
       };
       setConfig(configToSave); setStageIndex(1);
 
@@ -215,7 +221,11 @@ export const GenerateScreen = () => {
         layoutColumns,
         borderColor: currentConfig.borderColour || undefined,
         headingBg: currentConfig.headingBgColour || undefined,
-        imageLayout: selectedPattern ? `pattern_${selectedPattern.toLowerCase()}` : undefined
+        imageLayout: selectedPattern ? `pattern_${selectedPattern.toLowerCase()}` : undefined,
+        reporterName,
+        reporterImage,
+        reporter_name: reporterName,
+        reporter_image: reporterImage
       };
       setStageIndex(2);
       const renderTimer = setTimeout(() => setStageIndex(3), 8_000);

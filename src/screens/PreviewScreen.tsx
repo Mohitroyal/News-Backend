@@ -31,7 +31,7 @@ const STAGE_PROGRESS: Record<string, number> = {
 
 const MAX_POLL_MS     = 10 * 60 * 1000; // 10 minutes
 const POLL_INTERVAL   = 3000;           // 3 seconds
-const MAX_CONSEC_FAIL = 30;             // 30 consecutive network failures before stopping
+const MAX_CONSEC_FAIL = 150;            // 150 consecutive polls (~7.5 min) to tolerate server wake-up/deploys
 
 function getProgress(stage?: string): number {
   if (!stage) return 10;
@@ -452,13 +452,30 @@ export const PreviewScreen = () => {
                 </p>
               </div>
               
-              <button 
-                onClick={() => navigate(-1)}
-                className="w-full bg-[#cc2222] active:bg-[#a01b1b] text-white py-[14px] rounded-[8px] font-bold text-xs tracking-wider uppercase transition-colors shadow-sm flex justify-center items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Retry</span>
-              </button>
+              <div className="flex flex-col gap-2.5 w-full">
+                <button 
+                  onClick={() => {
+                    updateGeneration(generation.id, {
+                      status: 'pending',
+                      error: undefined,
+                      message: undefined,
+                      stage: 'Resuming Polling',
+                    } as any);
+                    consecFailRef.current = 0;
+                    startTimeRef.current = Date.now();
+                  }}
+                  className="w-full bg-[#cc2222] active:bg-[#a01b1b] text-white py-[14px] rounded-[8px] font-bold text-xs tracking-wider uppercase transition-colors shadow-sm flex justify-center items-center gap-2"
+                >
+                  <span>Resume / Check Result</span>
+                </button>
+                <button 
+                  onClick={() => navigate('/generate')}
+                  className="w-full bg-white border border-[#b8d4e8] text-[#0a2540] py-[12px] rounded-[8px] font-bold text-xs tracking-wider uppercase transition-colors shadow-sm flex justify-center items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Generator</span>
+                </button>
+              </div>
            </div>
         )}
 

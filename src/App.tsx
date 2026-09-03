@@ -15,7 +15,9 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { PreviewScreen } from './screens/PreviewScreen';
 import { LoginOtpScreen } from './screens/LoginOtpScreen';
 import { VerifyOtpScreen } from './screens/VerifyOtpScreen';
-import { useAuthStore, useUIStore } from './store';
+import { CreatePasswordScreen } from './screens/CreatePasswordScreen';
+import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
+import { useAuthStore, useUIStore, getReporterPhoto } from './store';
 import { supabase } from './lib/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -28,6 +30,9 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const isActive = (path: string) => location.pathname === path;
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const userAvatar = user?.avatarUrl || getReporterPhoto(user?.email) || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || (user as any)?.avatar_url;
+  const userName = (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
+  const userInitials = userName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'RP';
 
   return (
     <div className="flex flex-col h-screen bg-[#EEF3F8] transition-colors duration-300 relative font-sans">
@@ -68,11 +73,11 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="w-full flex items-center justify-between px-4 pt-2 pb-1">
           <span className="text-white/55 text-[10px] uppercase tracking-wider font-semibold">EST. 2024 | INDIA</span>
           <span className="text-white/55 text-[10px] uppercase tracking-wider font-semibold">
-            REPORTER: {(user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Journalist'}
+            REPORTER: {userName}
           </span>
         </div>
 
-        {/* ── Logo + Title row ── */}
+        {/* ── Logo + Title row with Top-Right Profile Avatar ── */}
         <div className="w-full flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3">
             {/* Logo box */}
@@ -84,6 +89,21 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
               <span className="text-white/50 text-[11px] uppercase font-bold tracking-widest mt-0.5">24X7</span>
             </div>
           </div>
+
+          {/* Top-Right Profile Avatar Badge */}
+          <Link to="/settings" className="flex items-center gap-2 active:scale-95 transition-transform" title="Reporter Profile">
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt="Reporter Profile"
+                className="w-10 h-10 rounded-full object-cover border-2 border-[#CC1E1E] shadow-md bg-white"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#1e3a5f] border-2 border-[#CC1E1E] flex items-center justify-center text-white font-bold text-sm shadow-md">
+                {userInitials}
+              </div>
+            )}
+          </Link>
         </div>
 
         {/* ── Date bar ── */}
@@ -99,7 +119,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             {t.latest}
           </span>
           <span className="text-white text-[12px] truncate">
-            Welcome to RTI Express · {t.tickerText}
+            Welcome to Spot News 24x7 · {t.tickerText}
           </span>
         </div>
       </header>
@@ -195,10 +215,15 @@ function App() {
       }
     });
 
-    // Also set up the global auth listener
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        login(session.user as any, session.access_token);
+        const email = session.user?.email;
+        const savedPhoto = getReporterPhoto(email);
+        const userObj = {
+          ...session.user,
+          avatarUrl: savedPhoto || (session.user as any)?.user_metadata?.avatar_url || (session.user as any)?.user_metadata?.picture || '',
+        };
+        login(userObj as any, session.access_token);
       }
     });
 
@@ -231,6 +256,18 @@ function App() {
         <Route 
           path="/signup" 
           element={!isAuthenticated ? <SignupScreen /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/create-password" 
+          element={<CreatePasswordScreen />} 
+        />
+        <Route 
+          path="/reset-password" 
+          element={<CreatePasswordScreen />} 
+        />
+        <Route 
+          path="/forgot-password" 
+          element={<ForgotPasswordScreen />} 
         />
         
         <Route 

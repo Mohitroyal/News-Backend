@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useAuthStore } from '@/store';
+import { useState, useRef, useEffect } from 'react';
+import { useAuthStore, getReporterPhoto, saveReporterPhoto } from '@/store';
 import { authService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Mail, Lock } from 'lucide-react';
+import { Loader2, Mail, Lock, Camera, User as UserIcon } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { LogoWatermark } from '@/components/LogoWatermark';
@@ -11,24 +11,95 @@ import logoUrl from '@/assets/rti_express_logo.png';
 export const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const saved = getReporterPhoto(email);
+    if (saved) {
+      setAvatarUrl(saved);
+    }
+  }, []);
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    if (newEmail.trim().length > 3) {
+      const stored = getReporterPhoto(newEmail);
+      if (stored) {
+        setAvatarUrl(stored);
+      }
+    }
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = Math.min(img.width, img.height);
+        const targetSize = 250;
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const offsetX = (img.width - size) / 2;
+          const offsetY = (img.height - size) / 2;
+          ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setAvatarUrl(dataUrl);
+          saveReporterPhoto(email, dataUrl);
+        } else {
+          const dataUrl = event.target?.result as string;
+          setAvatarUrl(dataUrl);
+          saveReporterPhoto(email, dataUrl);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setShowSignupPrompt(false);
 
     try {
       const res = await authService.login({ email, password });
       if (res.data) {
-        login(res.data.user, res.data.token);
+        const userObj = { ...res.data.user };
+        const finalPhoto = avatarUrl || getReporterPhoto(email) || (userObj as any)?.user_metadata?.avatar_url;
+        if (finalPhoto) {
+          userObj.avatarUrl = finalPhoto;
+          saveReporterPhoto(email, finalPhoto);
+          supabase.auth.updateUser({ data: { avatar_url: finalPhoto } }).catch(() => {});
+        }
+        login(userObj, res.data.token);
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to login');
+      const errMsg = err.message || err.response?.data?.message || '';
+      if (
+        errMsg.toLowerCase().includes('invalid login credentials') ||
+        errMsg.toLowerCase().includes('invalid_credentials') ||
+        errMsg.toLowerCase().includes('user not found') ||
+        errMsg.toLowerCase().includes('invalid_grant')
+      ) {
+        setShowSignupPrompt(true);
+      } else {
+        setError(errMsg || 'Failed to login. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -50,7 +121,14 @@ export const LoginScreen = () => {
         if (authError) throw authError;
 
         if (sessionData.session) {
-          login(sessionData.session.user as any, sessionData.session.access_token);
+          const userObj = { ...sessionData.session.user } as any;
+          const googleEmail = userObj?.email;
+          const finalPhoto = avatarUrl || getReporterPhoto(googleEmail) || userObj?.user_metadata?.avatar_url || userObj?.user_metadata?.picture;
+          if (finalPhoto) {
+            userObj.avatarUrl = finalPhoto;
+            saveReporterPhoto(googleEmail, finalPhoto);
+          }
+          login(userObj, sessionData.session.access_token);
           navigate('/');
         }
       }
@@ -71,10 +149,10 @@ export const LoginScreen = () => {
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
       <div className="bg-[#0a2540] border-b-[3px] border-[#cc2222] flex items-center justify-center py-4 px-4 shrink-0 shadow-sm relative z-20">
          <div className="flex items-center gap-2">
-           <img src={logoUrl} alt="RTI" className="w-10 h-10 object-contain rounded-md shadow-sm" />
+           <img src={logoUrl} alt="Spot News" className="w-10 h-10 object-contain rounded-md shadow-sm" />
            <div className="flex flex-col">
-             <span className="text-white font-bold text-[18px] leading-tight tracking-wide font-serif">EXPRESS</span>
-             <span className="text-[#a0c4dc] text-[8px] uppercase tracking-widest font-semibold leading-none">News Generator</span>
+             <span className="text-white font-bold text-[18px] leading-tight tracking-wide font-serif">SPOT NEWS</span>
+             <span className="text-[#a0c4dc] text-[8px] uppercase tracking-widest font-semibold leading-none">24X7 News Generator</span>
            </div>
          </div>
       </div>
@@ -87,7 +165,7 @@ export const LoginScreen = () => {
           <div className="mb-6 flex flex-col items-start">
             {/* PORTAL BADGE */}
             <div className="bg-[#0a2540] text-white text-[9px] uppercase tracking-widest font-bold py-1 px-2.5 rounded-full mb-3 shadow-sm">
-              NewsCraft Portal
+              Spot News Portal
             </div>
             
             {/* WELCOME TEXT */}
@@ -95,11 +173,68 @@ export const LoginScreen = () => {
             <div className="w-12 h-[3px] bg-[#cc2222] rounded-full"></div>
           </div>
 
+          {showSignupPrompt && (
+            <div className="mb-5 p-4 bg-amber-50 border-2 border-amber-400 rounded-xl text-[#0a1a2e] text-xs shadow-sm flex flex-col gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-base">⚠️</span>
+                <span className="font-bold text-sm text-[#0a2540]">Account Not Found</span>
+              </div>
+              <p className="text-gray-700 leading-relaxed">
+                No account was found for <strong className="text-[#0a2540]">{email || 'this email'}</strong>. Please create your reporter account first to get started.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/signup', { state: { email, avatarUrl } })}
+                className="w-full py-2.5 bg-[#cc2222] hover:bg-[#ff3333] active:bg-[#a01b1b] text-white rounded-md font-bold text-xs font-serif tracking-wide transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+              >
+                Create Account Now &rarr;
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-[#cc2222] rounded-[8px] text-[#cc2222] text-xs font-semibold text-center shadow-sm">
               {error}
             </div>
           )}
+
+          {/* REPORTER PHOTO SELECTOR */}
+          <div className="flex flex-col items-center justify-center mb-6">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="relative w-20 h-20 rounded-full border-2 border-dashed border-[#cc2222] bg-[#dceef8] flex items-center justify-center cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-md group overflow-hidden"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Reporter" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-[#0a2540]">
+                  <UserIcon className="w-8 h-8 text-[#0a2540]/60 mb-0.5" />
+                  <span className="text-[8px] font-bold uppercase tracking-wider text-[#0a2540]/70">Photo</span>
+                  <div className="absolute bottom-1 right-1 bg-[#cc2222] text-white rounded-full p-1 shadow-sm">
+                    <Camera className="w-3 h-3" />
+                  </div>
+                </div>
+              )}
+            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarChange}
+              accept="image/*"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[#0a2540] text-xs font-bold mt-2 hover:underline flex items-center gap-1.5"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#cc2222]" />
+              {avatarUrl ? 'Change Reporter Photo' : 'Upload Reporter Photo'}
+            </button>
+            <span className="text-[10px] text-[#5b7e9a] font-medium text-center mt-0.5">
+              Will be placed on your newspaper clippings &amp; app header
+            </span>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
@@ -108,7 +243,7 @@ export const LoginScreen = () => {
                 type="email"
                 placeholder="Email Address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 className="w-full bg-[#dceef8] rounded-[6px] py-[10px] pl-[36px] pr-3 text-[#0a1a2e] text-sm placeholder:text-[#a0c4dc] focus:outline-none focus:ring-1 focus:ring-[#0a2540] font-medium"
                 required
               />
@@ -124,6 +259,11 @@ export const LoginScreen = () => {
                 className="w-full bg-[#dceef8] rounded-[6px] py-[10px] pl-[36px] pr-3 text-[#0a1a2e] text-sm placeholder:text-[#a0c4dc] focus:outline-none focus:ring-1 focus:ring-[#0a2540] font-medium"
                 required
               />
+            </div>
+            <div className="flex justify-end -mt-1 mb-1">
+              <Link to="/forgot-password" state={{ email }} className="text-[11px] font-bold text-[#cc2222] hover:underline">
+                Forgot Password?
+              </Link>
             </div>
 
             <button
