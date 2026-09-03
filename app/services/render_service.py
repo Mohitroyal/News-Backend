@@ -892,7 +892,7 @@ class RenderService:
                         imgEl.style.boxSizing = 'border-box';
                         imgEl.style.border = 'none';
                         imgEl.style.padding = '0';
-                        imgEl.style.background = 'var(--bg-color, #F5F1E8)';
+                        imgEl.style.background = 'var(--bg-color, #FFFFFF)';
                         imgEl.style.zIndex = '5';
                         
                         let cleanCap = obs.caption;
@@ -912,23 +912,23 @@ class RenderService:
                         const imgH = obs.imgH || (obs.h - (captionHeight ? captionHeight + 8 : 0));
                         
                         let captionHtml = capStr ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${capStr}</div>` : '';
-                            if (obs.isCentered) {
-                                const isFullBleed = (obs.visW >= obs.w);
-                                imgEl.style.display = 'flex';
-                                imgEl.style.flexDirection = 'column';
-                                imgEl.style.alignItems = 'center';
-                                imgEl.style.border = 'none';
-                                imgEl.style.background = 'transparent';
-                                imgEl.style.padding = '0';
-                                
-                                const innerStyle = isFullBleed 
-                                    ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
-                                    : `width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #F5F1E8); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
+                        if (obs.isCentered) {
+                            const isFullBleed = (obs.visW >= obs.w);
+                            imgEl.style.display = 'flex';
+                            imgEl.style.flexDirection = 'column';
+                            imgEl.style.alignItems = 'center';
+                            imgEl.style.border = 'none';
+                            imgEl.style.background = 'transparent';
+                            imgEl.style.padding = '0';
+                            
+                            const innerStyle = isFullBleed 
+                                ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
+                                : `width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #FFFFFF); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
 
-                                imgEl.innerHTML = '<div style="' + innerStyle + '"><img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
-                            } else {
-                                imgEl.innerHTML = '<img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml;
-                            }
+                            imgEl.innerHTML = '<div style="' + innerStyle + '"><img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
+                        } else {
+                            imgEl.innerHTML = '<img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml;
+                        }
                         canvas.appendChild(imgEl);
                     });
                 }

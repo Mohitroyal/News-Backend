@@ -2,8 +2,8 @@
 
 /* Color Theme: Saffron, Gold, Crimson accents, Warm BroadSheet Paper Background */
 :root {
-    --bg-color: #F5F1E8;
-    --paper-color: #F5F1E8;
+    --bg-color: #FFFFFF;
+    --paper-color: #FFFFFF;
     --text-color: #000000;
     --accent-color: #e67e22; /* Saffron/Orange */
     --accent-dark: #A30000;
