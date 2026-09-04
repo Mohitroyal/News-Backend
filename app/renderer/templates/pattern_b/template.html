@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="{{ language if language else 'te' }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ headline }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600;700;800&family=Noto+Serif+Telugu:wght@400;600;700;800&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: optimizeLegibility !important;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #F0F2F5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .newspaper-container {
+            width: 540px;
+            background: #FFFFFF;
+            margin: 0 auto;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            font-family: 'Gautami', 'Noto Sans Telugu', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            position: relative;
+        }
+        .hero-image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 460px;
+            background: #1A1A1A;
+            overflow: hidden;
+        }
+        .hero-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            display: block;
+        }
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 130px;
+            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.60) 55%, rgba(0,0,0,0) 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 14px 18px;
+            box-sizing: border-box;
+            z-index: 2;
+        }
+        .reporter-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .reporter-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #FFFFFF;
+            object-fit: cover;
+            display: block;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+            background: #333333;
+        }
+        .reporter-avatar-fallback {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1d70b8, #0f3d68);
+            color: #FFFFFF;
+            font-size: 18px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        }
+        .reporter-meta {
+            display: flex;
+            flex-direction: column;
+        }
+        .reporter-name {
+            font-size: 15.5px;
+            font-weight: 700;
+            color: #FFFFFF;
+            font-family: 'Noto Sans Telugu', 'Inter', sans-serif;
+            line-height: 1.2;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .reporter-sub {
+            font-size: 12px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.90);
+            font-family: 'Noto Sans Telugu', 'Inter', sans-serif;
+            line-height: 1.2;
+            margin-top: 3px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .right-badges {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+        .pill-badge {
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            border-radius: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .location-badge {
+            font-size: 12.5px;
+            color: #FFFFFF;
+            font-family: 'Noto Sans Telugu', 'Inter', sans-serif;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .article-content {
+            padding: 22px 20px 16px 20px;
+            background: #FFFFFF;
+        }
+        .article-headline {
+            font-size: 24.5px;
+            font-weight: 700;
+            color: #263238;
+            line-height: 1.38;
+            margin: 0 0 14px 0;
+            letter-spacing: -0.2px;
+            font-family: 'Gautami Bold', 'Gautami', 'Noto Sans Telugu', 'Inter', sans-serif;
+        }
+        .article-body {
+            font-size: 17.5px;
+            line-height: 1.72;
+            color: #455A64;
+            font-weight: 400;
+            margin: 0;
+            font-family: 'Gautami', 'Noto Sans Telugu', 'Inter', sans-serif;
+        }
+        .article-body p {
+            margin: 0 0 12px 0;
+            text-align: left;
+            word-break: break-word;
+        }
+        .article-body p:last-child {
+            margin-bottom: 0;
+        }
+        .card-footer {
+            padding: 14px 20px 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #8E8E93;
+            font-size: 13px;
+            font-family: 'Noto Sans Telugu', 'Inter', sans-serif;
+            font-weight: 500;
+            background: #FFFFFF;
+            border-top: 1px solid #F5F5F7;
+        }
+        .footer-time {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="newspaper-container">
+        <!-- Top Hero Image Section -->
+        <div class="hero-image-wrapper">
+            {% set img_src = image_urls[0] if (image_urls and image_urls|length > 0) else (image_url if image_url else 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&auto=format&fit=crop&q=80') %}
+            <img class="hero-img" src="{{ img_src }}" alt="Hero Image" />
+            
+            <div class="image-overlay">
+                <!-- Bottom Left Reporter Avatar & Name -->
+                <div class="reporter-badge">
+                    {% if reporter_image %}
+                        <img class="reporter-avatar" src="{{ reporter_image }}" alt="Reporter" />
+                    {% else %}
+                        <div class="reporter-avatar-fallback">
+                            {{ (reporter_name[0] if reporter_name else 'R')|upper }}
+                        </div>
+                    {% endif %}
+                    <div class="reporter-meta">
+                        <span class="reporter-name">{{ reporter_name if reporter_name else 'Shankar' }}</span>
+                        <span class="reporter-sub">{{ reporter_sub if reporter_sub else ('Sr Reporter, ' ~ (location if location else 'మన వార్తలు')) }}</span>
+                    </div>
+                </div>
+
+                <!-- Bottom Right Pill & Location Badge -->
+                <div class="right-badges">
+                    <div class="pill-badge">{{ short_link if short_link else (website_url if website_url else 'way2.co/mr4e49') }}</div>
+                    <div class="location-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        <span>{{ location if location else 'Hindupur (M)' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Article Content Section -->
+        <div class="article-content">
+            <h1 class="article-headline">{{ headline }}</h1>
+            <div class="article-body">
+                {% if sections and sections|length > 0 %}
+                    {% for sec in sections %}
+                        <p>{{ sec }}</p>
+                    {% endfor %}
+                {% else %}
+                    <p>{{ article_text if article_text else (raw_content if raw_content else '') }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bottom Footer Section -->
+        <div class="card-footer">
+            <div class="footer-time">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>{{ publication_time if publication_time else '3:31 PM' }}</span>
+            </div>
+            <div>
+                <span>{{ page_indicator if page_indicator else '2 of 11 Pages' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Signal layout readiness immediately when DOM and images are ready
+        window.addEventListener('load', () => {
+            window.__LAYOUT_DONE__ = true;
+        });
+        setTimeout(() => {
+            window.__LAYOUT_DONE__ = true;
+        }, 300);
+    </script>
+</body>
+</html>

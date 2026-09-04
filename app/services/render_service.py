@@ -259,13 +259,30 @@ class RenderService:
         print(f"[MULTILANG] Body chars total  : {_char_count} across {len(_sections)} sections")
         sys.stdout.flush()
 
-        try:
-            template = self.env.get_template(f"{template_key}/template.html")
-        except Exception:
+        raw_image_layout = str(data.get("image_layout") or "").lower().replace("_", "").replace("-", "").replace(" ", "").strip()
+        template_key = template_name.replace(".html", "")
+        
+        is_pattern_b = (
+            raw_image_layout in ["patternb", "heroimage", "singleimagepatternb"] or
+            template_key in ["pattern_b", "hero-image", "hero_image"]
+        )
+
+        if is_pattern_b:
             try:
-                template = self.env.get_template(f"{template_key}.html")
+                template = self.env.get_template("pattern_b/template.html")
             except Exception:
-                template = self.env.get_template("master_layout.html")
+                try:
+                    template = self.env.get_template("hero-image/template.html")
+                except Exception:
+                    template = self.env.get_template("master_layout.html")
+        else:
+            try:
+                template = self.env.get_template(f"{template_key}/template.html")
+            except Exception:
+                try:
+                    template = self.env.get_template(f"{template_key}.html")
+                except Exception:
+                    template = self.env.get_template("master_layout.html")
 
 
         html = template.render(**data)
@@ -414,8 +431,14 @@ class RenderService:
         else:
             html = f"{html}\n{dynamic_css}"
 
-
-                
+        if is_pattern_b:
+            try:
+                debug_path = os.path.join(os.path.dirname(__file__), "debug_last_render.html")
+                with open(debug_path, "w", encoding="utf-8") as f:
+                    f.write(html)
+            except Exception:
+                pass
+            return html
 
         # Single-Page Dynamic Compression Engine Injection
         import json
