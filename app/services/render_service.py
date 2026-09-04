@@ -633,13 +633,19 @@ class RenderService:
                     const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
                     
                     if (isSingleLeft75) {
-                        // Single image: Left side covering ~58% width and 75% height
-                        let targetTotalH = Math.max(H_canvas, 800);
-                        let h0 = Math.round(targetTotalH * 0.75);
+                        // Single image: Left side covering ~58% width, dynamic height based on text content
                         let w0 = Math.round(W_canvas * 0.58);
-                        
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w0 / 6.5))) * 15 + 8 : 0;
+                        
+                        let h0;
+                        if (totalChars <= 1400) {
+                            // Short/medium articles: image covers full height of right column
+                            h0 = Math.max(200, H_canvas - capAllowance0);
+                        } else {
+                            // Longer articles: image covers ~72% height, remaining text flows below
+                            h0 = Math.max(300, Math.round(H_canvas * 0.72));
+                        }
                         
                         obstacles.push({
                             url: urls[0],
@@ -1022,29 +1028,31 @@ class RenderService:
                     canvas.appendChild(colRight);
                     regions.push({ rBox: rBoxRight, height: rightH, y: 0, col: 0 });
                     
-                    // 2. Full-Width Bottom Section spanning across under the image
+                    // 2. Full-Width Bottom Section spanning across under the image (only when canvas height allows)
                     const botY = obs0.h + 16;
                     const botH = Math.max(0, H_canvas - botY);
                     
-                    const colBot = document.createElement('div');
-                    colBot.className = 'nc-column col-bottom';
-                    colBot.style.position = 'absolute';
-                    colBot.style.left = '0px';
-                    colBot.style.top = `${botY}px`;
-                    colBot.style.width = `${W_canvas}px`;
-                    
-                    const rBoxBot = document.createElement('div');
-                    rBoxBot.className = 'nc-text-region-box';
-                    rBoxBot.style.position = 'absolute';
-                    rBoxBot.style.left = '0px';
-                    rBoxBot.style.top = '0px';
-                    rBoxBot.style.width = `${W_canvas}px`;
-                    rBoxBot.style.height = `${botH}px`;
-                    rBoxBot.style.boxSizing = 'border-box';
-                    rBoxBot.style.overflow = 'hidden';
-                    colBot.appendChild(rBoxBot);
-                    canvas.appendChild(colBot);
-                    regions.push({ rBox: rBoxBot, height: botH, y: botY, col: 1 });
+                    if (botH > 25) {
+                        const colBot = document.createElement('div');
+                        colBot.className = 'nc-column col-bottom';
+                        colBot.style.position = 'absolute';
+                        colBot.style.left = '0px';
+                        colBot.style.top = `${botY}px`;
+                        colBot.style.width = `${W_canvas}px`;
+                        
+                        const rBoxBot = document.createElement('div');
+                        rBoxBot.className = 'nc-text-region-box';
+                        rBoxBot.style.position = 'absolute';
+                        rBoxBot.style.left = '0px';
+                        rBoxBot.style.top = '0px';
+                        rBoxBot.style.width = `${W_canvas}px`;
+                        rBoxBot.style.height = `${botH}px`;
+                        rBoxBot.style.boxSizing = 'border-box';
+                        rBoxBot.style.overflow = 'hidden';
+                        colBot.appendChild(rBoxBot);
+                        canvas.appendChild(colBot);
+                        regions.push({ rBox: rBoxBot, height: botH, y: botY, col: 1 });
+                    }
                 } else {
                     for (let c = 0; c < N; c++) {
                         const L_c = c * (W_col + G);
@@ -1274,6 +1282,31 @@ class RenderService:
                 // Third image is now handled as an absolute obstacle at bottom-right
                 
                 if (isFinal) {
+                    if (isSingleLeft75Pass && obstacles.length > 0) {
+                        const rBoxRight = regions[0] ? regions[0].rBox : null;
+                        const rBoxBot = regions[1] ? regions[1].rBox : null;
+                        const hasBottomText = rBoxBot && rBoxBot.lastElementChild && rBoxBot.innerText.trim() !== '';
+                        
+                        if (rBoxRight && !hasBottomText) {
+                            // All text fits cleanly in the right column! Align image height exactly to the right column
+                            const textBottomY = rBoxRight.scrollHeight;
+                            if (textBottomY > 120) {
+                                const imgDomEl = canvas.querySelector('.nc-absolute-image');
+                                if (imgDomEl) {
+                                    let capEl = imgDomEl.querySelector('.nc-image-caption');
+                                    let capH = capEl ? capEl.offsetHeight + 4 : 0;
+                                    let targetImgH = Math.max(100, textBottomY - capH);
+                                    let imgTag = imgDomEl.querySelector('img');
+                                    if (imgTag) {
+                                        imgTag.style.height = `${targetImgH}px`;
+                                    }
+                                    imgDomEl.style.height = `${textBottomY}px`;
+                                    obstacles[0].h = textBottomY;
+                                }
+                            }
+                        }
+                    }
+
                     let maxY = 0;
                     regions.forEach(r => {
                         if (r.rBox.lastElementChild && r.rBox.innerText.trim() !== '') {
@@ -1469,15 +1502,15 @@ class RenderService:
 
                 const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
                 const isSingleLeft75Layout = (urls.length === 1) && (rawLayoutStr.includes('patterng') || rawLayoutStr.includes('left75') || rawLayoutStr.includes('pattern75') || rawLayoutStr.includes('75left') || rawLayoutStr.includes('75'));
-                let low = isSingleLeft75Layout ? Math.max(900, Math.round(maxObstacleY + 60)) : Math.max(300, Math.round(maxObstacleY + 30));
+                let low = isSingleLeft75Layout ? Math.max(200, Math.round(totalChars * 0.42)) : Math.max(300, Math.round(maxObstacleY + 30));
                 let high = H_avail;
-                let H_best = H_avail;
+                let H_best = high;
 
                 if (foundFit) {
                     // Binary search for minimum height at targetFs
                     conf.fontSize = targetFs;
                     H_best = high;
-                    for (let step = 0; step < 8; step++) {
+                    for (let step = 0; step < 10; step++) {
                         const mid = Math.round((low + high) / 2);
                         if (runLayoutPass(conf, S, mid, false)) {
                             H_best = mid;
@@ -1492,7 +1525,7 @@ class RenderService:
                     low = H_avail;
                     high = H_avail + 6000;
                     H_best = high;
-                    for (let step = 0; step < 10; step++) {
+                    for (let step = 0; step < 12; step++) {
                         const mid = Math.round((low + high) / 2);
                         if (runLayoutPass(conf, S, mid, false)) {
                             H_best = mid;
