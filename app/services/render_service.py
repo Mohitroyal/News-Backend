@@ -608,6 +608,9 @@ class RenderService:
                     return p;
                 }
                 const rawLayout = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                if (rawLayout.includes('patternd')) {
+                    return 3;
+                }
                 const isSingleSideLayout = (urls.length === 1) && (rawLayout.includes('patterna') || (!rawLayout.includes('patternb') && !rawLayout.includes('patternd') && !rawLayout.includes('single') && !rawLayout.includes('hero') && !rawLayout.includes('patternc') && !rawLayout.includes('patterng')));
                 if (isSingleSideLayout) {
                     return 2;
@@ -704,6 +707,62 @@ class RenderService:
                             for (let i = 0; i < count; i++) {
                                 obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH) });
                             }
+                        }
+                    } else if (rawLayout.includes('patternd')) {
+                        // Pattern D: 2 images in staggered diagonal newspaper layout
+                        // PHOTO 1: Top-Left (Column 0)
+                        // PHOTO 2: Bottom-Right (Column 2)
+                        let N_layout_cols = 3;
+                        let grid_gap = 24;
+                        let single_col_w = Math.round((W_canvas - (N_layout_cols - 1) * grid_gap) / N_layout_cols);
+                        
+                        let w0 = single_col_w;
+                        let dynamicH0 = Math.round(w0 / aspect0);
+                        let maxH0 = Math.round(Math.min(dynamicH0, Math.max(220, single_col_w * 0.82)));
+                        let h0 = Math.max(160, maxH0);
+                        let cap0 = String(captions[0] || '').trim();
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w0 / 6.5))) * 15 + 8 : 0;
+                        let totalH0 = Math.round(h0 + capAllowance0);
+                        
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: 0,
+                            y: 0,
+                            w: Math.round(w0),
+                            h: Math.round(totalH0),
+                            imgH: Math.round(h0),
+                            isCentered: false,
+                            visW: Math.round(w0),
+                            objectFit: 'cover',
+                            objectPosition: 'center 20%'
+                        });
+
+                        if (urls.length > 1) {
+                            let aspect1 = aspectRatios[1] || 1.0;
+                            let w1 = single_col_w;
+                            let dynamicH1 = Math.round(w1 / aspect1);
+                            let maxH1 = Math.round(Math.min(dynamicH1, Math.max(220, single_col_w * 0.82)));
+                            let h1 = Math.max(160, maxH1);
+                            let cap1 = String(captions[1] || '').trim();
+                            let capAllowance1 = cap1 ? Math.ceil(cap1.length / Math.max(1, Math.floor(w1 / 6.5))) * 15 + 8 : 0;
+                            let totalH1 = Math.round(h1 + capAllowance1);
+                            let x1 = Math.round(W_canvas - w1);
+                            let y1 = Math.max(0, Math.round(H_canvas - totalH1));
+                            
+                            obstacles.push({
+                                url: urls[1],
+                                caption: captions[1] || '',
+                                x: Math.round(x1),
+                                y: Math.round(y1),
+                                w: Math.round(w1),
+                                h: Math.round(totalH1),
+                                imgH: Math.round(h1),
+                                isCentered: false,
+                                visW: Math.round(w1),
+                                objectFit: 'cover',
+                                objectPosition: 'center 20%'
+                            });
                         }
                     } else if (isTriplePatternB) {
                         // Pattern E style with 3 images: Large hero on top, two smaller side-by-side below
@@ -1001,7 +1060,7 @@ class RenderService:
                 });
                 
                 const rawLayoutStr = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
-                if (urls.length === 2 && (rawLayoutStr.includes('patternc') || rawLayoutStr.includes('patterna') || rawLayoutStr.includes('patternb') || rawLayoutStr === 'default' || rawLayoutStr === '')) {
+                if (urls.length === 2 && !rawLayoutStr.includes('patternd') && (rawLayoutStr.includes('patternc') || rawLayoutStr.includes('patterna') || rawLayoutStr.includes('patternb') || rawLayoutStr === 'default' || rawLayoutStr === '')) {
                     let maxH = 0;
                     obstacles.forEach(o => {
                         if (o.y === 0 && o.h > maxH && o.type !== 'summary_bullets') {
@@ -1486,9 +1545,11 @@ class RenderService:
                 const obstacles = getObstacles(W_canvas, S_img, imgHeightPx, H_avail);
                 
                 let maxObstacleY = 0;
-                // Only consider the first two (fixed) obstacles for the page height floor limit
-                obstacles.slice(0, 2).forEach(obs => {
-                    maxObstacleY = Math.max(maxObstacleY, obs.y + obs.h);
+                // Only consider fixed top obstacles (at y=0) for the page height floor limit
+                obstacles.forEach(obs => {
+                    if (obs.y === 0 && obs.type !== 'summary_bullets') {
+                        maxObstacleY = Math.max(maxObstacleY, obs.y + obs.h);
+                    }
                 });
                 
                 // Available width for columns: N * W_col.
@@ -1561,6 +1622,17 @@ class RenderService:
                 
                 // Final render pass with H_best (plus 4px margin for safe line wrapping rounding variations)
                 runLayoutPass(conf, S, H_best + 4, true);
+
+                // Wait for all canvas images to finish downloading/rendering
+                const canvasImgs = Array.from(canvas.querySelectorAll('img'));
+                await Promise.all(canvasImgs.map(img => {
+                    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                    return new Promise(resolve => {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                        setTimeout(resolve, 2500);
+                    });
+                }));
                 
                 let st = document.getElementById('nc-layout-style');
                 if (!st) { st = document.createElement('style'); st.id = 'nc-layout-style'; document.head.appendChild(st); }
