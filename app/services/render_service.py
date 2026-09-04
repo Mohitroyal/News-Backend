@@ -799,40 +799,56 @@ class RenderService:
                     if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
                         let a1 = aspectRatios[1] || 1.0;
-                        let gap = 12;
+                        let gap = 16;
                         let availW = W_canvas - gap;
-                        let sumAspect = a0 + a1;
                         
-                        let naturalH = availW / sumAspect;
-                        let maxH = Math.min(Math.max(H_canvas * 0.45, 480), 540);
-                        let sharedH = Math.round(Math.min(naturalH, maxH));
+                        // Give each image half the width
+                        let w_img0 = Math.round(availW / 2);
+                        let w_img1 = availW - w_img0;
                         
-                        w0 = Math.round(sharedH * a0);
-                        let w1 = Math.round(sharedH * a1);
-                        let totalImgsW = w0 + w1 + gap;
+                        // Balance their height cleanly
+                        let natH0 = w_img0 / a0;
+                        let natH1 = w_img1 / a1;
+                        let maxAllowedH = Math.round(Math.min(W_canvas * 0.40, 400));
+                        let sharedH = Math.round(Math.min(Math.max(natH0, natH1), maxAllowedH));
+                        sharedH = Math.max(sharedH, 220);
                         
-                        let startX = 0;
-                        if (totalImgsW < W_canvas) {
-                            startX = Math.round((W_canvas - totalImgsW) / 2);
-                        } else {
-                            w0 = Math.round(availW * (a0 / sumAspect));
-                            w1 = availW - w0;
-                            sharedH = Math.round(w0 / a0);
-                            startX = 0;
-                        }
+                        let cap0 = String(captions[0] || '').trim();
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w_img0 / 6.5))) * 15 + 8 : 0;
                         
-                        h0 = sharedH;
-                        imgX = startX;
-                        imgY = 0; // Both images at the top
-                        imgVisW = w0;
-                        isPatternB_centered = false;
+                        let cap1 = String(captions[1] || '').trim();
+                        let capAllowance1 = cap1 ? Math.ceil(cap1.length / Math.max(1, Math.floor(w_img1 / 6.5))) * 15 + 8 : 0;
                         
-                        // Save parameters for the second image
-                        window.__db_sharedH = sharedH;
-                        window.__db_w0 = w0;
-                        window.__db_w1 = w1;
-                        window.__db_startX = startX;
-                        window.__db_gap = gap;
+                        let maxCapAllowance = Math.max(capAllowance0, capAllowance1);
+                        let totalSharedH = Math.round(sharedH + maxCapAllowance);
+                        
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: 0,
+                            y: 0,
+                            w: Math.round(w_img0),
+                            h: Math.round(totalSharedH),
+                            imgH: Math.round(sharedH),
+                            isCentered: false,
+                            visW: Math.round(w_img0),
+                            objectFit: 'cover',
+                            objectPosition: 'center 20%'
+                        });
+                        
+                        obstacles.push({
+                            url: urls[1],
+                            caption: captions[1] || '',
+                            x: Math.round(w_img0 + gap),
+                            y: 0,
+                            w: Math.round(w_img1),
+                            h: Math.round(totalSharedH),
+                            imgH: Math.round(sharedH),
+                            isCentered: false,
+                            visW: Math.round(w_img1),
+                            objectFit: 'cover',
+                            objectPosition: 'center 20%'
+                        });
                     } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
                         w0 = W_canvas;
                         imgX = 0;
@@ -846,6 +862,23 @@ class RenderService:
                             imgVisW = W_canvas;
                         }
                         isPatternB_centered = true;
+                        
+                        let cap0 = String(captions[0] || '').trim();
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
+                        
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: imgX,
+                            y: imgY,
+                            w: Math.round(w0),
+                            h: Math.round(h0 + capAllowance0),
+                            imgH: Math.round(h0),
+                            isCentered: isPatternB_centered,
+                            visW: Math.round(imgVisW),
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
+                        });
                     } else if (isSinglePatternA || rawLayout.includes('patterna')) {
                         w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
@@ -854,6 +887,23 @@ class RenderService:
                         imgVisW = w0;
                         imgX = 0; // Left side
                         isPatternB_centered = false;
+                        
+                        let cap0 = String(captions[0] || '').trim();
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
+                        
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: imgX,
+                            y: imgY,
+                            w: Math.round(w0),
+                            h: Math.round(h0 + capAllowance0),
+                            imgH: Math.round(h0),
+                            isCentered: isPatternB_centered,
+                            visW: Math.round(imgVisW),
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
+                        });
                     } else {
                         // Default / Custom with 1 image: Right side side-by-side with text
                         w0 = side_w;
@@ -863,66 +913,43 @@ class RenderService:
                         imgVisW = w0;
                         imgX = Math.round(W_canvas - w0);
                         isPatternB_centered = false;
+                        
+                        let cap0 = String(captions[0] || '').trim();
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
+                        
+                        obstacles.push({
+                            url: urls[0],
+                            caption: captions[0] || '',
+                            x: imgX,
+                            y: imgY,
+                            w: Math.round(w0),
+                            h: Math.round(h0 + capAllowance0),
+                            imgH: Math.round(h0),
+                            isCentered: isPatternB_centered,
+                            visW: Math.round(imgVisW),
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
+                        });
                     }
-                    
-                    let cap0 = String(captions[0] || '').trim();
-                    let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
-                    
-                    obstacles.push({
-                        url: urls[0],
-                        caption: captions[0] || '',
-                        x: imgX,
-                        y: imgY,
-                        w: Math.round(w0),
-                        h: Math.round(h0 + capAllowance0),
-                        imgH: Math.round(h0),
-                        isCentered: isPatternB_centered,
-                        visW: Math.round(imgVisW),
-                        objectFit: 'contain',
-                        objectPosition: 'center center'
-                    });
 
-                    if (urls.length > 1) {
-                        if (isDoublePatternB) {
-                            let h1 = window.__db_sharedH;
-                            let w0 = window.__db_w0;
-                            let w1 = window.__db_w1;
-                            let startX = window.__db_startX;
-                            let gap = window.__db_gap;
-                            let x1 = startX + w0 + gap;
-                            let y1 = 0; // Top aligned
-                            let cap1 = String(captions[1] || '').trim();
-                            let capAllowance1 = cap1 ? Math.ceil(cap1.length / Math.max(1, Math.floor(w1 / 6.5))) * 15 + 8 : 0;
-                            obstacles.push({
-                                url: urls[1],
-                                caption: captions[1] || '',
-                                x: Math.round(x1),
-                                y: Math.round(y1),
-                                w: Math.round(w1),
-                                h: Math.round(h1 + capAllowance1),
-                                imgH: Math.round(h1),
-                                isCentered: false,
-                                visW: Math.round(w1),
-                                objectFit: 'contain',
-                                objectPosition: 'center center'
-                            });
-                        } else {
-                            const aspect1 = aspectRatios[1] || 1.0;
-                            let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
-                            let h1 = w1 / aspect1;
-                            h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
-                            let y1 = h0 + gap; // Spacing below Hero
-                            let x1 = W_canvas - w1; // Align secondary image on right side below Hero
-                            
-                            obstacles.push({
-                                url: urls[1],
-                                caption: captions[1] || '',
-                                x: Math.round(x1),
-                                y: Math.round(y1),
-                                w: Math.round(w1),
-                                h: Math.round(h1)
-                            });
-                        }
+                    if (urls.length > 1 && !isDoublePatternB) {
+                        const aspect1 = aspectRatios[1] || 1.0;
+                        let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
+                        let h1 = w1 / aspect1;
+                        h1 = Math.min(h1, imgHeightPx * (urls.length > 2 && totalChars < 2500 ? 0.75 : 1.0));
+                        let gap = 60;
+                        let y1 = h0 + gap; // Spacing below Hero
+                        let x1 = W_canvas - w1; // Align secondary image on right side below Hero
+                        
+                        obstacles.push({
+                            url: urls[1],
+                            caption: captions[1] || '',
+                            x: Math.round(x1),
+                            y: Math.round(y1),
+                            w: Math.round(w1),
+                            h: Math.round(h1)
+                        });
+                    }
                     }
 
                     if (urls.length > 2) {
@@ -941,7 +968,6 @@ class RenderService:
                             h: Math.round(h2)
                         });
                     }
-                }
                 }
                 if (isCustom && (data.summary || (data.bullet_points && data.bullet_points.length > 0)) && data.show_summary !== false && String(data.show_summary).toLowerCase() !== "false") {
                     let maxImgY = 0;
