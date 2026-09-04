@@ -365,13 +365,14 @@ class RenderService:
             except ValueError:
                 return False
 
-        headline_text_color = "var(--primary-color)"
         heading_bg = data.get('heading_bg')
         if heading_bg:
             if is_dark_hex(heading_bg):
                 headline_text_color = "#FFFFFF" # Use white for dark backgrounds
             else:
                 headline_text_color = "#111111" # Use dark text for light backgrounds
+        else:
+            headline_text_color = "#111111"
 
         custom_border_css = ""
         if data.get('border_color'):
@@ -632,14 +633,10 @@ class RenderService:
                     const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
                     
                     if (isSingleLeft75) {
-                        // Single image: Left side covering 75% height, width dynamically adjusted to aspect ratio
-                        let a0 = aspectRatios[0] || 1.2;
-                        let targetTotalH = Math.max(H_canvas, 1000);
+                        // Single image: Left side covering ~58% width and 75% height
+                        let targetTotalH = Math.max(H_canvas, 800);
                         let h0 = Math.round(targetTotalH * 0.75);
-                        let desiredW = Math.round(h0 * a0 * 0.55);
-                        let minW = Math.round(W_canvas * 0.38);
-                        let maxW = Math.round(W_canvas * 0.50);
-                        let w0 = Math.max(minW, Math.min(maxW, desiredW));
+                        let w0 = Math.round(W_canvas * 0.58);
                         
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w0 / 6.5))) * 15 + 8 : 0;
@@ -994,112 +991,168 @@ class RenderService:
 
                 // Flow layout function
                 const regions = [];
-                for (let c = 0; c < N; c++) {
-                    const L_c = c * (W_col + G);
-                    const R_c = L_c + W_col;
+                const rawLayoutStrPass = String(data.image_layout || "default").toLowerCase().replace(/[^a-z]/g, "");
+                const isSingleLeft75Pass = (urls.length === 1) && (rawLayoutStrPass.includes('patterng') || rawLayoutStrPass.includes('left75') || rawLayoutStrPass.includes('pattern75') || rawLayoutStrPass.includes('75left') || rawLayoutStrPass.includes('75'));
+
+                if (isSingleLeft75Pass && obstacles.length > 0) {
+                    const obs0 = obstacles[0];
+                    const G_side = 24;
+                    const rightX = obs0.w + G_side;
+                    const rightW = W_canvas - rightX;
+                    const rightH = obs0.h;
                     
-                    let intervals = [{ yStart: 0, yEnd: H_canvas, xOffset: 0, w: W_col }];
+                    // 1. Right Column next to the 75% left image
+                    const colRight = document.createElement('div');
+                    colRight.className = 'nc-column col-right';
+                    colRight.style.position = 'absolute';
+                    colRight.style.left = `${rightX}px`;
+                    colRight.style.top = '0px';
+                    colRight.style.width = `${rightW}px`;
                     
-                    inflatedObstacles.forEach(obs => {
-                        const xOverlapStart = Math.max(L_c, obs.x);
-                        const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
-                        if (xOverlapStart >= xOverlapEnd) return;
+                    const rBoxRight = document.createElement('div');
+                    rBoxRight.className = 'nc-text-region-box';
+                    rBoxRight.style.position = 'absolute';
+                    rBoxRight.style.left = '0px';
+                    rBoxRight.style.top = '0px';
+                    rBoxRight.style.width = `${rightW}px`;
+                    rBoxRight.style.height = `${rightH}px`;
+                    rBoxRight.style.boxSizing = 'border-box';
+                    rBoxRight.style.overflow = 'hidden';
+                    colRight.appendChild(rBoxRight);
+                    canvas.appendChild(colRight);
+                    regions.push({ rBox: rBoxRight, height: rightH, y: 0, col: 0 });
+                    
+                    // 2. Full-Width Bottom Section spanning across under the image
+                    const botY = obs0.h + 16;
+                    const botH = Math.max(0, H_canvas - botY);
+                    
+                    const colBot = document.createElement('div');
+                    colBot.className = 'nc-column col-bottom';
+                    colBot.style.position = 'absolute';
+                    colBot.style.left = '0px';
+                    colBot.style.top = `${botY}px`;
+                    colBot.style.width = `${W_canvas}px`;
+                    
+                    const rBoxBot = document.createElement('div');
+                    rBoxBot.className = 'nc-text-region-box';
+                    rBoxBot.style.position = 'absolute';
+                    rBoxBot.style.left = '0px';
+                    rBoxBot.style.top = '0px';
+                    rBoxBot.style.width = `${W_canvas}px`;
+                    rBoxBot.style.height = `${botH}px`;
+                    rBoxBot.style.boxSizing = 'border-box';
+                    rBoxBot.style.overflow = 'hidden';
+                    colBot.appendChild(rBoxBot);
+                    canvas.appendChild(colBot);
+                    regions.push({ rBox: rBoxBot, height: botH, y: botY, col: 1 });
+                } else {
+                    for (let c = 0; c < N; c++) {
+                        const L_c = c * (W_col + G);
+                        const R_c = L_c + W_col;
                         
-                        const yOverlapStart = Math.max(0, obs.y);
-                        const yOverlapEnd = Math.min(H_canvas, obs.y + obs.h);
-                        if (yOverlapStart >= yOverlapEnd) return;
+                        let intervals = [{ yStart: 0, yEnd: H_canvas, xOffset: 0, w: W_col }];
                         
-                        const nextIntervals = [];
-                        intervals.forEach(int => {
-                            const yIntersectStart = Math.max(int.yStart, yOverlapStart);
-                            const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
+                        inflatedObstacles.forEach(obs => {
+                            const xOverlapStart = Math.max(L_c, obs.x);
+                            const xOverlapEnd = Math.min(R_c, obs.x + obs.w);
+                            if (xOverlapStart >= xOverlapEnd) return;
                             
-                            if (yIntersectStart >= yIntersectEnd) {
-                                nextIntervals.push(int);
-                                return;
-                            }
+                            const yOverlapStart = Math.max(0, obs.y);
+                            const yOverlapEnd = Math.min(H_canvas, obs.y + obs.h);
+                            if (yOverlapStart >= yOverlapEnd) return;
                             
-                            if (int.yStart < yIntersectStart) {
-                                nextIntervals.push({
-                                    yStart: int.yStart,
-                                    yEnd: yIntersectStart,
-                                    xOffset: int.xOffset,
-                                    w: int.w
-                                });
-                            }
-                            
-                            const intStart = int.xOffset;
-                            const intEnd = int.xOffset + int.w;
-                            
-                            const obsStart = obs.x - L_c;
-                            const obsEnd = obs.x + obs.w - L_c;
-                            
-                            // Left piece
-                            if (intStart < obsStart) {
-                                const wRem = Math.min(intEnd, obsStart) - intStart;
-                                if (wRem >= 40) {
+                            const nextIntervals = [];
+                            intervals.forEach(int => {
+                                const yIntersectStart = Math.max(int.yStart, yOverlapStart);
+                                const yIntersectEnd = Math.min(int.yEnd, yOverlapEnd);
+                                
+                                if (yIntersectStart >= yIntersectEnd) {
+                                    nextIntervals.push(int);
+                                    return;
+                                }
+                                
+                                if (int.yStart < yIntersectStart) {
                                     nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: intStart,
-                                        w: wRem
+                                        yStart: int.yStart,
+                                        yEnd: yIntersectStart,
+                                        xOffset: int.xOffset,
+                                        w: int.w
                                     });
                                 }
-                            }
-                            
-                            // Right piece
-                            if (intEnd > obsEnd) {
-                                const newStart = Math.max(intStart, obsEnd);
-                                const wRem = intEnd - newStart;
-                                if (wRem >= 40) {
+                                
+                                const intStart = int.xOffset;
+                                const intEnd = int.xOffset + int.w;
+                                
+                                const obsStart = obs.x - L_c;
+                                const obsEnd = obs.x + obs.w - L_c;
+                                
+                                // Left piece
+                                if (intStart < obsStart) {
+                                    const wRem = Math.min(intEnd, obsStart) - intStart;
+                                    if (wRem >= 40) {
+                                        nextIntervals.push({
+                                            yStart: yIntersectStart,
+                                            yEnd: yIntersectEnd,
+                                            xOffset: intStart,
+                                            w: wRem
+                                        });
+                                    }
+                                }
+                                
+                                // Right piece
+                                if (intEnd > obsEnd) {
+                                    const newStart = Math.max(intStart, obsEnd);
+                                    const wRem = intEnd - newStart;
+                                    if (wRem >= 40) {
+                                        nextIntervals.push({
+                                            yStart: yIntersectStart,
+                                            yEnd: yIntersectEnd,
+                                            xOffset: newStart,
+                                            w: wRem
+                                        });
+                                    }
+                                }
+                                
+                                if (int.yEnd > yIntersectEnd) {
                                     nextIntervals.push({
-                                        yStart: yIntersectStart,
-                                        yEnd: yIntersectEnd,
-                                        xOffset: newStart,
-                                        w: wRem
+                                        yStart: yIntersectEnd,
+                                        yEnd: int.yEnd,
+                                        xOffset: int.xOffset,
+                                        w: int.w
                                     });
                                 }
-                            }
-                            
-                            if (int.yEnd > yIntersectEnd) {
-                                nextIntervals.push({
-                                    yStart: yIntersectEnd,
-                                    yEnd: int.yEnd,
-                                    xOffset: int.xOffset,
-                                    w: int.w
-                                });
-                            }
+                            });
+                            intervals = nextIntervals;
                         });
-                        intervals = nextIntervals;
-                    });
-                    
-                    intervals.forEach(int => {
-                        const h = int.yEnd - int.yStart;
-                        if (h < 24 || int.w < 40) return;
                         
-                        const rBox = document.createElement('div');
-                        rBox.className = 'nc-text-region-box';
-                        rBox.style.position = 'absolute';
-                        rBox.style.left = `${int.xOffset}px`;
-                        rBox.style.top = `${int.yStart}px`;
-                        rBox.style.width = `${int.w}px`;
-                        rBox.style.height = `${h}px`;
-                        rBox.style.boxSizing = 'border-box';
-                        rBox.style.overflow = 'hidden';
-                        
-                        const colDiv = canvas.querySelector(`.col-${c}`) || document.createElement('div');
-                        if (!canvas.contains(colDiv)) {
-                            colDiv.className = `nc-column col-${c}`;
-                            colDiv.style.position = 'absolute';
-                            colDiv.style.left = `${L_c}px`;
-                            colDiv.style.top = '0px';
-                            colDiv.style.width = `${W_col}px`;
-                            canvas.appendChild(colDiv);
-                        }
-                        colDiv.appendChild(rBox);
-                        
-                        regions.push({ rBox, height: h, y: int.yStart, col: c });
-                    });
+                        intervals.forEach(int => {
+                            const h = int.yEnd - int.yStart;
+                            if (h < 24 || int.w < 40) return;
+                            
+                            const rBox = document.createElement('div');
+                            rBox.className = 'nc-text-region-box';
+                            rBox.style.position = 'absolute';
+                            rBox.style.left = `${int.xOffset}px`;
+                            rBox.style.top = `${int.yStart}px`;
+                            rBox.style.width = `${int.w}px`;
+                            rBox.style.height = `${h}px`;
+                            rBox.style.boxSizing = 'border-box';
+                            rBox.style.overflow = 'hidden';
+                            
+                            const colDiv = canvas.querySelector(`.col-${c}`) || document.createElement('div');
+                            if (!canvas.contains(colDiv)) {
+                                colDiv.className = `nc-column col-${c}`;
+                                colDiv.style.position = 'absolute';
+                                colDiv.style.left = `${L_c}px`;
+                                colDiv.style.top = '0px';
+                                colDiv.style.width = `${W_col}px`;
+                                canvas.appendChild(colDiv);
+                            }
+                            colDiv.appendChild(rBox);
+                            
+                            regions.push({ rBox, height: h, y: int.yStart, col: c });
+                        });
+                    }
                 }
                 
                 // Strict multi-column newspaper reading flow:
