@@ -568,17 +568,15 @@ class RenderService:
                 if (existingImg && existingImg.naturalWidth && existingImg.naturalHeight) {
                     return { width: existingImg.naturalWidth, height: existingImg.naturalHeight };
                 }
-                return Promise.race([
-                    new Promise((resolve) => {
-                        const img = new Image();
-                        img.onload  = () => resolve({ width: img.naturalWidth || 800, height: img.naturalHeight || 600 });
-                        img.onerror = () => resolve({ width: 800, height: 600 });
-                        img.src = url;
-                    }),
-                    new Promise(resolve => setTimeout(() => {
-                        resolve({ width: 800, height: 600 });
-                    }, 1500))
-                ]);
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ width: img.naturalWidth || 800, height: img.naturalHeight || 600 });
+                    img.onerror = () => resolve({ width: 800, height: 600 });
+                    img.src = url;
+                    if (img.complete && img.naturalWidth) {
+                        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                    }
+                });
             }
 
             // Ensure we have a compositor-canvas element
@@ -803,19 +801,27 @@ class RenderService:
                         let availW = W_canvas - gap;
                         
                         // Exact height and proportional widths so both images fill their boxes with 0% crop and 0% white gaps!
-                        let H_calc = availW / (a0 + a1);
-                        let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.55);
-                        let sharedH = Math.min(Math.round(H_calc), maxAllowedH);
+                        let H_calc = Math.round(availW / (a0 + a1));
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 1400) * 0.60);
+                        let sharedH = Math.min(H_calc, maxAllowedH);
                         sharedH = Math.max(sharedH, 180);
                         
-                        let w_img0 = Math.round(availW * (a0 / (a0 + a1)));
-                        let w_img1 = availW - w_img0;
+                        let w_img0 = Math.round(sharedH * a0);
+                        let w_img1 = Math.round(sharedH * a1);
+                        let totalGalW = w_img0 + gap + w_img1;
+                        
+                        if (totalGalW > W_canvas) {
+                            let scale = availW / (w_img0 + w_img1);
+                            w_img0 = Math.round(w_img0 * scale);
+                            w_img1 = availW - w_img0;
+                            sharedH = Math.round(w_img0 / a0);
+                            totalGalW = W_canvas;
+                        }
                         
                         let startX0 = 0;
                         let startX1 = w_img0 + gap;
-                        let actualTotalW = w_img0 + gap + w_img1;
-                        if (actualTotalW < W_canvas) {
-                            startX0 = Math.round((W_canvas - actualTotalW) / 2);
+                        if (totalGalW < W_canvas) {
+                            startX0 = Math.round((W_canvas - totalGalW) / 2);
                             startX1 = startX0 + w_img0 + gap;
                         }
                         
@@ -838,7 +844,7 @@ class RenderService:
                             imgH: Math.round(sharedH),
                             isCentered: false,
                             visW: Math.round(w_img0),
-                            objectFit: 'cover',
+                            objectFit: 'contain',
                             objectPosition: 'center center'
                         });
                         
@@ -852,21 +858,24 @@ class RenderService:
                             imgH: Math.round(sharedH),
                             isCentered: false,
                             visW: Math.round(w_img1),
-                            objectFit: 'cover',
+                            objectFit: 'contain',
                             objectPosition: 'center center'
                         });
                     } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
-                        let w0 = W_canvas;
-                        let imgX = 0;
-                        let imgY = 0;
                         let dynamicH = Math.round(W_canvas / aspect0);
-                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.65);
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.60);
                         let h0 = Math.min(dynamicH, maxAllowedH);
-                        let imgVisW = (dynamicH > maxAllowedH) ? Math.round(maxAllowedH * aspect0) : W_canvas;
+                        let w0 = Math.round(h0 * aspect0);
+                        if (w0 > W_canvas) {
+                            w0 = W_canvas;
+                            h0 = Math.round(w0 / aspect0);
+                        }
+                        let imgX = Math.round((W_canvas - w0) / 2);
+                        let imgY = 0;
                         let isPatternB_centered = true;
                         
                         let cap0 = String(captions[0] || '').trim();
-                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? w0 : w0) / 6.5))) * 15 + 8 : 0;
                         
                         obstacles.push({
                             url: urls[0],
@@ -877,7 +886,7 @@ class RenderService:
                             h: Math.round(h0 + capAllowance0),
                             imgH: Math.round(h0),
                             isCentered: isPatternB_centered,
-                            visW: Math.round(imgVisW),
+                            visW: Math.round(w0),
                             objectFit: 'contain',
                             objectPosition: 'center center'
                         });
@@ -888,8 +897,11 @@ class RenderService:
                         let side_w = (N_layout_cols >= 3) ? single_col_w : Math.round((W_canvas - grid_gap) * 0.48);
                         let w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
-                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.55);
                         let h0 = Math.min(dynamicH, maxAllowedH);
+                        if (dynamicH > maxAllowedH) {
+                            w0 = Math.round(h0 * aspect0);
+                        }
                         let imgVisW = w0;
                         let imgX = 0; // Left side
                         let isPatternB_centered = false;
@@ -918,8 +930,11 @@ class RenderService:
                         let side_w = (N_layout_cols >= 3) ? single_col_w : Math.round((W_canvas - grid_gap) * 0.48);
                         let w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
-                        let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.55);
                         let h0 = Math.min(dynamicH, maxAllowedH);
+                        if (dynamicH > maxAllowedH) {
+                            w0 = Math.round(h0 * aspect0);
+                        }
                         let imgVisW = w0;
                         let imgX = Math.round(W_canvas - w0);
                         let isPatternB_centered = false;
