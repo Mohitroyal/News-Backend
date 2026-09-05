@@ -213,7 +213,9 @@ class RenderService:
         brand_key = data.get("logo_id") or template_key
         data["template_id"] = template_key
         if brand_key in branding:
-            data.update(branding[brand_key])
+            for k, v in branding[brand_key].items():
+                if not data.get(k):
+                    data[k] = v
         lang_map = {
             "en": "English",  "te": "Telugu",   "hi": "Hindi",
             "kn": "Kannada",  "ta": "Tamil",    "ml": "Malayalam",
