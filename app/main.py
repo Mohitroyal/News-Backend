@@ -237,10 +237,11 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 # ── API Router ────────────────────────────────────────────────────────────────
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# Directly attach the generate router without prefix for /generate endpoint calls
-from app.api.v1.endpoints import generate, upload
+# Directly attach routers without prefix for root calls
+from app.api.v1.endpoints import generate, upload, posts
 app.include_router(generate.router, prefix="/generate", tags=["generation_direct"])
 app.include_router(upload.router, tags=["upload_direct"])
+app.include_router(posts.router, prefix="/posts", tags=["posts_direct"])
 
 if __name__ == "__main__":
     import uvicorn

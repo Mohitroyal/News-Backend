@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { DashboardScreen } from '../screens/DashboardScreen';
-import { FeedScreen } from '../screens/FeedScreen';
 import { TemplatesScreen } from '../screens/TemplatesScreen';
 import { TemplateCategoryScreen } from '../screens/TemplateCategoryScreen';
 import { GenerateScreen } from '../screens/GenerateScreen';
@@ -37,8 +36,6 @@ export const AppNavigator = () => {
         <Route element={<Layout />}>
           <Route path="/" element={<DashboardScreen />} />
           <Route path="/home" element={<DashboardScreen />} />
-          <Route path="/feed" element={<FeedScreen />} />
-          <Route path="/community" element={<FeedScreen />} />
           <Route path="/templates" element={<TemplatesScreen />} />
           <Route path="/templates/:categoryId" element={<TemplateCategoryScreen />} />
           <Route path="/generate" element={<GenerateScreen />} />

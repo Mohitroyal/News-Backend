@@ -1,4 +1,4 @@
-import { Home, Radio, Plus, LayoutTemplate, Settings } from 'lucide-react';
+import { Home, FileText, Plus, History, Settings } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const NAVY = '#0E2A4D';
@@ -10,10 +10,10 @@ export const Navbar = () => {
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
-    { name: 'Feed', path: '/feed', icon: Radio },
+    { name: 'Templates', path: '/templates', icon: FileText },
     // Center placeholder for FAB
     { name: '', path: '', icon: null, isSpacer: true },
-    { name: 'Templates', path: '/templates', icon: LayoutTemplate },
+    { name: 'History', path: '/history', icon: History },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
