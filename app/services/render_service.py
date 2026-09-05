@@ -262,16 +262,17 @@ class RenderService:
         sys.stdout.flush()
 
         raw_image_layout = str(data.get("image_layout") or "").lower().replace("_", "").replace("-", "").replace(" ", "").strip()
-        template_key = template_name.replace(".html", "")
+        template_key = template_name.replace(".html", "").lower().strip()
+        data_tid = str(data.get("template_id") or "").lower().strip()
         
         _img_urls = data.get("image_urls") or ([data.get("image_url")] if data.get("image_url") else [])
         is_single_img = len(_img_urls) <= 1
-        is_explicit_other_template = template_key in ["bharath_reporter", "national_news", "custom"] and raw_image_layout not in ["patternb", "heroimage", "singleimagepatternb"]
+        is_explicit_other_template = any(t in template_key or t in data_tid for t in ["bharath_reporter", "national_news", "custom"]) and raw_image_layout not in ["patternb", "heroimage", "singleimagepatternb"]
         
         is_pattern_b = (
             raw_image_layout in ["patternb", "heroimage", "singleimagepatternb"] or
             template_key in ["pattern_b", "hero-image", "hero_image"] or
-            (is_single_img and not is_explicit_other_template and (not raw_image_layout or raw_image_layout in ["default", "auto", "singleimage", "patternb", "pattern_b"]))
+            (is_single_img and not is_explicit_other_template)
         )
 
         if is_pattern_b:

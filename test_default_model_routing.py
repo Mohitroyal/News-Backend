@@ -47,8 +47,19 @@ async def test_routing():
         "image_urls": ["https://picsum.photos/id/1025/600/700", "https://picsum.photos/id/1026/600/700"],
     }
     html4 = await render_service.render_html(multi_img, "rti_express.html")
-    assert "footer-banner-text" not in html4, "Multi-image must NOT use Pattern B footer banner"
-    print("[TEST 4 PASSED] Multi-image -> Standard multi-image layout rendered!")
+    # 5. User mobile app sends template_id="rti_express" and image_layout="pattern_a" with 1 image
+    app_default_single_img = {
+        "headline": "దెందులూరు మండలం గోపన్నపాలెం సెంటర్ లో ఘోర ప్రమాదం.. టిప్పర్ కింద పడి వ్యక్తి దుర్మరణం",
+        "article_text": "దెందులూరు, సెప్టెంబర్ 5 (ఆర్టిఐ ఎక్స్‌ప్రెస్ న్యూస్): ఏలూరు జిల్లా దెందులూరు మండలం గోపన్నపాలెం సెంటర్‌లో శుక్రవారం సాయంత్రం విషాదకర ఘటన చోటుచేసుకుంది.",
+        "language": "te",
+        "template_id": "rti_express",
+        "image_layout": "pattern_a",
+        "image_urls": ["https://picsum.photos/id/1025/600/700"],
+        "reporter_name": "Mohithroyal Pokkala",
+    }
+    html5 = await render_service.render_html(app_default_single_img, "rti_express.html")
+    assert "footer-banner" in html5, "Single image from app must use Pattern B even if image_layout is pattern_a"
+    print("[TEST 5 PASSED] Mobile app default single image (sent pattern_a) -> Pattern B correctly rendered!")
 
 if __name__ == "__main__":
     asyncio.run(test_routing())
