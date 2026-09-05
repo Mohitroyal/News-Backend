@@ -230,6 +230,27 @@ class RenderService:
         if not data.get("reporter_image"):
             data["reporter_image"] = data.get("author_image") or data.get("reporter_photo") or data.get("avatar_url") or data.get("profile_image") or ""
 
+        # Ensure date and time are available for templates (e.g. below reporter name)
+        from datetime import datetime, timezone, timedelta
+        ist = timezone(timedelta(hours=5, minutes=30))
+        now_ist = datetime.now(ist)
+        current_date_str = now_ist.strftime("%d %b %Y")
+        current_time_str = now_ist.strftime("%I:%M %p")
+        current_datetime_str = f"{current_date_str} | {current_time_str}"
+
+        pub_date = data.get("publication_date") or data.get("published_date") or data.get("date")
+        if not pub_date:
+            data["publication_date"] = current_date_str
+            data["publication_time"] = current_time_str
+            data["publication_date_time"] = current_datetime_str
+        else:
+            data["publication_date"] = str(pub_date)
+            data["publication_time"] = data.get("publication_time") or current_time_str
+            if any(t in str(pub_date).lower() for t in ["am", "pm", ":"]):
+                data["publication_date_time"] = str(pub_date)
+            else:
+                data["publication_date_time"] = f"{pub_date} | {data['publication_time']}"
+
         # ── Per-language primary font for logging ─────────────────────────────
         _lang_font_map = {
             "en": ("Playfair Display / Merriweather", "Latin + full Unicode"),
