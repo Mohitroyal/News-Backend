@@ -5,22 +5,20 @@ import {
   Share2, 
   Bookmark, 
   Search, 
-  Flame, 
   Radio, 
   Send, 
   X, 
   CheckCircle2, 
   MapPin, 
   Clock, 
-  Sparkles,
   RefreshCw,
   PlusCircle
 } from 'lucide-react';
 import { useAuthStore, getReporterPhoto } from '@/store';
 import { useNavigate } from 'react-router-dom';
+import api from '@/lib/axios';
 
 const NAVY = '#0D1B2A';
-const RED = '#CC1E1E';
 
 const CATEGORIES = [
   'All',
@@ -102,13 +100,12 @@ export const FeedScreen = () => {
       if (activeQ.trim()) {
         url += `&query=${encodeURIComponent(activeQ.trim())}`;
       }
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.posts) {
-        setPosts(data.posts);
+      const res = await api.get(url);
+      if (res.data?.posts) {
+        setPosts(res.data.posts);
       }
     } catch (err) {
-      console.error('Error fetching feed:', err);
+      console.error('Error fetching feed from backend:', err);
     } finally {
       setLoading(false);
     }
@@ -136,7 +133,7 @@ export const FeedScreen = () => {
     );
 
     try {
-      await fetch(`/api/v1/feed/${postId}/like`, { method: 'POST' });
+      await api.post(`/api/v1/feed/${postId}/like`);
     } catch (err) {
       console.error('Like toggle error:', err);
     }
@@ -146,10 +143,9 @@ export const FeedScreen = () => {
     setActiveCommentPost(post);
     setLoadingComments(true);
     try {
-      const res = await fetch(`/api/v1/feed/${post.id}/comments`);
-      const data = await res.json();
-      if (data.comments) {
-        setCommentsList(data.comments);
+      const res = await api.get(`/api/v1/feed/${post.id}/comments`);
+      if (res.data?.comments) {
+        setCommentsList(res.data.comments);
       }
     } catch (err) {
       console.error('Error loading comments:', err);
@@ -178,14 +174,10 @@ export const FeedScreen = () => {
     );
 
     try {
-      await fetch(`/api/v1/feed/${activeCommentPost.id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_name: displayName,
-          user_avatar: userPhoto || '',
-          comment_text: text,
-        }),
+      await api.post(`/api/v1/feed/${activeCommentPost.id}/comments`, {
+        user_name: displayName,
+        user_avatar: userPhoto || '',
+        comment_text: text,
       });
     } catch (err) {
       console.error('Error adding comment:', err);
