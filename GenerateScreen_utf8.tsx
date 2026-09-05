@@ -7,12 +7,13 @@ import { TEMPLATES_LIST } from '@/lib/constants';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import type { Language } from '@/types';
 
+// ΓöÇΓöÇΓöÇ Generation stage labels + progress ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const GEN_STAGES = [
-  { label: 'Uploading Images...',           pct: 10 },
-  { label: 'Generating Article...',         pct: 30 },
-  { label: 'Creating Newspaper Layout...',  pct: 55 },
-  { label: 'Rendering Clipping...',         pct: 75 },
-  { label: 'Finalizing...',                 pct: 92 },
+  { label: 'Uploading ImagesΓÇª',           pct: 10 },
+  { label: 'Generating ArticleΓÇª',         pct: 30 },
+  { label: 'Creating Newspaper LayoutΓÇª',  pct: 55 },
+  { label: 'Rendering ClippingΓÇª',         pct: 75 },
+  { label: 'FinalizingΓÇª',                 pct: 92 },
 ];
 
 export const GenerateScreen = () => {
@@ -28,11 +29,12 @@ export const GenerateScreen = () => {
   const [layoutColumns, setLayoutColumns] = useState(currentConfig.layoutColumns  || 3);
   const [imageUrls,     setImageUrls]     = useState<string[]>(currentConfig.imageUrls || []);
   const [loading,       setLoading]       = useState(false);
-  const [stageIndex,    setStageIndex]    = useState(-1);
+  const [stageIndex,    setStageIndex]    = useState(-1); // -1 = idle
   const [columnMode,    setColumnMode]    = useState<'auto' | 'manual'>(currentConfig.columnMode || 'auto');
 
   const currentStage = stageIndex >= 0 ? GEN_STAGES[Math.min(stageIndex, GEN_STAGES.length - 1)] : null;
 
+  // ΓöÇΓöÇΓöÇ Image upload ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const handleImageUpload = async () => {
     if (imageUrls.length >= 3) {
       alert('You can only upload up to 3 images.');
@@ -50,8 +52,9 @@ export const GenerateScreen = () => {
       if (!image.base64String) return;
 
       setLoading(true);
-      console.log('[GEN] Image selected - compressing...');
+      console.log('[GEN] Image selected ΓÇö compressingΓÇª');
 
+      // Decode Base64 ΓåÆ Blob ΓåÆ File
       const byteCharacters = atob(image.base64String);
       const byteNumbers    = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -62,17 +65,19 @@ export const GenerateScreen = () => {
       const extension = image.format || 'jpeg';
       const rawFile   = new File([new Blob([byteArray], { type: mimeType })], `upload.${extension}`, { type: mimeType });
 
+      // Compress before upload (Γëñ1600 px, 82% quality)
       const compressedFile = await compressImage(rawFile, 1600, 0.82);
-      console.log(`[GEN] Uploading image (${(compressedFile.size / 1024).toFixed(0)} KB)...`);
+      console.log(`[GEN] Uploading image (${(compressedFile.size / 1024).toFixed(0)} KB)ΓÇª`);
 
       const uploadRes = await generationService.uploadImage(compressedFile);
       if (uploadRes.success && uploadRes.data.url) {
         let finalUrl = uploadRes.data.url;
+        // Bypass Render hairpin NAT deadlock when accessed from within Render
         if (finalUrl.includes('onrender.com')) {
           finalUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
         }
         setImageUrls(prev => [...prev, finalUrl].slice(0, 3));
-        console.log('[GEN] Images Uploaded ✓', finalUrl);
+        console.log('[GEN] Images Uploaded Γ£ô', finalUrl);
       }
     } catch (err: any) {
       if (err.message !== 'User cancelled photos app') {
@@ -85,10 +90,11 @@ export const GenerateScreen = () => {
     }
   };
 
+  // ΓöÇΓöÇΓöÇ Generate clipping ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const handleGenerate = async () => {
     if (!headline || !content) return;
     setLoading(true);
-    setStageIndex(0);
+    setStageIndex(0); // "Uploading ImagesΓÇª"
 
     console.log('[GEN] === Generation Started ===');
     console.log(`[GEN] headline="${headline}" lang=${language} images=${imageUrls.length} template=${currentConfig.templateId}`);
@@ -125,7 +131,7 @@ export const GenerateScreen = () => {
         columnMode,
         imageUrls,
         imageUrl:        imageUrls[0] || '',
-        imageLayout:     derivedImageLayout,
+        imageLayout:     derivedImageLayout,   // ← persisted in store
         publicationName: selectedTemplateDetails.name,
         logoId:          selectedTemplateDetails.id,
         publicationDate: new Date().toLocaleDateString('en-US', {
@@ -135,7 +141,8 @@ export const GenerateScreen = () => {
 
       setConfig(configToSave);
 
-      setStageIndex(1);
+      // Stage 1: Images uploaded -> move to article stage
+      setStageIndex(1); // "Generating Article..."
       console.log('[GEN] Images Uploaded ✓');
 
       const payload = {
@@ -144,14 +151,18 @@ export const GenerateScreen = () => {
         articleContent: content,
         imageUrls,
         imageUrl: imageUrls[0] || '',
-        imageLayout: derivedImageLayout,
+        imageLayout: derivedImageLayout,   // ← CRITICAL: tells backend pattern_a / pattern_b
       };
 
-      setStageIndex(2);
-      console.log('[GEN] Article Generated ✓ - sending to backend...');
+      // ΓöÇΓöÇ Stage 2: Layout ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+      setStageIndex(2); // "Creating Newspaper LayoutΓÇª"
+      console.log('[GEN] Article Generated Γ£ô ΓÇö sending to backendΓÇª');
 
-      const renderTimer = setTimeout(() => setStageIndex(3), 8_000);
-      const finalTimer  = setTimeout(() => setStageIndex(4), 60_000);
+      // ΓöÇΓöÇ Stage 3: Rendering ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+      // The generate call can take 2ΓÇô5 minutes on Render free tier.
+      // It has timeout: 0 (no timeout). We advance the UI stage while waiting.
+      const renderTimer = setTimeout(() => setStageIndex(3), 8_000);  // "Rendering ClippingΓÇª"
+      const finalTimer  = setTimeout(() => setStageIndex(4), 60_000); // "FinalizingΓÇª"
 
       let res: any;
       try {
@@ -161,16 +172,17 @@ export const GenerateScreen = () => {
         clearTimeout(finalTimer);
       }
 
-      console.log('[GEN] Backend response received ✓');
+      console.log('[GEN] Backend response received Γ£ô');
 
       const generation = res?.data?.id ? res.data : (res?.id ? res : null);
 
       if (generation) {
-        console.log(`[GEN] PNG Generated ✓ | ID=${generation.id} | status=${generation.status}`);
-        if (generation.png_url)  console.log('[GEN] PNG URL ✓', generation.png_url);
-        if (generation.pdf_url)  console.log('[GEN] PDF URL ✓', generation.pdf_url);
-        console.log('[GEN] Upload Complete ✓ - navigating to preview');
+        console.log(`[GEN] PNG Generated Γ£ô | ID=${generation.id} | status=${generation.status}`);
+        if (generation.png_url)  console.log('[GEN] PNG URL Γ£ô', generation.png_url);
+        if (generation.pdf_url)  console.log('[GEN] PDF URL Γ£ô', generation.pdf_url);
+        console.log('[GEN] Upload Complete Γ£ô ΓÇö navigating to preview');
 
+        // Inject config so history/dashboard screens don't crash
         generation.config = configToSave;
         addGeneration(generation);
         navigate(`/preview/${generation.id}`);
@@ -180,12 +192,13 @@ export const GenerateScreen = () => {
     } catch (err: any) {
       console.error('[GEN] Generation error:', err);
 
+      // ΓöÇΓöÇ Map error to a human-readable stage message ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
       let errorTitle   = 'Generation Failed';
       let errorMessage = err.response?.data?.message || err.message || JSON.stringify(err);
 
       if (err.response?.status === 403 || errorMessage.includes('403')) {
         errorTitle   = 'Limit Reached';
-        errorMessage = 'Free clipping limit reached. Go to Settings -> Log Out and sign up with a new email to continue.';
+        errorMessage = 'Free clipping limit reached. Go to Settings ΓåÆ Log Out and sign up with a new email to continue.';
       } else if (errorMessage.toLowerCase().includes('upload') || errorMessage.toLowerCase().includes('image')) {
         errorTitle = 'Image Upload Failed';
       } else if (errorMessage.toLowerCase().includes('playwright') || errorMessage.toLowerCase().includes('browser')) {
@@ -195,7 +208,7 @@ export const GenerateScreen = () => {
       } else if (errorMessage.toLowerCase().includes('template') || errorMessage.toLowerCase().includes('html')) {
         errorTitle = 'Template Generation Failed';
       } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('connect')) {
-        errorTitle = 'Network Error - Check Connection';
+        errorTitle = 'Network Error ΓÇö Check Connection';
       }
 
       alert(`${errorTitle}\n\n${errorMessage}`);
@@ -217,6 +230,7 @@ export const GenerateScreen = () => {
       <div className="p-6 max-w-md mx-auto relative" style={{ paddingBottom: '10rem' }}>
         <div className="space-y-6">
 
+          {/* Language Selector */}
           <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-3">
               <Globe className="w-4 h-4 text-blue-500" /> Language
@@ -227,14 +241,15 @@ export const GenerateScreen = () => {
               className="w-full bg-gray-50 dark:bg-dusk-blue border border-gray-200 dark:border-dusty-denim rounded-2xl p-4 text-gray-900 dark:text-alabaster-grey focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium appearance-none"
             >
               <option value="en">English</option>
-              <option value="te">Telugu (తెలుగు)</option>
-              <option value="hi">Hindi (हिंदी)</option>
-              <option value="kn">Kannada (ಕನ್ನಡ)</option>
-              <option value="ta">Tamil (தமிழ்)</option>
-              <option value="ml">Malayalam (മലയാളം)</option>
+              <option value="te">Telugu (α░ñα▒åα░▓α▒üα░ùα▒ü)</option>
+              <option value="hi">Hindi (αñ╣αñ┐αñ¿αÑìαñªαÑÇ)</option>
+              <option value="kn">Kannada (α▓òα▓¿α│ìα▓¿α▓í)</option>
+              <option value="ta">Tamil (α«ñα««α«┐α«┤α»ì)</option>
+              <option value="ml">Malayalam (α┤«α┤▓α┤»α┤╛α┤│α┤é)</option>
             </select>
           </div>
 
+          {/* Headline */}
           <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
             <label className="block text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-2">Headline</label>
             <input
@@ -246,6 +261,7 @@ export const GenerateScreen = () => {
             />
           </div>
 
+          {/* Content Snippet */}
           <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-2">
               <Type className="w-4 h-4 text-blue-500" /> Article Content
@@ -259,6 +275,7 @@ export const GenerateScreen = () => {
             />
           </div>
 
+          {/* Featured Images */}
           <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-alabaster-grey mb-3">
               <ImageIcon className="w-4 h-4 text-blue-500" /> Featured Images (Max 3)
@@ -292,12 +309,13 @@ export const GenerateScreen = () => {
                 <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
                   <ImageIcon className="h-6 w-6 text-gray-400 dark:text-dusty-denim" />
                   <p className="text-sm font-medium text-gray-600 dark:text-dusty-denim">Tap to upload image</p>
-                  <p className="text-xs text-gray-500 dark:text-dusty-denim">{3 - imageUrls.length} remaining · auto-compressed</p>
+                  <p className="text-xs text-gray-500 dark:text-dusty-denim">{3 - imageUrls.length} remaining ┬╖ auto-compressed</p>
                 </div>
               </button>
             )}
           </div>
 
+          {/* Typography & Layout */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
               <label className="block text-xs font-semibold text-gray-500 dark:text-dusty-denim mb-2 uppercase tracking-wider">Font</label>
@@ -338,6 +356,7 @@ export const GenerateScreen = () => {
             </div>
           </div>
 
+          {/* Image Layout */}
           <div className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue transition-colors duration-300">
             <label className="block text-xs font-semibold text-gray-500 dark:text-dusty-denim mb-2 uppercase tracking-wider">Image Layout</label>
             <select
@@ -352,6 +371,7 @@ export const GenerateScreen = () => {
             </select>
           </div>
 
+          {/* Logo / Template Status */}
           <div
             onClick={() => navigate('/templates')}
             className="bg-white dark:bg-prussian-blue p-5 rounded-3xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-dusk-blue flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform duration-300"
@@ -370,11 +390,13 @@ export const GenerateScreen = () => {
         </div>
       </div>
 
+      {/* ΓöÇΓöÇ Sticky bottom: progress bar + generate button ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
       <div 
         className="fixed left-0 w-full px-6 pt-4 pb-2 bg-gradient-to-t from-gray-50 via-gray-50 dark:from-gray-900 dark:via-gray-900 to-transparent z-40 transition-colors duration-300"
         style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom))' }}
       >
 
+        {/* Live progress bar shown during generation */}
         {loading && currentStage && (
           <div className="mb-3 bg-white dark:bg-prussian-blue rounded-2xl px-4 py-3 shadow-md border border-gray-100 dark:border-dusk-blue">
             <div className="flex justify-between items-center mb-1.5">
@@ -388,7 +410,7 @@ export const GenerateScreen = () => {
               />
             </div>
             <p className="text-[10px] text-gray-400 dark:text-dusty-denim mt-1.5 text-center">
-              This can take up to 2-3 minutes. Do not close the app.
+              This can take up to 2ΓÇô3 minutes. Do not close the app.
             </p>
           </div>
         )}
@@ -401,7 +423,7 @@ export const GenerateScreen = () => {
           {loading ? (
             <>
               <Loader2 className="w-6 h-6 animate-spin" />
-              <span className="text-sm">{currentStage?.label || 'Processing...'}</span>
+              <span className="text-sm">{currentStage?.label || 'ProcessingΓÇª'}</span>
             </>
           ) : (
             <>

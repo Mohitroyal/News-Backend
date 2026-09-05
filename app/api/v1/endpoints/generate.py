@@ -264,6 +264,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
 
                 custom = clipping.custom_layout or {}
                 resolved_image_layout = custom.get("image_layout") or getattr(clipping, "image_layout", "default")
+                total_imgs = len(safe_image_urls) if safe_image_urls else (1 if safe_image_url else 0)
                 if not resolved_image_layout or resolved_image_layout in ["default", "auto"]:
                     if "patternc" in normalized_id:
                         resolved_image_layout = "pattern_c"
@@ -278,6 +279,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     elif "patterna" in normalized_id:
                         resolved_image_layout = "pattern_a"
                     elif "patternb" in normalized_id:
+                        resolved_image_layout = "pattern_b"
+                    elif total_imgs <= 1:
                         resolved_image_layout = "pattern_b"
 
                 render_data = {
