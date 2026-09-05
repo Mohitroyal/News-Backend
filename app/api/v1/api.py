@@ -8,4 +8,5 @@ api_router.include_router(generate.router, prefix="/generate", tags=["generation
 api_router.include_router(upload.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["subscriptions"])
 api_router.include_router(posts.router, prefix="/posts", tags=["posts"])
+api_router.include_router(posts.router, prefix="/feed", tags=["feed_alias"])
 

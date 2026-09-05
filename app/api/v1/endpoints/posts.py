@@ -102,6 +102,8 @@ def _build_post_response(post: Post, current_user_id: Optional[uuid.UUID] = None
 
 # ── [1] POST ON SPOT (PUBLISH CLIPPING) ──────────────────────────────────────
 @router.post("/publish", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 def publish_to_spot(
     payload: PostPublishRequest,
     current_user: User = Depends(get_current_active_user),
@@ -156,6 +158,8 @@ def publish_to_spot(
 
 
 # ── [2] SOCIAL MEDIA FEED STREAM ─────────────────────────────────────────────
+@router.get("", response_model=FeedResponse)
+@router.get("/", response_model=FeedResponse)
 @router.get("/feed", response_model=FeedResponse)
 def get_spot_feed(
     page: int = Query(1, ge=1, description="Page number"),
