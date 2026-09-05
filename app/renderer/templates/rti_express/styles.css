@@ -196,13 +196,13 @@ html[lang="ml"] .headline {
     column-rule: 1px solid #dcdcd8;
     text-align: justify;
     font-size: 15px;
-    line-height: 1.65;
+    line-height: 1.45;
     color: #1a1a1a;
 }
 
 .paragraph {
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     text-indent: 20px;
 }
 

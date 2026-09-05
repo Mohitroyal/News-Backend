@@ -177,13 +177,13 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     column-rule: 1px solid #e9e2d5;
     text-align: justify;
     font-size: 15.5px;
-    line-height: 1.6;
+    line-height: 1.45;
     color: #222222;
 }
 
 .paragraph {
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     text-indent: 18px;
 }
 

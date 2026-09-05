@@ -174,13 +174,13 @@ html[lang="ml"] body, html[lang="ml"] .paragraph, html[lang="ml"] .headline {
     column-rule: 0.5px solid #cbd5e1;
     text-align: justify;
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.45;
     color: #1e293b;
 }
 
 .paragraph {
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     text-indent: 18px;
 }
 

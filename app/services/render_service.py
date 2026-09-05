@@ -1625,7 +1625,7 @@ class RenderService:
                 
                 const estFontSize = Math.sqrt(Math.max(100000, N * W_col * H_avail - blockedArea) / (totalChars * 0.54));
                 const maxFontSize = (urls.length > 2 && totalChars < 2500) ? 23.0 : 21.0;
-                const conf = { fontSize: Math.min(maxFontSize, estFontSize), lineHeight: 1.35, paraMargin: 12, imgMaxPct: 0.58, padding: 32 };
+                const conf = { fontSize: Math.min(maxFontSize, estFontSize), lineHeight: 1.28, paraMargin: 8, imgMaxPct: 0.58, padding: 32 };
 
                 // Step 1: Find best font size that fits 100% of text within H_avail
                 let targetFs = Math.min(maxFontSize, estFontSize);
