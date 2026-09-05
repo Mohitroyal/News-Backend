@@ -688,7 +688,7 @@ class RenderService:
                             imgH: Math.round(h0),
                             isCentered: false,
                             visW: w0,
-                            objectFit: 'cover',
+                            objectFit: 'contain',
                             objectPosition: 'center center'
                         });
                     } else if (rawLayout.includes('patterng')) {
@@ -710,7 +710,7 @@ class RenderService:
                             if (maxH > W_canvas * 0.75) maxH = W_canvas * 0.75;
                             
                             for (let i = 0; i < count; i++) {
-                                obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH) });
+                                obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH), imgH: Math.round(maxH), objectFit: 'contain', objectPosition: 'center center' });
                             }
                         }
                     } else if (rawLayout.includes('patternd')) {
@@ -739,8 +739,8 @@ class RenderService:
                             imgH: Math.round(h0),
                             isCentered: false,
                             visW: Math.round(w0),
-                            objectFit: 'cover',
-                            objectPosition: 'center 20%'
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
                         });
 
                         if (urls.length > 1) {
@@ -765,8 +765,8 @@ class RenderService:
                                 imgH: Math.round(h1),
                                 isCentered: false,
                                 visW: Math.round(w1),
-                                objectFit: 'cover',
-                                objectPosition: 'center 20%'
+                                objectFit: 'contain',
+                                objectPosition: 'center center'
                             });
                         }
                     } else if (isTriplePatternB) {
@@ -784,26 +784,12 @@ class RenderService:
                         // Balance their heights so they look perfectly aligned
                         let sharedH = Math.max(h1, h2);
                         
-                        obstacles.push({ url: urls[0], caption: captions[0] || '', x: 0, y: 0, w: Math.round(w0), h: Math.round(h0) });
-                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
-                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH) });
-                    } else {
-                    
-                    let N_layout_cols = resolveColumns(data.layout_columns, totalChars);
-                    let grid_gap = 24;
-                    let single_col_w = Math.round((W_canvas - (N_layout_cols - 1) * grid_gap) / N_layout_cols);
-                    let side_w = (N_layout_cols >= 3) ? single_col_w : Math.round((W_canvas - grid_gap) * 0.48);
-                    
-                    let w0 = side_w;
-                    let isPatternB_centered = false;
-                    let imgVisW = w0;
-                    let h0 = Math.min(w0 / aspect0, 360);
-                    let imgX = Math.round(W_canvas - w0);
-                    let imgY = 0;
-                    
-                    if (isDoublePatternB) {
+                        obstacles.push({ url: urls[0], caption: captions[0] || '', x: 0, y: 0, w: Math.round(w0), h: Math.round(h0), imgH: Math.round(h0), objectFit: 'contain', objectPosition: 'center center' });
+                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH), imgH: Math.round(sharedH), objectFit: 'contain', objectPosition: 'center center' });
+                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH), imgH: Math.round(sharedH), objectFit: 'contain', objectPosition: 'center center' });
+                    } else if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
-                        let a1 = aspectRatios[1] || 1.0;
+                        let a1 = (aspectRatios && aspectRatios.length > 1 && aspectRatios[1]) ? aspectRatios[1] : 1.0;
                         let gap = 16;
                         let availW = W_canvas - gap;
                         
@@ -811,12 +797,13 @@ class RenderService:
                         let w_img0 = Math.round(availW / 2);
                         let w_img1 = availW - w_img0;
                         
-                        // Balance their height cleanly
-                        let natH0 = w_img0 / a0;
-                        let natH1 = w_img1 / a1;
-                        let maxAllowedH = Math.round(Math.min(W_canvas * 0.40, 400));
-                        let sharedH = Math.round(Math.min(Math.max(natH0, natH1), maxAllowedH));
-                        sharedH = Math.max(sharedH, 220);
+                        // Exact natural uncropped height for each image based on its cropped aspect ratio
+                        let natH0 = Math.round(w_img0 / a0);
+                        let natH1 = Math.round(w_img1 / a1);
+                        
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.55);
+                        let sharedH = Math.min(Math.max(natH0, natH1), maxAllowedH);
+                        sharedH = Math.max(sharedH, 180);
                         
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w_img0 / 6.5))) * 15 + 8 : 0;
@@ -837,8 +824,8 @@ class RenderService:
                             imgH: Math.round(sharedH),
                             isCentered: false,
                             visW: Math.round(w_img0),
-                            objectFit: 'cover',
-                            objectPosition: 'center 20%'
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
                         });
                         
                         obstacles.push({
@@ -851,22 +838,18 @@ class RenderService:
                             imgH: Math.round(sharedH),
                             isCentered: false,
                             visW: Math.round(w_img1),
-                            objectFit: 'cover',
-                            objectPosition: 'center 20%'
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
                         });
                     } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
-                        w0 = W_canvas;
-                        imgX = 0;
-                        imgY = 0;
+                        let w0 = W_canvas;
+                        let imgX = 0;
+                        let imgY = 0;
                         let dynamicH = Math.round(W_canvas / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.65);
-                        h0 = Math.min(dynamicH, maxAllowedH);
-                        if (dynamicH > maxAllowedH) {
-                            imgVisW = Math.round(maxAllowedH * aspect0);
-                        } else {
-                            imgVisW = W_canvas;
-                        }
-                        isPatternB_centered = true;
+                        let h0 = Math.min(dynamicH, maxAllowedH);
+                        let imgVisW = (dynamicH > maxAllowedH) ? Math.round(maxAllowedH * aspect0) : W_canvas;
+                        let isPatternB_centered = true;
                         
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
@@ -885,13 +868,17 @@ class RenderService:
                             objectPosition: 'center center'
                         });
                     } else if (isSinglePatternA || rawLayout.includes('patterna')) {
-                        w0 = side_w;
+                        let N_layout_cols = resolveColumns(data.layout_columns, totalChars);
+                        let grid_gap = 24;
+                        let single_col_w = Math.round((W_canvas - (N_layout_cols - 1) * grid_gap) / N_layout_cols);
+                        let side_w = (N_layout_cols >= 3) ? single_col_w : Math.round((W_canvas - grid_gap) * 0.48);
+                        let w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
-                        h0 = Math.min(dynamicH, maxAllowedH);
-                        imgVisW = w0;
-                        imgX = 0; // Left side
-                        isPatternB_centered = false;
+                        let h0 = Math.min(dynamicH, maxAllowedH);
+                        let imgVisW = w0;
+                        let imgX = 0; // Left side
+                        let isPatternB_centered = false;
                         
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
@@ -900,7 +887,7 @@ class RenderService:
                             url: urls[0],
                             caption: captions[0] || '',
                             x: imgX,
-                            y: imgY,
+                            y: 0,
                             w: Math.round(w0),
                             h: Math.round(h0 + capAllowance0),
                             imgH: Math.round(h0),
@@ -911,13 +898,17 @@ class RenderService:
                         });
                     } else {
                         // Default / Custom with 1 image: Right side side-by-side with text
-                        w0 = side_w;
+                        let N_layout_cols = resolveColumns(data.layout_columns, totalChars);
+                        let grid_gap = 24;
+                        let single_col_w = Math.round((W_canvas - (N_layout_cols - 1) * grid_gap) / N_layout_cols);
+                        let side_w = (N_layout_cols >= 3) ? single_col_w : Math.round((W_canvas - grid_gap) * 0.48);
+                        let w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 900) * 0.55);
-                        h0 = Math.min(dynamicH, maxAllowedH);
-                        imgVisW = w0;
-                        imgX = Math.round(W_canvas - w0);
-                        isPatternB_centered = false;
+                        let h0 = Math.min(dynamicH, maxAllowedH);
+                        let imgVisW = w0;
+                        let imgX = Math.round(W_canvas - w0);
+                        let isPatternB_centered = false;
                         
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor((isPatternB_centered ? imgVisW : w0) / 6.5))) * 15 + 8 : 0;
@@ -926,7 +917,7 @@ class RenderService:
                             url: urls[0],
                             caption: captions[0] || '',
                             x: imgX,
-                            y: imgY,
+                            y: 0,
                             w: Math.round(w0),
                             h: Math.round(h0 + capAllowance0),
                             imgH: Math.round(h0),
@@ -937,7 +928,7 @@ class RenderService:
                         });
                     }
 
-                    if (urls.length > 1 && !isDoublePatternB) {
+                    if (urls.length > 1 && !isDoublePatternB && !isTriplePatternB && !rawLayout.includes('patternd') && !rawLayout.includes('patterng')) {
                         const aspect1 = aspectRatios[1] || 1.0;
                         let w1 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
                         let h1 = w1 / aspect1;
@@ -952,12 +943,14 @@ class RenderService:
                             x: Math.round(x1),
                             y: Math.round(y1),
                             w: Math.round(w1),
-                            h: Math.round(h1)
+                            h: Math.round(h1),
+                            imgH: Math.round(h1),
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
                         });
                     }
-                    }
 
-                    if (urls.length > 2) {
+                    if (urls.length > 2 && !isDoublePatternB && !isTriplePatternB && !rawLayout.includes('patternd') && !rawLayout.includes('patterng')) {
                         const aspect2 = aspectRatios[2] || 1.0;
                         let w2 = W_canvas * Math.max(0.40, Math.min(0.58, 0.48 * S_scale));
                         let h2 = w2 / aspect2;
@@ -970,7 +963,10 @@ class RenderService:
                             x: Math.round(W_canvas - w2), // Align bottom-right
                             y: Math.round(y2),
                             w: Math.round(w2),
-                            h: Math.round(h2)
+                            h: Math.round(h2),
+                            imgH: Math.round(h2),
+                            objectFit: 'contain',
+                            objectPosition: 'center center'
                         });
                     }
                 }
