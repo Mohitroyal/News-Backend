@@ -66,10 +66,12 @@ async def lifespan(app: FastAPI):
     print("=== DATABASE AUTO-MIGRATIONS ===", flush=True)
     try:
         from sqlalchemy import text
-        from app.db.session import engine
+        from app.db.session import engine, Base
+        import app.models  # load all models into metadata
+        Base.metadata.create_all(bind=engine)
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE clippings ADD COLUMN IF NOT EXISTS show_inner_borders BOOLEAN DEFAULT TRUE;"))
-            print("  [SUCCESS] Column show_inner_borders is present.", flush=True)
+        print("  [SUCCESS] All database tables (clippings, posts, likes, comments) and columns verified.", flush=True)
     except Exception as e:
         print(f"  [WARNING] DB auto-migration skipped or failed: {e}", flush=True)
     print("="*60 + "\n", flush=True)
