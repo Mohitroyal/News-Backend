@@ -770,40 +770,54 @@ class RenderService:
                             });
                         }
                     } else if (isTriplePatternB) {
-                        // Pattern E style with 3 images: Large hero on top, two smaller side-by-side below
                         let w0 = W_canvas;
-                        let h0 = Math.min(w0 / aspect0, W_canvas * 0.6);
+                        let dynamicH0 = Math.round(w0 / aspect0);
+                        let maxAllowedH0 = Math.round(Math.max(H_canvas, 1200) * 0.40);
+                        let h0 = Math.min(dynamicH0, maxAllowedH0);
+                        let visW0 = (dynamicH0 > maxAllowedH0) ? Math.round(maxAllowedH0 * aspect0) : W_canvas;
+                        let x0 = Math.round((W_canvas - visW0) / 2);
                         
-                        let gap = 24;
-                        let w1 = (W_canvas - gap) / 2;
+                        let gap = 16;
+                        let availW = W_canvas - gap;
+                        let a1 = (aspectRatios && aspectRatios.length > 1 && aspectRatios[1]) ? aspectRatios[1] : 1.0;
+                        let a2 = (aspectRatios && aspectRatios.length > 2 && aspectRatios[2]) ? aspectRatios[2] : 1.0;
                         
-                        let a1 = aspectRatios[1] || 1.5;
-                        let a2 = aspectRatios[2] || 1.5;
-                        let h1 = w1 / a1;
-                        let h2 = w1 / a2;
-                        // Balance their heights so they look perfectly aligned
-                        let sharedH = Math.max(h1, h2);
+                        let H_bot = Math.round(availW / (a1 + a2));
+                        let w1 = Math.round(availW * (a1 / (a1 + a2)));
+                        let w2 = availW - w1;
+                        let sharedH = Math.min(H_bot, Math.round(Math.max(H_canvas, 1200) * 0.35));
+                        sharedH = Math.max(sharedH, 150);
                         
-                        obstacles.push({ url: urls[0], caption: captions[0] || '', x: 0, y: 0, w: Math.round(w0), h: Math.round(h0), imgH: Math.round(h0), objectFit: 'contain', objectPosition: 'center center' });
-                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH), imgH: Math.round(sharedH), objectFit: 'contain', objectPosition: 'center center' });
-                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: Math.round(h0 + gap), w: Math.round(w1), h: Math.round(sharedH), imgH: Math.round(sharedH), objectFit: 'contain', objectPosition: 'center center' });
+                        let cap0 = String(captions[0] || '').trim();
+                        let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(visW0 / 6.5))) * 15 + 8 : 0;
+                        
+                        obstacles.push({ url: urls[0], caption: captions[0] || '', x: x0, y: 0, w: Math.round(visW0), h: Math.round(h0 + capAllowance0), imgH: Math.round(h0), isCentered: true, visW: Math.round(visW0), objectFit: 'cover', objectPosition: 'center center' });
+                        
+                        let yBottom = Math.round(h0 + capAllowance0 + gap);
+                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: yBottom, w: Math.round(w1), h: Math.round(sharedH), imgH: Math.round(sharedH), isCentered: false, visW: Math.round(w1), objectFit: 'cover', objectPosition: 'center center' });
+                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: yBottom, w: Math.round(w2), h: Math.round(sharedH), imgH: Math.round(sharedH), isCentered: false, visW: Math.round(w2), objectFit: 'cover', objectPosition: 'center center' });
                     } else if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
                         let a1 = (aspectRatios && aspectRatios.length > 1 && aspectRatios[1]) ? aspectRatios[1] : 1.0;
                         let gap = 16;
                         let availW = W_canvas - gap;
                         
-                        // Give each image half the width
-                        let w_img0 = Math.round(availW / 2);
+                        // Exact height and proportional widths so both images fill their boxes with 0% crop and 0% white gaps!
+                        let H_calc = availW / (a0 + a1);
+                        let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.55);
+                        let sharedH = Math.min(Math.round(H_calc), maxAllowedH);
+                        sharedH = Math.max(sharedH, 180);
+                        
+                        let w_img0 = Math.round(availW * (a0 / (a0 + a1)));
                         let w_img1 = availW - w_img0;
                         
-                        // Exact natural uncropped height for each image based on its cropped aspect ratio
-                        let natH0 = Math.round(w_img0 / a0);
-                        let natH1 = Math.round(w_img1 / a1);
-                        
-                        let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.55);
-                        let sharedH = Math.min(Math.max(natH0, natH1), maxAllowedH);
-                        sharedH = Math.max(sharedH, 180);
+                        let startX0 = 0;
+                        let startX1 = w_img0 + gap;
+                        let actualTotalW = w_img0 + gap + w_img1;
+                        if (actualTotalW < W_canvas) {
+                            startX0 = Math.round((W_canvas - actualTotalW) / 2);
+                            startX1 = startX0 + w_img0 + gap;
+                        }
                         
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w_img0 / 6.5))) * 15 + 8 : 0;
@@ -817,28 +831,28 @@ class RenderService:
                         obstacles.push({
                             url: urls[0],
                             caption: captions[0] || '',
-                            x: 0,
+                            x: startX0,
                             y: 0,
                             w: Math.round(w_img0),
                             h: Math.round(totalSharedH),
                             imgH: Math.round(sharedH),
                             isCentered: false,
                             visW: Math.round(w_img0),
-                            objectFit: 'contain',
+                            objectFit: 'cover',
                             objectPosition: 'center center'
                         });
                         
                         obstacles.push({
                             url: urls[1],
                             caption: captions[1] || '',
-                            x: Math.round(w_img0 + gap),
+                            x: startX1,
                             y: 0,
                             w: Math.round(w_img1),
                             h: Math.round(totalSharedH),
                             imgH: Math.round(sharedH),
                             isCentered: false,
                             visW: Math.round(w_img1),
-                            objectFit: 'contain',
+                            objectFit: 'cover',
                             objectPosition: 'center center'
                         });
                     } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
