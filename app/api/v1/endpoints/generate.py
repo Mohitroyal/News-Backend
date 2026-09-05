@@ -196,11 +196,15 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 normalized_id = original_template_id.lower().replace(" ", "").replace("_", "").replace("-", "")
 
                 # Map missing frontend templates or layout-name mixups back to the correct template
-                valid_templates = ["classic", "rti_express", "bharath_reporter", "national_news", "hero-image", "hero_image", "modern", "custom"]
+                valid_templates = ["classic", "rti_express", "bharath_reporter", "national_news", "hero-image", "hero_image", "modern", "custom", "pattern_b"]
                 
                 # If it's NOT a valid template folder, the frontend definitely sent a layout name or ID by mistake
                 if original_template_id not in valid_templates and normalized_id not in valid_templates:
-                    intended_template = clipping.logo_id if clipping.logo_id else "rti_express"
+                    intended_template = "rti_express"
+                    if clipping.logo_id:
+                        norm_lid = str(clipping.logo_id).lower().replace(" ", "").replace("_", "").replace("-", "")
+                        if clipping.logo_id in valid_templates or norm_lid in valid_templates:
+                            intended_template = clipping.logo_id
                     clipping.template_id = intended_template
                     template_id = intended_template
                     
@@ -214,6 +218,14 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                             clipping.custom_layout["image_layout"] = "pattern_a"
                         elif "patternb" in normalized_id or normalized_id.endswith("b"):
                             clipping.custom_layout["image_layout"] = "pattern_b"
+                        elif "patternc" in normalized_id or normalized_id.endswith("c"):
+                            clipping.custom_layout["image_layout"] = "pattern_c"
+                        elif "patternd" in normalized_id or normalized_id.endswith("d"):
+                            clipping.custom_layout["image_layout"] = "pattern_d"
+                        elif "patterne" in normalized_id or normalized_id.endswith("e"):
+                            clipping.custom_layout["image_layout"] = "pattern_e"
+                        elif "patternf" in normalized_id or normalized_id.endswith("f"):
+                            clipping.custom_layout["image_layout"] = "pattern_f"
                         elif "patterng" in normalized_id or normalized_id.endswith("g"):
                             clipping.custom_layout["image_layout"] = "pattern_g"
                         elif "single" in normalized_id or "hero" in normalized_id:
@@ -251,6 +263,23 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 should_show_summary = True if is_custom_template else False
 
                 custom = clipping.custom_layout or {}
+                resolved_image_layout = custom.get("image_layout") or getattr(clipping, "image_layout", "default")
+                if not resolved_image_layout or resolved_image_layout in ["default", "auto"]:
+                    if "patternc" in normalized_id:
+                        resolved_image_layout = "pattern_c"
+                    elif "patternd" in normalized_id:
+                        resolved_image_layout = "pattern_d"
+                    elif "patterne" in normalized_id:
+                        resolved_image_layout = "pattern_e"
+                    elif "patternf" in normalized_id:
+                        resolved_image_layout = "pattern_f"
+                    elif "patterng" in normalized_id:
+                        resolved_image_layout = "pattern_g"
+                    elif "patterna" in normalized_id:
+                        resolved_image_layout = "pattern_a"
+                    elif "patternb" in normalized_id:
+                        resolved_image_layout = "pattern_b"
+
                 render_data = {
                     **formatted,
                     "id": str(clipping_id),
@@ -271,7 +300,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "is_premium": is_premium,
                     "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
                     "show_inner_borders": getattr(clipping, "show_inner_borders", True),
-                    "image_layout": custom.get("image_layout", "default"),
+                    "image_layout": resolved_image_layout,
                     "heading_bg": custom.get("heading_bg", None),
                     "border_color": custom.get("border_color", None),
                     "primary_color": custom.get("primary_color", None),

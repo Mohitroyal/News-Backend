@@ -284,7 +284,10 @@ class RenderService:
                 try:
                     template = self.env.get_template(f"{template_key}.html")
                 except Exception:
-                    template = self.env.get_template("master_layout.html")
+                    try:
+                        template = self.env.get_template("rti_express/template.html")
+                    except Exception:
+                        template = self.env.get_template("master_layout.html")
 
 
         html = template.render(**data)
@@ -1744,7 +1747,7 @@ class RenderService:
                 window.__LAYOUT_DONE__ = true;
             }
 
-            setTimeout(() => { if (!window.__LAYOUT_DONE__) window.__LAYOUT_DONE__ = true; }, 10000);
+            setTimeout(() => { if (!window.__LAYOUT_DONE__) { console.warn("[LAYOUT TIMEOUT FORCED DONE]"); window.__LAYOUT_DONE__ = true; } }, 4000);
             executeLayout().then(() => {
                 window.__LAYOUT_DONE__ = true;
             }).catch(err => {
