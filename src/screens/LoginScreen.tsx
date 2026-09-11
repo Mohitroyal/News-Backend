@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAuthStore, getReporterPhoto, saveReporterPhoto } from '@/store';
+import { useAuthStore, getReporterPhoto, saveReporterPhoto, isAdminUser } from '@/store';
 import { authService } from '@/services/auth.service';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Mail, Lock, Camera, User as UserIcon } from 'lucide-react';
@@ -86,7 +86,8 @@ export const LoginScreen = () => {
           supabase.auth.updateUser({ data: { avatar_url: finalPhoto } }).catch(() => {});
         }
         login(userObj, res.data.token);
-        navigate('/');
+        const userEmail = userObj?.email || email || '';
+        navigate(isAdminUser(userEmail) ? '/admin' : '/');
       }
     } catch (err: any) {
       const errMsg = err.message || err.response?.data?.message || '';
@@ -129,7 +130,7 @@ export const LoginScreen = () => {
             saveReporterPhoto(googleEmail, finalPhoto);
           }
           login(userObj, sessionData.session.access_token);
-          navigate('/');
+          navigate(isAdminUser(googleEmail) ? '/admin' : '/');
         }
       }
 

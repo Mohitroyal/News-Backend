@@ -158,6 +158,7 @@ const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS ?? 'mohithroyal16450@gma
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
   const login = useAuthStore((state) => state.login);
   const setPendingCropImageSrc = useUIStore((state) => state.setPendingCropImageSrc);
 
@@ -187,9 +188,6 @@ function App() {
           });
           if (data.session) {
             login(data.session.user as any, data.session.access_token);
-            // Redirect admin emails to admin panel, others to dashboard
-            const email = data.session.user?.email?.toLowerCase().trim() ?? '';
-            window.location.href = ADMIN_EMAILS.includes(email) ? '/admin' : '/';
           }
         }
       }
@@ -208,7 +206,7 @@ function App() {
       }
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         const email = session.user?.email;
         const savedName = getReporterName(email);
@@ -220,20 +218,11 @@ function App() {
           avatarUrl: savedPhoto || (session.user as any)?.user_metadata?.avatar_url || (session.user as any)?.user_metadata?.picture || '',
         };
         login(userObj as any, session.access_token);
-
-        // Auto-redirect admin emails to /admin on SIGNED_IN event
-        if (event === 'SIGNED_IN') {
-          const emailLower = email?.toLowerCase().trim() ?? '';
-          if (ADMIN_EMAILS.includes(emailLower)) {
-            // Small delay to let React Router mount before navigating
-            setTimeout(() => { window.location.href = '/admin'; }, 100);
-          }
-        }
       }
     });
 
-    // Simulate splash screen / capacitor initialization
-    const timer = setTimeout(() => setIsInitializing(false), 2000);
+    // Initial splash screen dismiss timer (runs once on cold start only)
+    const timer = setTimeout(() => setIsInitializing(false), 1200);
     return () => {
       clearTimeout(timer);
       authListener.subscription.unsubscribe();
@@ -243,13 +232,17 @@ function App() {
 
   if (isInitializing) return <SplashScreen />;
 
+  const userEmail = (user?.email ?? '').toLowerCase().trim();
+  const isAdmin = ADMIN_EMAILS.includes(userEmail);
+
   return (
     <Router>
       <Routes>
         <Route 
           path="/login" 
-          element={!isAuthenticated ? <LoginScreen /> : <Navigate to="/" />} 
+          element={!isAuthenticated ? <LoginScreen /> : <Navigate to={isAdmin ? "/admin" : "/"} replace />} 
         />
+
         <Route 
           path="/login/otp" 
           element={!isAuthenticated ? <LoginOtpScreen /> : <Navigate to="/" />} 
