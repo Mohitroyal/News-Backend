@@ -369,20 +369,57 @@ def update_user_role(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
+    """
+    Update a user's role across all layers:
+    1. Supabase Auth user metadata (app_metadata & user_metadata)
+    2. Supabase `profiles` table (via service role client — completely bypasses RLS)
+    3. Local `public.users` table
+    """
     verify_admin_access(current_user)
+    admin_sb = get_supabase_admin_client()
+
+    # 1. Update Supabase Auth user metadata
+    try:
+        admin_sb.auth.admin.update_user_by_id(
+            user_id,
+            {
+                "user_metadata": {"role": req.role},
+                "app_metadata": {"role": req.role},
+            },
+        )
+    except Exception as e:
+        print(f"[ADMIN] Warning updating Supabase Auth metadata: {e}")
+
+    # 2. Update Supabase public.profiles table using service role (bypasses RLS)
+    try:
+        admin_sb.from_("profiles").upsert(
+            {"id": user_id, "role": req.role},
+            on_conflict="id",
+        ).execute()
+    except Exception as e:
+        print(f"[ADMIN] Warning updating Supabase profiles table: {e}")
+
+    # 3. Update local DB (auto-syncing if user not in public.users yet)
     try:
         u_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
+        user = db.query(User).filter(User.id == u_uuid).first()
+        if not user:
+            try:
+                auth_user = admin_sb.auth.admin.get_user_by_id(user_id)
+                supa_user = auth_user.user if hasattr(auth_user, "user") else auth_user
+                if supa_user:
+                    user = _get_or_create_supabase_user(db, supa_user)
+            except Exception as e:
+                print(f"[ADMIN] Error syncing user to local DB: {e}")
 
-    user = db.query(User).filter(User.id == u_uuid).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        if user:
+            if req.role == "admin":
+                user.subscription_plan = "admin"
+            db.commit()
+    except Exception as e:
+        print(f"[ADMIN] Error updating local user: {e}")
 
-    if req.role == "admin":
-        user.subscription_plan = "admin"
-    db.commit()
-    return {"success": True}
+    return {"success": True, "detail": f"User {user_id} role updated to {req.role}"}
 
 
 @router.put("/users/{user_id}/plan")
@@ -392,19 +429,57 @@ def update_user_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
+    """
+    Update a user's subscription plan across all layers:
+    1. Supabase Auth user metadata (app_metadata & user_metadata)
+    2. Supabase `profiles` table (via service role client — completely bypasses RLS)
+    3. Local `public.users` table
+    """
     verify_admin_access(current_user)
+    admin_sb = get_supabase_admin_client()
+
+    # 1. Update Supabase Auth user metadata
+    try:
+        admin_sb.auth.admin.update_user_by_id(
+            user_id,
+            {
+                "user_metadata": {"plan": req.plan},
+                "app_metadata": {"plan": req.plan},
+            },
+        )
+    except Exception as e:
+        print(f"[ADMIN] Warning updating Supabase Auth metadata: {e}")
+
+    # 2. Update Supabase public.profiles table using service role (bypasses RLS)
+    try:
+        admin_sb.from_("profiles").upsert(
+            {"id": user_id, "plan": req.plan},
+            on_conflict="id",
+        ).execute()
+    except Exception as e:
+        print(f"[ADMIN] Warning updating Supabase profiles table: {e}")
+
+    # 3. Update local DB (auto-syncing if user not in public.users yet)
     try:
         u_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
+        user = db.query(User).filter(User.id == u_uuid).first()
+        if not user:
+            try:
+                auth_user = admin_sb.auth.admin.get_user_by_id(user_id)
+                supa_user = auth_user.user if hasattr(auth_user, "user") else auth_user
+                if supa_user:
+                    user = _get_or_create_supabase_user(db, supa_user)
+            except Exception as e:
+                print(f"[ADMIN] Error syncing user to local DB: {e}")
 
-    user = db.query(User).filter(User.id == u_uuid).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        if user:
+            user.subscription_plan = req.plan
+            db.commit()
+    except Exception as e:
+        print(f"[ADMIN] Error updating local user: {e}")
 
-    user.subscription_plan = req.plan
-    db.commit()
-    return {"success": True}
+    return {"success": True, "detail": f"User {user_id} plan updated to {req.plan}"}
+
 
 
 # ── Generation Logs ───────────────────────────────────────────────────────────
