@@ -13,6 +13,20 @@ else:
     supabase = None
 
 
+def get_supabase_admin_client():
+    """
+    Returns a Supabase client initialised with the service role key.
+    This client has full admin access to auth.users and should only be
+    used inside admin-protected endpoints.
+    """
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Supabase admin client is not configured (missing SUPABASE_SERVICE_ROLE_KEY)",
+        )
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+
+
 def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     """
     Given a Supabase user object (or dict), sync it to the local public.users table.
