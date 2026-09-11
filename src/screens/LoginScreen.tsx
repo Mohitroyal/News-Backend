@@ -79,6 +79,17 @@ export const LoginScreen = () => {
       const res = await authService.login({ email, password });
       if (res.data) {
         const userObj = { ...res.data.user };
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', userObj.id)
+            .single();
+          if (profile?.role) {
+            userObj.role = profile.role;
+          }
+        } catch {}
+
         const finalPhoto = avatarUrl || getReporterPhoto(email) || (userObj as any)?.user_metadata?.avatar_url;
         if (finalPhoto) {
           userObj.avatarUrl = finalPhoto;
@@ -86,8 +97,7 @@ export const LoginScreen = () => {
           supabase.auth.updateUser({ data: { avatar_url: finalPhoto } }).catch(() => {});
         }
         login(userObj, res.data.token);
-        const userEmail = userObj?.email || email || '';
-        navigate(isAdminUser(userEmail) ? '/admin' : '/');
+        navigate(isAdminUser(userObj) ? '/admin' : '/');
       }
     } catch (err: any) {
       const errMsg = err.message || err.response?.data?.message || '';
@@ -124,13 +134,26 @@ export const LoginScreen = () => {
         if (sessionData.session) {
           const userObj = { ...sessionData.session.user } as any;
           const googleEmail = userObj?.email;
+
+          // Fetch latest role from profiles table (user can read their own profile row)
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', userObj.id)
+              .single();
+            if (profile?.role) {
+              userObj.role = profile.role;
+            }
+          } catch {}
+
           const finalPhoto = avatarUrl || getReporterPhoto(googleEmail) || userObj?.user_metadata?.avatar_url || userObj?.user_metadata?.picture;
           if (finalPhoto) {
             userObj.avatarUrl = finalPhoto;
             saveReporterPhoto(googleEmail, finalPhoto);
           }
           login(userObj, sessionData.session.access_token);
-          navigate(isAdminUser(googleEmail) ? '/admin' : '/');
+          navigate(isAdminUser(userObj) ? '/admin' : '/');
         }
       }
 
@@ -139,6 +162,7 @@ export const LoginScreen = () => {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex flex-col min-h-screen bg-[#dceef8] relative font-sans text-[#0a1a2e]">

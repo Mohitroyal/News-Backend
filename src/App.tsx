@@ -18,7 +18,7 @@ import { LoginOtpScreen } from './screens/LoginOtpScreen';
 import { VerifyOtpScreen } from './screens/VerifyOtpScreen';
 import { CreatePasswordScreen } from './screens/CreatePasswordScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
-import { useAuthStore, useUIStore, getReporterPhoto, getReporterName } from './store';
+import { useAuthStore, useUIStore, getReporterPhoto, getReporterName, isAdminUser } from './store';
 import { AdminScreen } from './screens/AdminScreen';
 import { supabase } from './lib/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -150,10 +150,6 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
-// ── Admin email list ────────────────────────────────────────────────────────
-const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS ?? 'mohithroyal16450@gmail.com')
-  .split(',')
-  .map((e: string) => e.trim().toLowerCase());
 
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -232,8 +228,7 @@ function App() {
 
   if (isInitializing) return <SplashScreen />;
 
-  const userEmail = (user?.email ?? '').toLowerCase().trim();
-  const isAdmin = ADMIN_EMAILS.includes(userEmail);
+  const isAdmin = isAdminUser(user);
 
   return (
     <Router>

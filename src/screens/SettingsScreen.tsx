@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useAuthStore, useUIStore, useGenerationStore, getReporterPhoto, getReporterName } from '@/store';
+import { useAuthStore, useUIStore, useGenerationStore, getReporterPhoto, getReporterName, isAdminUser } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, User as UserIcon, UserCircle, ChevronRight, FileText, History } from 'lucide-react';
+import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, User as UserIcon, UserCircle, ChevronRight, FileText, History, Crown } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -307,8 +308,31 @@ export const SettingsScreen = () => {
           <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
         </div>
 
+        {/* Admin Panel Card (Visible to Admins) */}
+        {isAdminUser(user) && (
+          <div
+            onClick={() => navigate('/admin')}
+            className="bg-gradient-to-r from-[#1e3a5f] to-[#0D1B2A] border border-amber-500/40 rounded-[14px] p-4 shadow-lg flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-full bg-amber-400/20 border border-amber-400/30 flex items-center justify-center shrink-0">
+                <Crown className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white">Admin Control Center</h3>
+                  <span className="bg-amber-500 text-black text-[9px] font-black uppercase px-1.5 py-0.5 rounded">ADMIN</span>
+                </div>
+                <p className="text-xs text-white/60 mt-0.5">Manage users, roles, statistics & logos</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-amber-400 shrink-0" />
+          </div>
+        )}
+
         {/* Appearance */}
         <SettingsSection title={t.appearance} icon={Moon}>
+
           <SettingsRow
             label={t.innerBorders}
             description={t.innerBordersDesc}

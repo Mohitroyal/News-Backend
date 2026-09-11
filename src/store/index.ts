@@ -106,8 +106,17 @@ export const useAuthStore = create<AuthStore>()(
           ...(existingPhoto ? { avatar_url: existingPhoto, picture: existingPhoto } : {}),
         };
 
+        const role =
+          (user as any)?.role ||
+          (user as any)?.user_metadata?.role ||
+          (user as any)?.app_metadata?.role ||
+          ((user as any)?.subscription_plan === 'admin' ? 'admin' : undefined) ||
+          ((user as any)?.plan === 'admin' ? 'admin' : undefined) ||
+          'user';
+
         const enrichedUser: User = {
           ...user,
+          role,
           full_name: existingName || user?.full_name || user?.firstName || "",
           firstName: existingName || user?.firstName || "",
           avatarUrl: existingPhoto || "",
@@ -272,14 +281,38 @@ export const useUIStore = create<UIStore>()(
 
 // ─── Admin RBAC Helper ────────────────────────────────────────────────────────
 /**
- * Returns true if the given email is in the admin list (VITE_ADMIN_EMAILS env var).
- * Use this as a quick client-side guard before the full Supabase role check.
+ * Returns true if the given user or email has admin privileges:
+ * 1. Checks hardcoded admin emails (VITE_ADMIN_EMAILS env var)
+ * 2. Checks role / metadata from Supabase Auth & profiles ('admin')
+ * 3. Checks subscription plan ('admin')
  */
-export const isAdminUser = (email?: string): boolean => {
-  if (!email) return false;
+export const isAdminUser = (userOrEmail?: any): boolean => {
+  if (!userOrEmail) return false;
+
   const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS ?? 'mohithroyal16450@gmail.com')
     .split(',')
     .map((e: string) => e.trim().toLowerCase());
-  return adminEmails.includes(email.toLowerCase().trim());
+
+  if (typeof userOrEmail === 'string') {
+    const cleanEmail = userOrEmail.trim().toLowerCase();
+    return adminEmails.includes(cleanEmail);
+  }
+
+  // Object check
+  const u = userOrEmail;
+  const email = (u.email || u.user_metadata?.email || '').trim().toLowerCase();
+  if (email && adminEmails.includes(email)) return true;
+
+  const role = (
+    u.role ||
+    u.user_metadata?.role ||
+    u.app_metadata?.role ||
+    u.subscription_plan ||
+    u.plan ||
+    ''
+  ).toString().toLowerCase();
+
+  return role === 'admin';
 };
+
 

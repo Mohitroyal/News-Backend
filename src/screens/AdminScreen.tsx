@@ -7,7 +7,7 @@ import {
   AlertTriangle, TrendingUp, Newspaper, Activity, Crown,
   ChevronDown, ChevronUp, Search
 } from 'lucide-react';
-import { useAuthStore } from '@/store';
+import { useAuthStore, isAdminUser } from '@/store';
 import { supabase } from '@/lib/supabase';
 import {
   getAdminStats, getAdminUsers, getPublicationLogos,
@@ -16,10 +16,6 @@ import {
   type AdminStats, type AdminUserProfile, type PublicationLogo
 } from '@/services/admin.service';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS ?? 'mohithroyal16450@gmail.com')
-  .split(',')
-  .map((e: string) => e.trim().toLowerCase());
 
 function fmt(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -122,43 +118,55 @@ export const AdminScreen = () => {
   const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    // Give Zustand/localStorage a tick to hydrate the auth store before deciding.
-    // Without this, `user` is null on first render → navigate('/login') → flicker.
-    const checkAccess = () => {
-      const email = user?.email?.toLowerCase().trim() ?? '';
+    const checkAccess = async () => {
+      if (!user) return false;
 
-      if (!user) {
-        // Auth store not hydrated yet — wait one more tick
-        return false;
+      // 1. Immediate sync check via store role or email list
+      if (isAdminUser(user)) {
+        setHasAccess(true);
+        setAccessChecked(true);
+        return true;
       }
 
-      // Trust the hardcoded admin email list directly.
-      // Querying the `profiles` table was causing flicker because:
-      // 1. The table may not exist / RLS may block the anon key.
-      // 2. The async round-trip left `accessChecked=false` showing a spinner
-      //    that resolved to a redirect even for valid admins.
-      const isAdmin = ADMIN_EMAILS.includes(email);
-      setHasAccess(isAdmin);
+      // 2. Dynamic check: query profiles table in case role was recently updated
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (data?.role === 'admin') {
+          setHasAccess(true);
+          setAccessChecked(true);
+          return true;
+        }
+      } catch {
+        /* silent */
+      }
+
+      setHasAccess(false);
       setAccessChecked(true);
       return true;
     };
 
-    if (checkAccess()) return;
+    if (user) {
+      checkAccess();
+      return;
+    }
 
     // user was null — wait one tick for store hydration then try again
     const timer = setTimeout(() => {
-      const email = user?.email?.toLowerCase().trim() ?? '';
       if (!user) {
-        // Truly not logged in — redirect to login
         navigate('/login', { replace: true });
         return;
       }
-      setHasAccess(ADMIN_EMAILS.includes(email));
-      setAccessChecked(true);
+      checkAccess();
     }, 300);
 
     return () => clearTimeout(timer);
   }, [user, navigate]);
+
 
 
   // ── State ─────────────────────────────────────────────────────────────────
