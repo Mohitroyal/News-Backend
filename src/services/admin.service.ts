@@ -202,12 +202,21 @@ export const updateUserRole = async (
   userId: string,
   role: 'admin' | 'reporter' | 'user'
 ): Promise<{ success: boolean; error?: string }> => {
+  // 1. Primary: Use Backend API (runs with service_role key, safely bypassing RLS)
   try {
-    await api.put(`/api/v1/admin/users/${userId}/role`, { role });
-  } catch {
-    /* backend optional */
+    const res = await api.put(`/api/v1/admin/users/${userId}/role`, { role });
+    if (res.status >= 200 && res.status < 300) {
+      return { success: true };
+    }
+  } catch (backendErr: any) {
+    console.warn('[AdminService] Backend role update error:', backendErr?.response?.data || backendErr?.message);
+    const detail = backendErr?.response?.data?.detail;
+    if (detail) {
+      return { success: false, error: detail };
+    }
   }
 
+  // 2. Fallback: direct Supabase upsert (may fail if RLS does not allow public update)
   try {
     const { error } = await supabase
       .from('profiles')
@@ -215,7 +224,7 @@ export const updateUserRole = async (
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (e: any) {
-    return { success: false, error: e?.message ?? 'Unknown error' };
+    return { success: false, error: e?.message ?? 'Failed to update role' };
   }
 };
 
@@ -223,12 +232,21 @@ export const updateUserPlan = async (
   userId: string,
   plan: string
 ): Promise<{ success: boolean; error?: string }> => {
+  // 1. Primary: Use Backend API (runs with service_role key, safely bypassing RLS)
   try {
-    await api.put(`/api/v1/admin/users/${userId}/plan`, { plan });
-  } catch {
-    /* backend optional */
+    const res = await api.put(`/api/v1/admin/users/${userId}/plan`, { plan });
+    if (res.status >= 200 && res.status < 300) {
+      return { success: true };
+    }
+  } catch (backendErr: any) {
+    console.warn('[AdminService] Backend plan update error:', backendErr?.response?.data || backendErr?.message);
+    const detail = backendErr?.response?.data?.detail;
+    if (detail) {
+      return { success: false, error: detail };
+    }
   }
 
+  // 2. Fallback: direct Supabase upsert
   try {
     const { error } = await supabase
       .from('profiles')
@@ -236,9 +254,10 @@ export const updateUserPlan = async (
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (e: any) {
-    return { success: false, error: e?.message ?? 'Unknown error' };
+    return { success: false, error: e?.message ?? 'Failed to update plan' };
   }
 };
+
 
 // ─── Publication Logos ────────────────────────────────────────────────────────
 export const getPublicationLogos = async (): Promise<PublicationLogo[]> => {
