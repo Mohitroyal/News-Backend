@@ -46,6 +46,16 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
         or getattr(supabase_user, "user_metadata", {})
         or {}
     )
+    app_metadata = (
+        data.get("app_metadata")
+        or getattr(supabase_user, "app_metadata", {})
+        or {}
+    )
+    meta_role = (
+        user_metadata.get("role")
+        or app_metadata.get("role")
+        or ""
+    ).lower()
 
     if not supabase_id_str:
         raise HTTPException(status_code=401, detail="Invalid Supabase user: missing id")
@@ -59,18 +69,32 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     # 1. Look up by primary key (same UUID as Supabase auth)
     user = db.query(User).filter(User.id == supabase_uuid).first()
     if user:
+        if meta_role == "admin" and (user.subscription_plan or "").lower() != "admin":
+            user.subscription_plan = "admin"
+            try:
+                db.commit()
+                db.refresh(user)
+            except Exception:
+                db.rollback()
         return user
 
     # 2. Look up by email (handles case where row was created before UUID sync)
     if email:
         user = db.query(User).filter(User.email == email).first()
         if user:
+            if meta_role == "admin" and (user.subscription_plan or "").lower() != "admin":
+                user.subscription_plan = "admin"
             # Align the local id with Supabase auth id if they differ
             if user.id != supabase_uuid:
                 print(f"[AUTH] Updating local user id {user.id} → {supabase_uuid} for {email}")
-                # Update PK — only safe if no FK rows exist yet; otherwise skip
                 try:
                     user.id = supabase_uuid
+                    db.commit()
+                    db.refresh(user)
+                except Exception:
+                    db.rollback()
+            else:
+                try:
                     db.commit()
                     db.refresh(user)
                 except Exception:
@@ -83,19 +107,21 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
         or user_metadata.get("name")
         or (email.split("@")[0] if email else "User")
     )
+    init_plan = "admin" if meta_role == "admin" else "free"
     new_user = User(
         id=supabase_uuid,
         email=email,
         full_name=full_name,
         is_active=True,
-        subscription_plan="free",
+        subscription_plan=init_plan,
         subscription_status="active",
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    print(f"[AUTH] Auto-created local user for {email} (id={supabase_uuid})")
+    print(f"[AUTH] Auto-created local user for {email} (id={supabase_uuid}, plan={init_plan})")
     return new_user
+
 
 
 async def get_current_user(request: Request):
