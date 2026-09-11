@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useGenerationStore, useUIStore, useAuthStore, getReporterPhoto } from '@/store';
+import { useGenerationStore, useUIStore, useAuthStore, getReporterPhoto, getReporterName } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Image as ImageIcon, X, Newspaper, CheckCircle2, Globe, Type } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, Newspaper, CheckCircle2, Globe, Type, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { generationService, compressImage } from '@/services/generation.service';
 import { TEMPLATES_LIST } from '@/lib/constants';
 import { ImageCropModal } from '@/components/ImageCropModal';
@@ -9,20 +9,19 @@ import type { Language } from '@/types';
 import { LiveNewspaperPreview } from '@/components/LiveNewspaperPreview';
 import { PatternSelectionModal } from '@/components/PatternSelectionModal';
 import { BORDER_COLOURS, HEADING_BG_COLOURS } from '@/constants/colours';
+import { useTranslation } from '@/lib/i18n';
 
 // ─── Generation stage labels + progress ──────────────────────────────────────
 const GEN_STAGES = [
-  { label: 'Uploading Images…',           pct: 10 },
-  { label: 'Generating Article…',         pct: 30 },
-  { label: 'Creating Newspaper Layout…',  pct: 55 },
-  { label: 'Rendering Clipping…',         pct: 75 },
-  { label: 'Finalizing…',                 pct: 92 },
+  { id: 'uploadingImages',           pct: 10 },
+  { id: 'generatingArticle',         pct: 30 },
+  { id: 'creatingLayout',  pct: 55 },
+  { id: 'renderingClipping',         pct: 75 },
+  { id: 'finalizing',                 pct: 92 },
 ];
 
 const LANGUAGES = [
-  { id: 'en', label: 'English' },
   { id: 'te', label: 'Telugu (తెలుగు)' },
-  { id: 'hi', label: 'Hindi (हिन्दी)' },
 ];
 
 // ─── Shared card style ────────────────────────────────────────────────────────
@@ -59,6 +58,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export const GenerateScreen = () => {
+  const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const currentConfig   = useGenerationStore((state) => state.currentConfig);
   const addGeneration   = useGenerationStore((state) => state.addGeneration);
@@ -72,7 +72,7 @@ export const GenerateScreen = () => {
 
   const [headline,      setHeadline]      = useState(currentConfig.headline || '');
   const [content,       setContent]       = useState(currentConfig.articleContent || '');
-  const [language,      setLanguage]      = useState<Language>((currentConfig.language as Language) || 'en');
+  const [language,      setLanguage]      = useState<Language>((currentConfig.language as Language) || 'te');
   const [fontFamily,    setFontFamily]    = useState(currentConfig.fontFamily || 'playfair');
   const [layoutColumns, setLayoutColumns] = useState(currentConfig.layoutColumns || 3);
   const [imageUrls,     setImageUrls]     = useState<string[]>(currentConfig.imageUrls || []);
@@ -82,6 +82,8 @@ export const GenerateScreen = () => {
   const [activeColourTab,    setActiveColourTab]    = useState<'border' | 'heading'>('border');
   const [showLangPicker,     setShowLangPicker]     = useState(false);
   const [showColPicker,      setShowColPicker]      = useState(false);
+
+  const [isAdvanceOpen,      setIsAdvanceOpen]      = useState(false);
 
   const [loading,    setLoading]    = useState(false);
   const [stageIndex, setStageIndex] = useState(-1);
@@ -127,8 +129,6 @@ export const GenerateScreen = () => {
   const activeColourDetails = activeColourTab === 'border'
     ? getColourDetails(selectedBorderColour, true)
     : getColourDetails(selectedHeadingBgColour, false);
-
-
 
   const activeLang = LANGUAGES.find(l => l.id === language) || LANGUAGES[0];
 
@@ -185,13 +185,12 @@ export const GenerateScreen = () => {
     }
   };
 
-  // ─── Generate clipping ──────────────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!headline || !content) return;
     setLoading(true); setStageIndex(0);
     try {
-      const reporterName = (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
-      const reporterImage = user?.avatarUrl || getReporterPhoto(user?.email) || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || '';
+      const reporterName = getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
+      const reporterImage = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || '';
 
       const configToSave = {
         ...currentConfig, headline, articleContent: content, language, fontFamily,
@@ -243,10 +242,11 @@ export const GenerateScreen = () => {
         resetConfig();
         setHeadline('');
         setContent('');
-        setLanguage('en');
+        setLanguage('te');
         setFontFamily('playfair');
         setLayoutColumns(3);
         setImageUrls([]);
+        setIsAdvanceOpen(false);
         
         navigate(`/preview/${generation.id}`); 
       }
@@ -274,7 +274,7 @@ export const GenerateScreen = () => {
       {/* ── Page title banner ── */}
       <div style={{ background: '#0D1B2A', paddingTop: '14px', paddingBottom: '16px', marginBottom: '12px', borderBottom: '3px solid #CC1E1E' }}>
         <h1 style={{ color: '#fff', fontSize: '20px', fontWeight: 800, fontFamily: "'Georgia', serif", margin: 0, textAlign: 'center', letterSpacing: '0.3px', paddingLeft: '16px', paddingRight: '16px' }}>
-          New Newspaper Clipping
+          {t.newClippingTitle}
         </h1>
       </div>
 
@@ -285,7 +285,7 @@ export const GenerateScreen = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={labelStyle}>
-                <Newspaper style={{ width: 10, height: 10 }} /> ACTIVE LOGO
+                <Newspaper style={{ width: 10, height: 10 }} /> {t.activeLogo}
               </div>
               <span style={{ color: '#fff', fontSize: '16px', fontWeight: 700 }}>{selectedTemplateDetails.name}</span>
             </div>
@@ -293,118 +293,225 @@ export const GenerateScreen = () => {
               onClick={() => setIsLogoModalOpen(true)}
               style={{ background: '#CC1E1E', color: '#fff', border: 'none', borderRadius: '20px', padding: '8px 20px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', letterSpacing: '0.2px' }}
             >
-              Change
+              {t.change}
             </button>
           </div>
         </div>
 
         {/* ── SECTION 2: STYLE & COLOURS ── */}
         <div style={cardStyle}>
-          <div style={labelStyle}>🎨 STYLE &amp; COLOURS</div>
-
-          {/* Tabs */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-            {[
-              { key: 'border',  label: '▦  Border' },
-              { key: 'heading', label: 'abc  Heading BG' },
-            ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveColourTab(tab.key as any)}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: '8px',
-                  border: activeColourTab === tab.key ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
-                  background: activeColourTab === tab.key ? 'rgba(255,255,255,0.13)' : 'transparent',
-                  color: activeColourTab === tab.key ? '#fff' : 'rgba(255,255,255,0.38)',
-                  fontWeight: activeColourTab === tab.key ? 700 : 500,
-                  fontSize: '12px', cursor: 'pointer',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Live Preview header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '9px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }}>LIVE PREVIEW</span>
-            <button
-              onClick={() => navigate('/templates')}
-              style={{ background: 'none', border: '1px solid #CC1E1E', borderRadius: '6px', color: '#CC1E1E', fontSize: '9px', fontWeight: 800, letterSpacing: '1px', padding: '4px 10px', cursor: 'pointer', textTransform: 'uppercase' }}
-            >
-              CHANGE PATTERN
-            </button>
-          </div>
-
-          {/* Pattern Preview */}
-          <div style={{ marginBottom: '10px' }}>
-            <LiveNewspaperPreview
-              patternId={selectedPattern}
-              borderColour={selectedBorderColour}
-              headingBgColour={selectedHeadingBgColour}
-              headlineText={headline}
-              onPress={() => navigate('/templates')}
+          {/* Advance Toggle Button */}
+          <button
+            onClick={() => setIsAdvanceOpen(prev => !prev)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'transparent',
+              border: '1px dashed rgba(255,255,255,0.2)',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              color: '#ffffff',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600 }}>
+              <SlidersHorizontal style={{ width: '15px', height: '15px', color: 'rgba(255,255,255,0.7)' }} />
+              <span>{t.advanced}</span>
+            </div>
+            <ChevronDown
+              style={{
+                width: '16px',
+                height: '16px',
+                color: 'rgba(255,255,255,0.7)',
+                transform: isAdvanceOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 200ms ease',
+              }}
             />
-          </div>
+          </button>
 
-          {/* Selected colour display */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.07)', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: activeColourDetails.hex, flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.15)' }} />
-            <div>
-              <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>{activeColourDetails.name}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontFamily: 'monospace' }}>{activeColourDetails.hex}</span>
-                <span style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {activeColourTab === 'border' ? 'Border' : 'Heading BG'}
-                </span>
+          {/* Collapsible Panel */}
+          <div
+            style={{
+              maxHeight: isAdvanceOpen ? '1200px' : '0px',
+              opacity: isAdvanceOpen ? 1 : 0,
+              overflow: 'hidden',
+              transition: 'max-height 250ms ease, opacity 250ms ease, margin-top 250ms ease',
+              marginTop: isAdvanceOpen ? '14px' : '0px',
+              pointerEvents: isAdvanceOpen ? 'auto' : 'none',
+            }}
+          >
+            <div style={labelStyle}>🎨 {t.styleAndColours}</div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+              {[
+                { key: 'border',  label: `▦  ${t.border}` },
+                { key: 'heading', label: `abc  ${t.headingBg}` },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveColourTab(tab.key as any)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: '8px',
+                    border: activeColourTab === tab.key ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
+                    background: activeColourTab === tab.key ? 'rgba(255,255,255,0.13)' : 'transparent',
+                    color: activeColourTab === tab.key ? '#fff' : 'rgba(255,255,255,0.38)',
+                    fontWeight: activeColourTab === tab.key ? 700 : 500,
+                    fontSize: '12px', cursor: 'pointer',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Live Preview header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '9px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }}>{t.livePreview}</span>
+              <button
+                onClick={() => navigate('/templates')}
+                style={{ background: 'none', border: '1px solid #CC1E1E', borderRadius: '6px', color: '#CC1E1E', fontSize: '9px', fontWeight: 800, letterSpacing: '1px', padding: '4px 10px', cursor: 'pointer', textTransform: 'uppercase' }}
+              >
+                {t.changePattern}
+              </button>
+            </div>
+
+            {/* Pattern Preview */}
+            <div style={{ marginBottom: '14px' }}>
+              <LiveNewspaperPreview
+                patternId={selectedPattern}
+                borderColour={selectedBorderColour}
+                headingBgColour={selectedHeadingBgColour}
+                headlineText={headline}
+                onPress={() => navigate('/templates')}
+              />
+            </div>
+
+            {/* Selected colour display */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.07)', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: activeColourDetails.hex, flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.15)' }} />
+              <div>
+                <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>{activeColourDetails.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '10px', fontFamily: 'monospace' }}>{activeColourDetails.hex}</span>
+                  <span style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {activeColourTab === 'border' ? t.border : t.headingBg}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Colour Swatches */}
-          {(['classic', 'lightAndSoft'] as const).map(group => {
-            const palettes  = activeColourTab === 'border' ? BORDER_COLOURS : HEADING_BG_COLOURS;
-            const colours   = palettes[group];
-            const activeHex = activeColourTab === 'border' ? selectedBorderColour : selectedHeadingBgColour;
-            return (
-              <div key={group} style={{ marginBottom: '14px' }}>
-                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  {group === 'classic' ? 'CLASSIC COLOURS' : 'LIGHT & SOFT COLOURS'}
+            {/* Colour Swatches */}
+            {(['classic', 'lightAndSoft'] as const).map(group => {
+              const palettes  = activeColourTab === 'border' ? BORDER_COLOURS : HEADING_BG_COLOURS;
+              const colours   = palettes[group];
+              const activeHex = activeColourTab === 'border' ? selectedBorderColour : selectedHeadingBgColour;
+              return (
+                <div key={group} style={{ marginBottom: '14px' }}>
+                  <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                    {group === 'classic' ? t.classicColours : t.lightSoftColours}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                    {colours.map(c => {
+                      const isSelected = activeHex.toLowerCase() === c.hex.toLowerCase();
+                      return (
+                        <button
+                          key={c.hex}
+                          onClick={() => activeColourTab === 'border' ? setConfig({ borderColour: c.hex }) : setConfig({ headingBgColour: c.hex })}
+                          style={{
+                            width: '100%', aspectRatio: '1', borderRadius: '8px', border: 'none',
+                            background: c.hex, cursor: 'pointer', position: 'relative',
+                            outline: isSelected ? '2.5px solid #fff' : '2px solid rgba(255,255,255,0.1)',
+                            outlineOffset: isSelected ? '2px' : '0px',
+                            transform: isSelected ? 'scale(1.08)' : 'scale(1)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {isSelected && (
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', borderRadius: '8px' }}>
+                              <CheckCircle2 style={{ width: '14px', height: '14px', color: '#fff' }} strokeWidth={3} />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
-                  {colours.map(c => {
-                    const isSelected = activeHex.toLowerCase() === c.hex.toLowerCase();
+              );
+            })}
+
+            {/* Font + Columns section inside Advance panel */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '14px' }}>
+              {/* Font */}
+              <div>
+                <div style={labelStyle}>{t.font}</div>
+                <button
+                  onClick={() => {
+                    const fonts = ['playfair', 'merriweather', 'inter', 'courier'];
+                    const next = fonts[(fonts.indexOf(fontFamily) + 1) % fonts.length];
+                    setFontFamily(next);
+                  }}
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#fff', fontSize: '13px', fontWeight: 600,
+                    textAlign: 'left', cursor: 'pointer',
+                  }}
+                >
+                  {fontFamily.charAt(0).toUpperCase() + fontFamily.slice(1)}
+                </button>
+              </div>
+
+              {/* Columns */}
+              <div>
+                <div style={labelStyle}>{t.columns}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                  {[{ label: t.auto, val: 0 }, { label: t.oneColumn, val: 1 }, { label: t.twoColumns, val: 2 }, { label: t.threeColumns, val: 3 }]
+                    .filter(({ val }) => showColPicker || layoutColumns === val)
+                    .map(({ label, val }) => {
+                    const isActive = layoutColumns === val;
                     return (
                       <button
-                        key={c.hex}
-                        onClick={() => activeColourTab === 'border' ? setConfig({ borderColour: c.hex }) : setConfig({ headingBgColour: c.hex })}
+                        key={label}
+                        onClick={() => {
+                          if (!showColPicker) {
+                            setShowColPicker(true);
+                          } else {
+                            setLayoutColumns(val);
+                            setShowColPicker(false);
+                          }
+                        }}
                         style={{
-                          width: '100%', aspectRatio: '1', borderRadius: '8px', border: 'none',
-                          background: c.hex, cursor: 'pointer', position: 'relative',
-                          outline: isSelected ? '2.5px solid #fff' : '2px solid rgba(255,255,255,0.1)',
-                          outlineOffset: isSelected ? '2px' : '0px',
-                          transform: isSelected ? 'scale(1.08)' : 'scale(1)',
-                          transition: 'all 0.15s',
+                          padding: '9px 12px', borderRadius: '8px',
+                          background: isActive && showColPicker ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
+                          border: isActive && showColPicker ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
+                          color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
+                          fontSize: '12px', fontWeight: isActive ? 700 : 400,
+                          textAlign: 'left', cursor: 'pointer',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                         }}
                       >
-                        {isSelected && (
-                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', borderRadius: '8px' }}>
-                            <CheckCircle2 style={{ width: '14px', height: '14px', color: '#fff' }} strokeWidth={3} />
-                          </div>
+                        <span>{label}</span>
+                        {!showColPicker && (
+                          <span style={{ opacity: 0.5, fontSize: '10px' }}>▼</span>
                         )}
                       </button>
                     );
                   })}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          </div>
         </div>
 
         {/* ── SECTION 3: INTERFACE LANGUAGE ── */}
         <div style={cardStyle}>
           <div style={labelStyle}>
-            <Globe style={{ width: 10, height: 10 }} /> INTERFACE LANGUAGE
+            <Globe style={{ width: 10, height: 10 }} /> {t.interfaceLanguageLabel}
           </div>
           <button
             onClick={() => setShowLangPicker(v => !v)}
@@ -433,10 +540,10 @@ export const GenerateScreen = () => {
 
         {/* ── SECTION 4: HEADLINE ── */}
         <div style={cardStyle}>
-          <div style={labelStyle}>HEADLINE</div>
+          <div style={labelStyle}>{t.headlineLabel}</div>
           <input
             type="text"
-            placeholder="Enter headline"
+            placeholder={t.enterHeadline}
             value={headline}
             onChange={e => setHeadline(e.target.value)}
             style={{ ...inputStyle, caretColor: '#fff' }}
@@ -446,10 +553,10 @@ export const GenerateScreen = () => {
         {/* ── SECTION 5: ARTICLE CONTENT ── */}
         <div style={cardStyle}>
           <div style={labelStyle}>
-            <Type style={{ width: 10, height: 10 }} /> ARTICLE CONTENT
+            <Type style={{ width: 10, height: 10 }} /> {t.articleContentLabel}
           </div>
           <textarea
-            placeholder="Enter article content..."
+            placeholder={t.enterArticleContent}
             value={content}
             onChange={e => setContent(e.target.value)}
             rows={5}
@@ -460,7 +567,7 @@ export const GenerateScreen = () => {
         {/* ── SECTION 6: FEATURED IMAGES ── */}
         <div style={cardStyle}>
           <div style={labelStyle}>
-            <ImageIcon style={{ width: 10, height: 10 }} /> FEATURED IMAGES (MAX {maxImages})
+            <ImageIcon style={{ width: 10, height: 10 }} /> {t.featuredImagesMax.replace('{max}', maxImages.toString())}
           </div>
 
           {imageUrls.length > 0 && (
@@ -492,74 +599,12 @@ export const GenerateScreen = () => {
               }}
             >
               <ImageIcon style={{ width: '24px', height: '24px', color: 'rgba(255,255,255,0.4)' }} />
-              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>Tap to upload image</span>
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>{t.tapToUpload}</span>
               <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px' }}>
-                {maxImages - imageUrls.length} remaining · auto-compressed
+                {maxImages - imageUrls.length} {t.remainingAutoCompressed}
               </span>
             </button>
           )}
-        </div>
-
-        {/* ── SECTION 7: FONT + COLUMNS ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-          {/* Font — shows selected font as a display box, tap to cycle */}
-          <div style={{ ...cardStyle, marginBottom: 0 }}>
-            <div style={labelStyle}>FONT</div>
-            <button
-              onClick={() => {
-                const fonts = ['playfair', 'merriweather', 'inter', 'courier'];
-                const next = fonts[(fonts.indexOf(fontFamily) + 1) % fonts.length];
-                setFontFamily(next);
-              }}
-              style={{
-                width: '100%', padding: '10px 12px', borderRadius: '8px',
-                background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
-                color: '#fff', fontSize: '13px', fontWeight: 600,
-                textAlign: 'left', cursor: 'pointer',
-              }}
-            >
-              {fontFamily.charAt(0).toUpperCase() + fontFamily.slice(1)}
-            </button>
-          </div>
-
-          {/* Columns */}
-          <div style={{ ...cardStyle, marginBottom: 0 }}>
-            <div style={labelStyle}>COLUMNS</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-              {[{ label: 'Auto', val: 0 }, { label: '1 Column', val: 1 }, { label: '2 Columns', val: 2 }, { label: '3 Columns', val: 3 }]
-                .filter(({ val }) => showColPicker || layoutColumns === val)
-                .map(({ label, val }) => {
-                const isActive = layoutColumns === val;
-                return (
-                  <button
-                    key={label}
-                    onClick={() => {
-                      if (!showColPicker) {
-                        setShowColPicker(true);
-                      } else {
-                        setLayoutColumns(val);
-                        setShowColPicker(false);
-                      }
-                    }}
-                    style={{
-                      padding: '9px 12px', borderRadius: '8px',
-                      background: isActive && showColPicker ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
-                      border: isActive && showColPicker ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
-                      color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
-                      fontSize: '12px', fontWeight: isActive ? 700 : 400,
-                      textAlign: 'left', cursor: 'pointer',
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                    }}
-                  >
-                    <span>{label}</span>
-                    {!showColPicker && (
-                      <span style={{ opacity: 0.5, fontSize: '10px' }}>▼</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
       </div>
@@ -569,7 +614,7 @@ export const GenerateScreen = () => {
         {loading && currentStage && (
           <div style={{ background: '#0D1B2A', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '10px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ color: '#fff', fontSize: '11px', fontWeight: 600 }}>{currentStage.label}</span>
+              <span style={{ color: '#fff', fontSize: '11px', fontWeight: 600 }}>{(t as any)[currentStage.id]}</span>
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontFamily: 'monospace' }}>{currentStage.pct}%</span>
             </div>
             <div style={{ height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -589,9 +634,9 @@ export const GenerateScreen = () => {
           }}
         >
           {loading ? (
-            <><Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} /><span>{currentStage?.label || 'Processing…'}</span></>
+            <><Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} /><span>{currentStage ? (t as any)[currentStage.id] : t.publishLoading}</span></>
           ) : (
-            <span>Generate Clipping →</span>
+            <span>{t.publish}</span>
           )}
         </button>
       </div>
@@ -619,7 +664,7 @@ export const GenerateScreen = () => {
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-              <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: 800, fontFamily: "'Georgia', serif", margin: 0 }}>Select Logo</h2>
+              <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: 800, fontFamily: "'Georgia', serif", margin: 0 }}>{t.selectLogo}</h2>
               <button onClick={() => setIsLogoModalOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X style={{ width: '16px', height: '16px' }} />
               </button>

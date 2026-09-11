@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
-import { useAuthStore, useUIStore, useGenerationStore, saveReporterPhoto, getReporterPhoto } from '@/store';
+import { useState } from 'react';
+import { useAuthStore, useUIStore, useGenerationStore, getReporterPhoto, getReporterName } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, Camera, User as UserIcon } from 'lucide-react';
+import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, User as UserIcon, UserCircle, ChevronRight, FileText, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -68,9 +68,8 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 }
 
 export const SettingsScreen = () => {
-  const { user, logout, updateUser } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const resetGenerations = useGenerationStore((state) => state.resetConfig);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   // Use persistent UI store
@@ -80,36 +79,6 @@ export const SettingsScreen = () => {
   const toggleInnerBorders = useUIStore((state) => state.toggleInnerBorders);
   const { t, language: activeLanguage } = useTranslation();
   const setLanguage = useUIStore((state) => state.setLanguage);
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const size = Math.min(img.width, img.height);
-        const targetSize = 250;
-        canvas.width = targetSize;
-        canvas.height = targetSize;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const offsetX = (img.width - size) / 2;
-          const offsetY = (img.height - size) / 2;
-          ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          saveReporterPhoto(user?.email, dataUrl);
-          updateUser({ avatarUrl: dataUrl });
-          supabase.auth.updateUser({ data: { avatar_url: dataUrl } }).catch(() => {});
-          showToast('Reporter photo updated permanently!', 'success');
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
   const [notifications, setNotifications] = useState({
     emailGenerations: true,
@@ -261,58 +230,88 @@ export const SettingsScreen = () => {
       </div>
 
       <div className="space-y-5">
-        {/* Reporter Profile & Photo Card */}
+        {/* Reporter Profile Card */}
         <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl p-5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div
-              onClick={() => photoInputRef.current?.click()}
-              className="relative w-16 h-16 rounded-full border-2 border-[#CC1E1E] bg-[#EEF3F8] flex items-center justify-center cursor-pointer shadow-md overflow-hidden shrink-0 active:scale-95 transition-transform"
-              title="Change Reporter Photo"
-            >
-              {user?.avatarUrl || getReporterPhoto(user?.email) ? (
-                <img src={user?.avatarUrl || getReporterPhoto(user?.email)} alt="Reporter Photo" className="w-full h-full object-cover" />
+            <div className="relative w-16 h-16 rounded-full border-2 border-[#CC1E1E] bg-[#EEF3F8] flex items-center justify-center shadow-md overflow-hidden shrink-0">
+              {getReporterPhoto(user?.email) || user?.avatarUrl ? (
+                <img src={getReporterPhoto(user?.email) || user?.avatarUrl} alt="Reporter Photo" className="w-full h-full object-cover" />
               ) : (
                 <div className="flex flex-col items-center justify-center text-[#0D1B2A]">
                   <UserIcon className="w-7 h-7 text-[#0D1B2A]/60" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
-                <Camera className="w-5 h-5 text-white" />
-              </div>
             </div>
-            <input
-              type="file"
-              ref={photoInputRef}
-              onChange={handlePhotoUpload}
-              accept="image/*"
-              className="hidden"
-            />
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-gray-900 dark:text-white text-base">
-                  {(user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter'}
+                  {getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter'}
                 </h3>
                 <span className="bg-[#CC1E1E]/10 text-[#CC1E1E] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
                   Reporter
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user?.email || 'reporter@rtiexpress.com'}</p>
-              <button
-                onClick={() => photoInputRef.current?.click()}
-                className="text-xs font-bold text-[#CC1E1E] hover:underline mt-1.5 flex items-center gap-1"
-              >
-                <Camera className="w-3.5 h-3.5" />
-                {user?.avatarUrl ? 'Change Reporter Photo' : 'Upload Reporter Photo'}
-              </button>
             </div>
           </div>
+        </div>
+
+        {/* Profile Settings Card */}
+        <div
+          onClick={() => navigate('/settings/profile')}
+          className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-[12px] p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#0a2540]/10 flex items-center justify-center shrink-0">
+              <UserCircle className="w-5 h-5 text-[#0a2540]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t.profileSettings}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.profileSettingsDesc}</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+        </div>
+
+        {/* Templates Card */}
+        <div
+          onClick={() => navigate('/templates')}
+          className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-[12px] p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#0a2540]/10 flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5 text-[#0a2540]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t.templatesTitle}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.templatesDesc}</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+        </div>
+
+        {/* History Card */}
+        <div
+          onClick={() => navigate('/history')}
+          className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-[12px] p-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#0a2540]/10 flex items-center justify-center shrink-0">
+              <History className="w-5 h-5 text-[#0a2540]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t.historyTitle}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.historyDesc}</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
         </div>
 
         {/* Appearance */}
         <SettingsSection title={t.appearance} icon={Moon}>
           <SettingsRow
-            label="Inner Border Lines"
-            description="Show borders below the logo and headline."
+            label={t.innerBorders}
+            description={t.innerBordersDesc}
             control={
               <ToggleSwitch
                 enabled={showInnerBorders ?? true}

@@ -1,6 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Home, FileText, Settings, History, Plus } from 'lucide-react';
+import { Settings, Plus } from 'lucide-react';
 import { useTranslation } from './lib/i18n';
 import mastheadLogo from './assets/rti_express_logo.png';
 import watermarkLogo from './assets/rti_express_watermark.png';
@@ -12,12 +12,14 @@ import { GenerateScreen } from './screens/GenerateScreen';
 import { TemplatesScreen } from './screens/TemplatesScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { ProfileSettingsScreen } from './screens/ProfileSettingsScreen';
 import { PreviewScreen } from './screens/PreviewScreen';
 import { LoginOtpScreen } from './screens/LoginOtpScreen';
 import { VerifyOtpScreen } from './screens/VerifyOtpScreen';
 import { CreatePasswordScreen } from './screens/CreatePasswordScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
-import { useAuthStore, useUIStore, getReporterPhoto } from './store';
+import { useAuthStore, useUIStore, getReporterPhoto, getReporterName } from './store';
+import { AdminScreen } from './screens/AdminScreen';
 import { supabase } from './lib/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -26,12 +28,10 @@ import { ErrorBoundary } from './ErrorBoundary';
 
 // Mobile Layout with Bottom Navigation
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const userAvatar = user?.avatarUrl || getReporterPhoto(user?.email) || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || (user as any)?.avatar_url;
-  const userName = (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
+  const userAvatar = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || (user as any)?.avatar_url;
+  const userName = getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
   const userInitials = userName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'RP';
 
   return (
@@ -113,13 +113,13 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           </span>
         </div>
 
-        {/* ── Red ticker bar ── */}
-        <div className="w-full bg-[#CC1E1E] py-2 px-4 flex items-center gap-3">
-          <span className="bg-white text-[#CC1E1E] text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full whitespace-nowrap">
+        {/* ── Ticker bar ── */}
+        <div className="w-full bg-[#1e3a5f] py-2 px-4 flex items-center gap-3">
+          <span className="bg-white text-[#1e3a5f] text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full whitespace-nowrap">
             {t.latest}
           </span>
           <span className="text-white text-[12px] truncate">
-            Welcome to Spot News 24x7 · {t.tickerText}
+            Wanted Reporters:7668886666
           </span>
         </div>
       </header>
@@ -133,28 +133,15 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
 
       {/* Bottom Navigation */}
-      <nav className="bg-[#0D1B2A] fixed bottom-0 w-full pb-safe flex justify-around items-center h-[70px] z-20">
-        <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <Home className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.home}</span>
-        </Link>
-        <Link to="/templates" className={`flex flex-col items-center gap-1 ${isActive('/templates') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <FileText className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.templates}</span>
-        </Link>
-        
-        {/* Center FAB */}
-        <Link to="/generate" className="relative -top-5 flex items-center justify-center w-[48px] h-[48px] bg-[#CC1E1E] rounded-full text-white shadow-[0_4px_12px_rgba(204,30,30,0.4)] active:scale-95 transition-transform z-50">
-          <Plus className="w-[22px] h-[22px]" strokeWidth={2.5} />
+      <nav className="bg-[#0a2540] fixed bottom-0 w-full pb-safe flex justify-center items-center gap-[64px] h-[78px] z-20">
+        {/* Plus Tab */}
+        <Link to="/generate" className="flex items-center justify-center w-[54px] h-[54px] bg-[#16334d] rounded-full text-[#dceef8] active:scale-95 transition-transform">
+          <Plus className="w-[26px] h-[26px]" strokeWidth={2} />
         </Link>
 
-        <Link to="/history" className={`flex flex-col items-center gap-1 ${isActive('/history') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <History className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.history}</span>
-        </Link>
-        <Link to="/settings" className={`flex flex-col items-center gap-1 ${isActive('/settings') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <Settings className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.settings}</span>
+        {/* Settings Tab */}
+        <Link to="/settings" className="flex items-center justify-center w-[54px] h-[54px] bg-[#16334d] rounded-full text-[#dceef8] active:scale-95 transition-transform">
+          <Settings className="w-[26px] h-[26px]" strokeWidth={2} />
         </Link>
       </nav>
     </div>
@@ -162,6 +149,11 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+
+// ── Admin email list ────────────────────────────────────────────────────────
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS ?? 'mohithroyal16450@gmail.com')
+  .split(',')
+  .map((e: string) => e.trim().toLowerCase());
 
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -195,8 +187,9 @@ function App() {
           });
           if (data.session) {
             login(data.session.user as any, data.session.access_token);
-            // Force reload to dashboard
-            window.location.href = '/';
+            // Redirect admin emails to admin panel, others to dashboard
+            const email = data.session.user?.email?.toLowerCase().trim() ?? '';
+            window.location.href = ADMIN_EMAILS.includes(email) ? '/admin' : '/';
           }
         }
       }
@@ -215,15 +208,27 @@ function App() {
       }
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         const email = session.user?.email;
+        const savedName = getReporterName(email);
         const savedPhoto = getReporterPhoto(email);
         const userObj = {
           ...session.user,
+          full_name: savedName || (session.user as any)?.user_metadata?.full_name || (session.user as any)?.user_metadata?.name || (session.user as any)?.full_name || '',
+          firstName: savedName || (session.user as any)?.user_metadata?.full_name || '',
           avatarUrl: savedPhoto || (session.user as any)?.user_metadata?.avatar_url || (session.user as any)?.user_metadata?.picture || '',
         };
         login(userObj as any, session.access_token);
+
+        // Auto-redirect admin emails to /admin on SIGNED_IN event
+        if (event === 'SIGNED_IN') {
+          const emailLower = email?.toLowerCase().trim() ?? '';
+          if (ADMIN_EMAILS.includes(emailLower)) {
+            // Small delay to let React Router mount before navigating
+            setTimeout(() => { window.location.href = '/admin'; }, 100);
+          }
+        }
       }
     });
 
@@ -269,6 +274,12 @@ function App() {
           path="/forgot-password" 
           element={<ForgotPasswordScreen />} 
         />
+
+        {/* ── Admin Route (standalone, no MainLayout) ── */}
+        <Route 
+          path="/admin" 
+          element={<AdminScreen />} 
+        />
         
         <Route 
           path="/preview/:id" 
@@ -281,11 +292,13 @@ function App() {
             isAuthenticated ? (
               <MainLayout>
                 <Routes>
-                  <Route path="/" element={<DashboardScreen />} />
+                  <Route path="/" element={<GenerateScreen />} />
+                  <Route path="/dashboard" element={<DashboardScreen />} />
                   <Route path="/generate" element={<GenerateScreen />} />
                   <Route path="/templates" element={<TemplatesScreen />} />
                   <Route path="/history" element={<HistoryScreen />} />
                   <Route path="/settings" element={<SettingsScreen />} />
+                  <Route path="/settings/profile" element={<ProfileSettingsScreen />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </MainLayout>

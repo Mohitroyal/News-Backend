@@ -2,7 +2,36 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User, GenerationConfig, Generation } from "@/types";
 
-// ─── Permanent Reporter Photo Helpers ──────────────────────────────────────────
+// ─── Permanent Reporter Name & Photo Helpers ─────────────────────────────────────
+export const getReporterName = (email?: string): string => {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) return "";
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      const name = localStorage.getItem(`spotnews_reporter_name_${cleanEmail}`);
+      if (name) return name;
+    }
+    const lastName = localStorage.getItem("spotnews_last_reporter_name");
+    if (lastName) return lastName;
+  } catch (e) {
+    console.warn("[NameStore] Error reading reporter name:", e);
+  }
+  return "";
+};
+
+export const saveReporterName = (email: string | undefined, name: string): void => {
+  try {
+    if (!name || typeof window === "undefined" || !window.localStorage) return;
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      localStorage.setItem(`spotnews_reporter_name_${cleanEmail}`, name.trim());
+    }
+    localStorage.setItem("spotnews_last_reporter_name", name.trim());
+  } catch (e) {
+    console.warn("[NameStore] Error saving reporter name:", e);
+  }
+};
+
 export const getReporterPhoto = (email?: string): string => {
   try {
     if (typeof window === "undefined" || !window.localStorage) return "";
@@ -52,20 +81,44 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       login: (user, token) => {
         const email = user?.email || (user as any)?.user_metadata?.email;
+        const storedName = getReporterName(email);
         const storedPhoto = getReporterPhoto(email);
+
+        const existingName =
+          storedName ||
+          (user as any)?.user_metadata?.full_name ||
+          (user as any)?.user_metadata?.name ||
+          user?.full_name ||
+          user?.firstName ||
+          "";
+
         const existingPhoto =
+          storedPhoto ||
           user?.avatarUrl ||
           (user as any)?.user_metadata?.avatar_url ||
           (user as any)?.user_metadata?.picture ||
-          storedPhoto;
+          "";
+
+        const existingMetadata = (user as any)?.user_metadata || {};
+        const updatedMetadata = {
+          ...existingMetadata,
+          ...(existingName ? { full_name: existingName, name: existingName } : {}),
+          ...(existingPhoto ? { avatar_url: existingPhoto, picture: existingPhoto } : {}),
+        };
 
         const enrichedUser: User = {
           ...user,
+          full_name: existingName || user?.full_name || user?.firstName || "",
+          firstName: existingName || user?.firstName || "",
           avatarUrl: existingPhoto || "",
-        };
+          user_metadata: updatedMetadata,
+        } as any;
 
         if (existingPhoto && email) {
           saveReporterPhoto(email, existingPhoto);
+        }
+        if (existingName && email) {
+          saveReporterName(email, existingName);
         }
 
         set({ user: enrichedUser, token, isAuthenticated: true });
@@ -77,9 +130,29 @@ export const useAuthStore = create<AuthStore>()(
           if (!state.user) return { user: null };
           const updatedUser: User = { ...state.user, ...partial };
           const email = updatedUser.email || (updatedUser as any)?.user_metadata?.email;
+          const newName =
+            partial.full_name ||
+            partial.firstName ||
+            (partial as any)?.user_metadata?.full_name ||
+            (partial as any)?.user_metadata?.name;
+
+          if (newName) {
+            saveReporterName(email, newName);
+          }
           if (partial.avatarUrl) {
             saveReporterPhoto(email, partial.avatarUrl);
           }
+
+          // Ensure user_metadata is also kept in sync
+          if (newName || partial.avatarUrl) {
+            const currentMetadata = (updatedUser as any)?.user_metadata || {};
+            (updatedUser as any).user_metadata = {
+              ...currentMetadata,
+              ...(newName ? { full_name: newName, name: newName } : {}),
+              ...(partial.avatarUrl ? { avatar_url: partial.avatarUrl, picture: partial.avatarUrl } : {}),
+            };
+          }
+
           return { user: updatedUser };
         }),
       otpState: null,
@@ -196,3 +269,17 @@ export const useUIStore = create<UIStore>()(
     { name: "newscraft-ui" }
   )
 );
+
+// ─── Admin RBAC Helper ────────────────────────────────────────────────────────
+/**
+ * Returns true if the given email is in the admin list (VITE_ADMIN_EMAILS env var).
+ * Use this as a quick client-side guard before the full Supabase role check.
+ */
+export const isAdminUser = (email?: string): boolean => {
+  if (!email) return false;
+  const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS ?? 'mohithroyal16450@gmail.com')
+    .split(',')
+    .map((e: string) => e.trim().toLowerCase());
+  return adminEmails.includes(email.toLowerCase().trim());
+};
+

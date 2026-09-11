@@ -169,12 +169,12 @@ export const PreviewScreen = () => {
     );
   }
 
-  const handleDownload = async (format: 'png' | 'pdf') => {
+  const handleDownload = async (format: 'jpg' | 'pdf') => {
     setDownloading(true);
     try {
       let blob;
-      if (format === 'png') {
-        if (!generation.png_url) throw new Error("PNG URL not available");
+      if (format === 'jpg') {
+        if (!generation.png_url) throw new Error("JPG URL not available");
         const res = await fetch(generation.png_url);
         blob = await res.blob();
       } else {
@@ -233,8 +233,8 @@ export const PreviewScreen = () => {
     setIsShareSheetOpen(false);
 
     try {
-      const title = 'RTI EXPRESS';
-      const text = 'RTI EXPRESS WANTED REPORTERS: 7668886666';
+      const title = generation.config?.headline || 'RTI EXPRESS';
+      const text = `${generation.config?.headline || ''}\n\nRTI EXPRESS – India’s First Breaking News App.`;
 
       // Fetch image blob
       const res = await fetch(generation.png_url);
@@ -247,7 +247,7 @@ export const PreviewScreen = () => {
           let base64data = reader.result as string;
           if (base64data.includes(',')) base64data = base64data.split(',')[1];
           try {
-            const tempFileName = `newscraft-share-${generation.id}.png`;
+            const tempFileName = `newscraft-share-${generation.id}.jpg`;
             const writeResult = await Filesystem.writeFile({
               path: tempFileName,
               data: base64data,
@@ -273,7 +273,7 @@ export const PreviewScreen = () => {
         // Try Web Share API if supported
         if (navigator.share) {
           try {
-            const file = new File([blob], `newscraft-${generation.id}.png`, { type: blob.type });
+            const file = new File([blob], `newscraft-${generation.id}.jpg`, { type: blob.type });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               await navigator.share({
                 title,
@@ -357,7 +357,7 @@ export const PreviewScreen = () => {
         <div className="flex flex-col flex-1 truncate">
           <span className="text-white font-bold text-[17px] tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>Preview</span>
           <span className="text-[10px] text-[#a0c4dc] tracking-wider truncate">
-            clipping_{generation.id.slice(0, 8)}.png
+            clipping_{generation.id.slice(0, 8)}.jpg
           </span>
         </div>
       </div>
@@ -505,13 +505,13 @@ export const PreviewScreen = () => {
              <div className="w-full shrink-0 flex flex-col gap-2">
                 <div className="flex w-full gap-2">
                   <button
-                    onClick={() => handleDownload('png')}
+                    onClick={() => handleDownload('jpg')}
                     disabled={downloading}
                     className="flex-1 py-[14px] bg-[#cc2222] hover:bg-[#ff3333] active:bg-[#a01b1b] text-white rounded-[8px] font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-[0_4px_12px_rgba(204,34,34,0.3)] animate-in slide-in-from-bottom-2 duration-300 delay-200 fill-mode-both relative overflow-hidden group"
                   >
                     <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:animate-[shimmerSweep_1s_ease-out]" />
                     <Download className="w-4 h-4 shrink-0" />
-                    <span>Save PNG</span>
+                    <span>Save JPG</span>
                   </button>
 
                   <button

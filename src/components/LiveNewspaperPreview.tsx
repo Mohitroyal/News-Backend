@@ -1,6 +1,7 @@
 import React from 'react';
 import watermarkLogo from '@/assets/rti_express_watermark.png';
 import { ImageIcon } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 interface LiveNewspaperPreviewProps {
   patternId: string;
@@ -17,6 +18,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
   headlineText,
   onPress,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center w-full">
       <div 
@@ -26,7 +28,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
       >
         {/* Top header inside the border */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-          <span className="text-[10px] font-bold text-gray-500 tracking-wider">PATTERN {patternId}</span>
+          <span className="text-[10px] font-bold text-gray-500 tracking-wider">{t.pattern} {patternId}</span>
           <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: borderColour }}></span>
         </div>
 
@@ -42,7 +44,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
               <>
                  <div className="w-full p-1.5" style={{ backgroundColor: headingBgColour }}>
                    <div className="text-[10px] font-bold leading-tight font-serif text-black truncate">
-                     {headlineText || 'Headline text...'}
+                     {headlineText || t.headlineTextPlaceholder}
                    </div>
                  </div>
                  <div className="w-full h-1 mt-1 border-y" style={{ borderColor: borderColour }} />
@@ -66,7 +68,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
                    <div className="w-1.5 h-6" style={{ backgroundColor: borderColour }} />
                    <div className="flex-1 p-1.5" style={{ backgroundColor: headingBgColour }}>
                      <div className="text-[10px] font-bold leading-tight font-serif text-black truncate">
-                       {headlineText || 'Headline text...'}
+                       {headlineText || t.headlineTextPlaceholder}
                      </div>
                    </div>
                  </div>
@@ -92,7 +94,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
               <>
                  <div className="w-full p-1.5 mb-1.5" style={{ backgroundColor: headingBgColour }}>
                    <div className="text-[10px] font-bold leading-tight font-serif text-black truncate text-center border-y border-dashed py-0.5" style={{ borderColor: borderColour }}>
-                     {headlineText || 'Headline text...'}
+                     {headlineText || t.headlineTextPlaceholder}
                    </div>
                  </div>
                  <div className="flex gap-1.5 h-[45px] mb-1.5">
@@ -119,7 +121,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
                  <div className="w-full p-1.5 mb-1.5" style={{ backgroundColor: headingBgColour }}>
                    <div className="text-[10px] font-bold leading-tight font-serif text-black truncate flex items-center gap-1">
                      <span style={{ color: borderColour }}>■</span>
-                     {headlineText || 'Headline text...'}
+                     {headlineText || t.headlineTextPlaceholder}
                    </div>
                  </div>
                  <div className="flex gap-2 flex-1">
@@ -140,7 +142,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
               <>
                  <div className="w-full p-1.5 mb-1.5" style={{ backgroundColor: headingBgColour }}>
                    <div className="text-[10px] font-bold leading-tight font-serif text-black truncate text-center">
-                     {headlineText || 'Headline text...'}
+                     {headlineText || t.headlineTextPlaceholder}
                    </div>
                  </div>
                  <div className="w-full h-[40px] mb-1.5 bg-blue-100/50 border border-blue-200 flex items-center justify-center rounded-sm">
@@ -167,7 +169,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
                    <div className="w-1.5 h-6" style={{ backgroundColor: borderColour }} />
                    <div className="flex-1 p-1.5" style={{ backgroundColor: headingBgColour }}>
                      <div className="text-[10px] font-bold leading-tight font-serif text-black truncate">
-                       {headlineText || 'Headline text...'}
+                       {headlineText || t.headlineTextPlaceholder}
                      </div>
                    </div>
                  </div>
@@ -199,7 +201,7 @@ export const LiveNewspaperPreview: React.FC<LiveNewspaperPreviewProps> = ({
               <>
                  <div className="w-full p-1.5 mb-1.5" style={{ backgroundColor: headingBgColour }}>
                    <div className="text-[10px] font-bold leading-tight font-serif text-black truncate">
-                     {headlineText || 'Headline text...'}
+                     {headlineText || t.headlineTextPlaceholder}
                    </div>
                  </div>
                  <div className="flex gap-2 flex-1">
