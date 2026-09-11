@@ -28,11 +28,21 @@ def verify_admin_access(current_user: User):
     email = (current_user.email or "").lower().strip()
     is_admin_email = email in [e.lower() for e in ADMIN_EMAILS]
     is_admin_plan = (current_user.subscription_plan or "").lower() == "admin"
-    if not (is_admin_email or is_admin_plan):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required"
-        )
+    if is_admin_email or is_admin_plan:
+        return
+    # Fallback check: Supabase profiles table
+    try:
+        admin_sb = get_supabase_admin_client()
+        prof = admin_sb.from_("profiles").select("role").eq("id", str(current_user.id)).execute()
+        if prof and prof.data and len(prof.data) > 0 and prof.data[0].get("role") == "admin":
+            current_user.subscription_plan = "admin"
+            return
+    except Exception:
+        pass
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin privileges required"
+    )
 
 
 class UpdateRoleRequest(BaseModel):
@@ -129,9 +139,21 @@ def get_auth_users(
         is_active = local.is_active if local else True
 
         # Admin role check
-        user_role = "admin" if email.lower() in [e.lower() for e in ADMIN_EMAILS] else "user"
-        if local and (local.subscription_plan or "").lower() == "admin":
+        user_role = "user"
+        app_meta = au_data.get("app_metadata") or {}
+        if hasattr(app_meta, "model_dump"):
+            app_meta = app_meta.model_dump()
+        elif not isinstance(app_meta, dict):
+            app_meta = {}
+
+        meta_role = (meta.get("role") or app_meta.get("role") or "").lower()
+
+        if email.lower() in [e.lower() for e in ADMIN_EMAILS]:
             user_role = "admin"
+        elif (local and (local.subscription_plan or "").lower() == "admin"):
+            user_role = "admin"
+        elif meta_role in ("admin", "reporter", "user"):
+            user_role = meta_role
 
         # Ban status
         banned_until = au_data.get("banned_until")
@@ -380,25 +402,34 @@ def update_user_role(
 
     # 1. Fetch existing metadata first so we don't wipe other fields
     existing_app_metadata = {}
+    existing_user_metadata = {}
+    user_email = ""
     try:
         existing_auth_user = admin_sb.auth.admin.get_user_by_id(user_id)
         raw_user = existing_auth_user.user if hasattr(existing_auth_user, "user") else existing_auth_user
         if raw_user:
+            user_email = getattr(raw_user, "email", "") or ""
             raw_app = getattr(raw_user, "app_metadata", None)
             if hasattr(raw_app, "model_dump"):
                 existing_app_metadata = raw_app.model_dump() or {}
             elif isinstance(raw_app, dict):
                 existing_app_metadata = raw_app
+            raw_usr = getattr(raw_user, "user_metadata", None)
+            if hasattr(raw_usr, "model_dump"):
+                existing_user_metadata = raw_usr.model_dump() or {}
+            elif isinstance(raw_usr, dict):
+                existing_user_metadata = raw_usr
     except Exception as e:
         print(f"[ADMIN] Warning fetching existing metadata: {e}")
 
     # 2. Update Supabase Auth user metadata — merge role into existing metadata
     try:
         merged_app_metadata = {**existing_app_metadata, "role": req.role, "plan": req.role if req.role == "admin" else existing_app_metadata.get("plan", "free")}
+        merged_user_metadata = {**existing_user_metadata, "role": req.role}
         admin_sb.auth.admin.update_user_by_id(
             user_id,
             {
-                "user_metadata": {"role": req.role},
+                "user_metadata": merged_user_metadata,
                 "app_metadata": merged_app_metadata,
             },
         )
@@ -407,8 +438,11 @@ def update_user_role(
 
     # 3. Update Supabase public.profiles table using service role (bypasses RLS)
     try:
+        profile_data = {"id": user_id, "role": req.role}
+        if user_email:
+            profile_data["email"] = user_email
         admin_sb.from_("profiles").upsert(
-            {"id": user_id, "role": req.role},
+            profile_data,
             on_conflict="id",
         ).execute()
     except Exception as e:
@@ -492,8 +526,11 @@ def update_user_plan(
                 print(f"[ADMIN] Error syncing user to local DB: {e}")
 
         if user:
-            user.subscription_plan = req.plan
-            db.commit()
+            if (user.subscription_plan or "").lower() == "admin" and req.plan != "admin":
+                pass  # Keep admin status intact
+            else:
+                user.subscription_plan = req.plan
+                db.commit()
     except Exception as e:
         print(f"[ADMIN] Error updating local user: {e}")
 
