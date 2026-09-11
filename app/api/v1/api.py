@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import generate, auth, upload, subscriptions, health, posts
+from app.api.v1.endpoints import generate, auth, upload, subscriptions, health, posts, admin
 
 api_router = APIRouter()
 api_router.include_router(health.router, prefix="/health", tags=["health"])
@@ -9,4 +9,6 @@ api_router.include_router(upload.router, prefix="/uploads", tags=["uploads"])
 api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["subscriptions"])
 api_router.include_router(posts.router, prefix="/posts", tags=["posts"])
 api_router.include_router(posts.router, prefix="/feed", tags=["feed_alias"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+
 
