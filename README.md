@@ -18,6 +18,12 @@
 
 Or follow the full guide: **[DEPLOY_RENDER.md](./DEPLOY_RENDER.md)**
 
+## Comprehensive Guides & Documentation
+- 🛡️ **[Security Architecture & Secrets Management Specification](./GUIDES/SECURITY_DOCUMENTATION.md)** — Complete guide on what credentials to keep, where, how, and why.
+- 📰 **[System Architecture & All-in-One Documentation](./GUIDES/SYSTEM_DOCUMENTATION.md)** — Full frontend, backend, rendering, and database documentation.
+- 📱 **[Android APK Build Guide](./GUIDES/HOW_TO_BUILD_APK.md)** — Step-by-step production APK compilation instructions.
+- 🌐 **[Social Feed Integration Guide](./GUIDES/SOCIAL_FEED_INTEGRATION_GUIDE.md)** — Community Feed, likes, and comment API specs.
+
 ## Local Development
 
 Use the frontend repo's `backend/` folder for local development — this repo is for **production deployment only**.
