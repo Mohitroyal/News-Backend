@@ -378,19 +378,34 @@ def update_user_role(
     verify_admin_access(current_user)
     admin_sb = get_supabase_admin_client()
 
-    # 1. Update Supabase Auth user metadata
+    # 1. Fetch existing metadata first so we don't wipe other fields
+    existing_app_metadata = {}
     try:
+        existing_auth_user = admin_sb.auth.admin.get_user_by_id(user_id)
+        raw_user = existing_auth_user.user if hasattr(existing_auth_user, "user") else existing_auth_user
+        if raw_user:
+            raw_app = getattr(raw_user, "app_metadata", None)
+            if hasattr(raw_app, "model_dump"):
+                existing_app_metadata = raw_app.model_dump() or {}
+            elif isinstance(raw_app, dict):
+                existing_app_metadata = raw_app
+    except Exception as e:
+        print(f"[ADMIN] Warning fetching existing metadata: {e}")
+
+    # 2. Update Supabase Auth user metadata — merge role into existing metadata
+    try:
+        merged_app_metadata = {**existing_app_metadata, "role": req.role, "plan": req.role if req.role == "admin" else existing_app_metadata.get("plan", "free")}
         admin_sb.auth.admin.update_user_by_id(
             user_id,
             {
                 "user_metadata": {"role": req.role},
-                "app_metadata": {"role": req.role},
+                "app_metadata": merged_app_metadata,
             },
         )
     except Exception as e:
         print(f"[ADMIN] Warning updating Supabase Auth metadata: {e}")
 
-    # 2. Update Supabase public.profiles table using service role (bypasses RLS)
+    # 3. Update Supabase public.profiles table using service role (bypasses RLS)
     try:
         admin_sb.from_("profiles").upsert(
             {"id": user_id, "role": req.role},
@@ -399,7 +414,7 @@ def update_user_role(
     except Exception as e:
         print(f"[ADMIN] Warning updating Supabase profiles table: {e}")
 
-    # 3. Update local DB (auto-syncing if user not in public.users yet)
+    # 4. Update local DB (auto-syncing if user not in public.users yet)
     try:
         u_uuid = uuid.UUID(user_id)
         user = db.query(User).filter(User.id == u_uuid).first()
@@ -415,6 +430,10 @@ def update_user_role(
         if user:
             if req.role == "admin":
                 user.subscription_plan = "admin"
+            elif req.role in ("reporter", "user"):
+                # Demote: clear the admin plan back to free if it was admin
+                if (user.subscription_plan or "").lower() == "admin":
+                    user.subscription_plan = "free"
             db.commit()
     except Exception as e:
         print(f"[ADMIN] Error updating local user: {e}")
