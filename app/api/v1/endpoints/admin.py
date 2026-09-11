@@ -63,10 +63,23 @@ def get_auth_users(
 
     admin_sb = get_supabase_admin_client()
 
-    # 1. Fetch all users from Supabase auth.users (paginate up to 1000)
+    # 1. Fetch ALL users from Supabase auth.users using pagination.
+    # Supabase defaults to 50 users per page — must loop to get all users.
     try:
-        auth_response = admin_sb.auth.admin.list_users()
-        auth_users = auth_response if isinstance(auth_response, list) else list(auth_response)
+        auth_users = []
+        page = 1
+        per_page = 1000  # max allowed per request
+        while True:
+            response = admin_sb.auth.admin.list_users(page=page, per_page=per_page)
+            batch = response if isinstance(response, list) else list(response)
+            if not batch:
+                break
+            auth_users.extend(batch)
+            if len(batch) < per_page:
+                # Last page — no more users
+                break
+            page += 1
+        print(f"[ADMIN] Fetched {len(auth_users)} users from Supabase Auth (pages={page})")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch Supabase auth users: {e}")
 
