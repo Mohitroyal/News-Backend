@@ -377,3 +377,84 @@ def update_user_plan(
     user.subscription_plan = req.plan
     db.commit()
     return {"success": True}
+
+
+# ── Generation Logs ───────────────────────────────────────────────────────────
+
+@router.get("/generations")
+def get_generation_logs(
+    page: int = 1,
+    page_size: int = 50,
+    user_id: Optional[str] = None,       # filter by specific user
+    status: Optional[str] = None,        # filter: completed, failed, processing
+    template_id: Optional[str] = None,   # filter by template
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Admin view of ALL clippings across ALL users.
+    Shows: who generated it, what headline, which template, when, status, PNG/PDF links.
+    Supports pagination and optional filters by user_id, status, template_id.
+    """
+    verify_admin_access(current_user)
+
+    query = db.query(Clipping, User).join(User, Clipping.user_id == User.id)
+
+    # Optional filters
+    if user_id:
+        try:
+            u_uuid = uuid.UUID(user_id)
+            query = query.filter(Clipping.user_id == u_uuid)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid user_id format")
+
+    if status:
+        query = query.filter(Clipping.status == status)
+
+    if template_id:
+        query = query.filter(Clipping.template_id == template_id)
+
+    # Total count for pagination
+    total = query.count()
+
+    # Paginate, newest first
+    skip = (page - 1) * page_size
+    rows = query.order_by(Clipping.created_at.desc()).offset(skip).limit(page_size).all()
+
+    results = []
+    for clipping, user in rows:
+        results.append({
+            # Clipping identity
+            "id": str(clipping.id),
+            "status": clipping.status or "unknown",
+            "created_at": clipping.created_at.isoformat() if clipping.created_at else "",
+
+            # Who generated it
+            "user_id": str(user.id),
+            "user_email": user.email or "",
+            "user_name": user.full_name or "",
+            "user_plan": user.subscription_plan or "free",
+
+            # What was generated
+            "headline": clipping.headline or "",
+            "template_id": clipping.template_id or "",
+            "language": clipping.language or "en",
+            "tone": clipping.tone or "formal",
+            "publication_name": clipping.publication_name or "",
+            "publication_date": clipping.publication_date or "",
+            "layout_columns": clipping.layout_columns,
+            "font_family": clipping.font_family or "",
+            "image_count": len(clipping.image_urls or []) + (1 if clipping.image_url else 0),
+
+            # Output files
+            "png_url": clipping.png_url or "",
+            "pdf_url": clipping.pdf_url or "",
+        })
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+        "results": results,
+    }
