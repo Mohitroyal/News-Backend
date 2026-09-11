@@ -264,10 +264,37 @@ def get_admin_stats(
 ) -> Any:
     verify_admin_access(current_user)
 
-    # 1. Total users
-    total_users = db.query(User).count()
+    # 1. Total users — read from Supabase Auth (Layer 1) for accurate count.
+    #    Falls back to local DB count if service role key is not configured.
+    try:
+        admin_sb = get_supabase_admin_client()
+        auth_users_page = admin_sb.auth.admin.list_users(page=1, per_page=1)
+        # Supabase returns total via pagination metadata; if not available, do a full fetch
+        # Use a lightweight approach: fetch page 1 and check total from the response object
+        # Some SDK versions expose .total; otherwise fall back to full count
+        total_users = None
+        if hasattr(auth_users_page, "total"):
+            total_users = auth_users_page.total
+        if total_users is None:
+            # Full paginated count
+            all_users = []
+            page = 1
+            per_page = 1000
+            while True:
+                batch = admin_sb.auth.admin.list_users(page=page, per_page=per_page)
+                batch_list = batch if isinstance(batch, list) else list(batch)
+                if not batch_list:
+                    break
+                all_users.extend(batch_list)
+                if len(batch_list) < per_page:
+                    break
+                page += 1
+            total_users = len(all_users)
+    except Exception:
+        # Fallback to local DB count
+        total_users = db.query(User).count()
 
-    # 2. Start of today (UTC & Local tolerance — start of current UTC day)
+    # 2. Start of today (UTC)
     now = datetime.utcnow()
     start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -291,6 +318,7 @@ def get_admin_stats(
         "activeUsersToday": active_today_count,
         "totalLogos": 0,
     }
+
 
 
 @router.get("/users")
