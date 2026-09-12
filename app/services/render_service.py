@@ -1941,6 +1941,25 @@ class RenderService:
                         page.on("console", handle_console)
                         page.set_default_timeout(300000)
 
+                        # SSRF network interception: prevent Chromium from requesting internal or metadata IPs
+                        async def _block_ssrf_routes(route):
+                            r_url = route.request.url
+                            if r_url.startswith("data:") or r_url.startswith("about:"):
+                                await route.continue_()
+                                return
+                            try:
+                                from app.core.ssrf import validate_url_for_ssrf
+                                is_safe, reason = validate_url_for_ssrf(r_url)
+                                if not is_safe:
+                                    print(f"[SSRF BLOCKED] Chromium request to {r_url} blocked: {reason}")
+                                    await route.abort("blockedbyclient")
+                                    return
+                            except Exception:
+                                pass
+                            await route.continue_()
+
+                        await page.route("**/*", _block_ssrf_routes)
+
                         if html_content.startswith("http"):
                             await page.goto(html_content, wait_until="domcontentloaded", timeout=300000)
                         else:

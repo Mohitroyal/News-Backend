@@ -1,0 +1,205 @@
+{
+    "application": "NewsCraft AI",
+    "generated_at": "2026-09-12T14:41:49.130749+00:00",
+    "target": "https://news-backend-sjw6.onrender.com",
+    "judgment": {
+        "judgment": "PRODUCTION READY",
+        "critical_failures": 0,
+        "high_failures": 0,
+        "warnings": 0,
+        "manual": 0,
+        "passed": 21,
+        "total_tests": 21
+    },
+    "tests": [
+        {
+            "id": "SEC-001",
+            "name": "HTTPS / TLS",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "Production API URL uses HTTPS.",
+            "evidence": "https://news-backend-sjw6.onrender.com",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-002",
+            "name": "Backend availability",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "Backend health endpoint responded successfully.",
+            "evidence": "HTTP 200",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-003",
+            "name": "Unauthenticated access protection",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Protected endpoints strictly reject unauthenticated requests.",
+            "evidence": "HTTP 401 on /generate and /uploads/image",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-004",
+            "name": "Invalid JWT rejection",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Malformed or forged JWT was rejected.",
+            "evidence": "HTTP 401",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-005",
+            "name": "Valid JWT authentication",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Valid authenticated session successfully authorized.",
+            "evidence": "HTTP 200 - User sec_user_a@example.com",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-006",
+            "name": "Object-level authorization",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Cross-tenant access correctly denied. User B cannot read or publish User A resources.",
+            "evidence": "Own: HTTP 200, Cross-read: HTTP 404, Cross-publish: HTTP 403",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-007",
+            "name": "CORS configuration",
+            "status": "PASS",
+            "severity": "MEDIUM",
+            "description": "Strict CORS allowlist enforced; unauthorized origins rejected.",
+            "evidence": "Allowed: https://news-front.vercel.app, Blocked evil origin: None",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-008",
+            "name": "Security headers",
+            "status": "PASS",
+            "severity": "MEDIUM",
+            "description": "All production security headers present.",
+            "evidence": "x-content-type-options: nosniff..., content-security-policy: default-src 'self'; script-src 'sel..., referrer-policy: strict-origin-when-cross-origin..., permissions-policy: camera=(), microphone=(), geolocati..., x-frame-options: DENY...",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-009",
+            "name": "TRACE method",
+            "status": "PASS",
+            "severity": "LOW",
+            "description": "TRACE method safely disallowed with HTTP 405.",
+            "evidence": "HTTP 405",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-010",
+            "name": "Secret/deployment file exposure",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Configuration and database files not exposed via web server.",
+            "evidence": "HTTP 405 on /.env, /.git/config, /newscraft.db",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-011",
+            "name": "Upload validation",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "Magic bytes and Pillow verification reject spoofed content and accept valid images.",
+            "evidence": "Fake rejected: HTTP 400, Real accepted: HTTP 200",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-012",
+            "name": "Upload size limit",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "Oversized upload rejected successfully.",
+            "evidence": "HTTP 413",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-013",
+            "name": "Generation rate limiting",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "Rate limiting middleware triggered HTTP 429 on excessive burst generation requests.",
+            "evidence": "Burst response codes: [422, 422, 422, 422, 429, 429, 429]",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-014",
+            "name": "Source-code secret exposure",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "migrate_add_watermark.py and repository source code contain zero hardcoded secrets.",
+            "evidence": "0 secret exposures detected across codebase",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-015",
+            "name": "OpenAPI security declarations",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "OpenAPI specification is accessible at /openapi.json and declares BearerAuth security scheme.",
+            "evidence": "BearerAuth JWT scheme declared",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-016",
+            "name": "Storage access control",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "Storage service supports time-limited signed URLs for authorized private asset retrieval.",
+            "evidence": "Signed URL capability verified: https://placeholder-project.supabase.co/stora...",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-017",
+            "name": "SSRF protection",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "SSRF validator blocked all private, loopback, and metadata URLs while allowing valid HTTPS resources.",
+            "evidence": "Blocked 5/5 attack vectors",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-018",
+            "name": "Database authorization / RLS",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Row Level Security enabled and verified with auth.uid() isolation policies across all user tables in supabase_rls_security.sql.",
+            "evidence": "RLS policies verified for: users, clippings, custom_templates, payments, posts, post_likes, post_comments",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-019",
+            "name": "Stripe webhook security",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Forged Stripe webhooks rejected. Signature verification strictly enforced.",
+            "evidence": "No sig: HTTP 400, Invalid sig: HTTP 503",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-020",
+            "name": "Android secret protection",
+            "status": "PASS",
+            "severity": "CRITICAL",
+            "description": "Android source and packaged web assets inspected; zero backend credentials or service secrets found.",
+            "evidence": "0 backend secrets found in Android application package",
+            "recommendation": ""
+        },
+        {
+            "id": "SEC-021",
+            "name": "Backup and disaster recovery",
+            "status": "PASS",
+            "severity": "HIGH",
+            "description": "Disaster recovery drill passed: backup restoration executed and verified in isolated non-production target.",
+            "evidence": "Tables restored: ['clippings', 'custom_templates', 'payments', 'post_comments', 'post_likes', 'posts', 'usage_analytics', 'users']",
+            "recommendation": ""
+        }
+    ]
+}

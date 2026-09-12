@@ -97,13 +97,18 @@ def _flush_error(stage: str, e: Exception) -> dict:
     print("=" * 70)
     sys.stdout.flush()
 
+    # Safe client message that does not leak internal server paths or stack traces
+    safe_message = f"Generation encountered an issue during {stage}."
+    if "timeout" in exc_msg.lower():
+        safe_message = f"Generation timed out during {stage}. Please retry."
+
     return {
         "stage": stage,
         "error_type": exc_type,
-        "message": exc_msg,
-        "error": exc_msg,
-        "details": details,
-        "traceback": tb_str,
+        "message": safe_message,
+        "error": safe_message,
+        "details": f"Failed at stage '{stage}'.",
+        "traceback": "",
     }
 
 async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
@@ -552,6 +557,7 @@ async def _background_process_clipping(clipping_id: Any):
         print(f"[PIPELINE FATAL] Unhandled exception in background task: {type(e).__name__}: {e}"); sys.stdout.flush()
 
 
+@router.post("", response_model=dict)
 @router.post("/", response_model=dict)
 async def create_clipping(
     *,
@@ -667,7 +673,7 @@ def _enrich_clipping_response(clipping, resp_data: dict) -> dict:
         resp_data["message"]    = custom_layout.get("message") or custom_layout.get("error") or "An unexpected error occurred"
         resp_data["error"]      = custom_layout.get("error") or "An unexpected error occurred"
         resp_data["details"]    = custom_layout.get("details", "")
-        resp_data["traceback"]  = custom_layout.get("traceback", "")
+        resp_data["traceback"]  = ""
 
     elif status == "completed":
         resp_data["stage"]    = "Final Response"
@@ -684,6 +690,7 @@ def _enrich_clipping_response(clipping, resp_data: dict) -> dict:
     return resp_data
 
 
+@router.get("", response_model=dict)
 @router.get("/", response_model=dict)
 def get_all_clippings(
     page: int = 1,
@@ -760,7 +767,12 @@ def get_clipping_public(
     id: uuid.UUID,
     db: Session = Depends(get_db)
 ) -> Any:
-    # Public read-only access for the headless renderer (UUID acts as capability)
+    # Public read-only access only permitted for published community feed posts
+    from app.models.post import Post
+    is_published = db.query(Post).filter(Post.clipping_id == id, Post.is_published == True).first() is not None
+    if not is_published:
+        raise HTTPException(status_code=404, detail="Clipping not found")
+
     clipping = db.query(Clipping).filter(Clipping.id == id).first()
     if not clipping:
         raise HTTPException(status_code=404, detail="Clipping not found")

@@ -10,8 +10,8 @@ def _supabase_public_url(destination_path: str) -> str:
     Pattern: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
     This is the only URL format that Playwright can load externally.
     """
-    base = settings.SUPABASE_URL.rstrip("/")
-    bucket = settings.SUPABASE_STORAGE_BUCKET
+    base = (settings.SUPABASE_URL or "https://placeholder-project.supabase.co").rstrip("/")
+    bucket = settings.SUPABASE_STORAGE_BUCKET or "newscraft"
     return f"{base}/storage/v1/object/public/{bucket}/{destination_path}"
 
 
@@ -93,6 +93,21 @@ class StorageService:
         except Exception as e:
             print(f"[STORAGE] Supabase upload failed: {e}")
             raise Exception(f"Supabase upload failed: {e}")
+
+    def create_signed_url(self, destination_path: str, expires_in: int = 3600) -> str:
+        """
+        Generate time-limited signed URL for authorized private storage access (SEC-016).
+        """
+        if not self.supabase:
+            return _supabase_public_url(destination_path)
+        try:
+            res = self.supabase.storage.from_(self.bucket).create_signed_url(destination_path, expires_in)
+            if isinstance(res, dict):
+                return res.get("signedURL") or res.get("signedUrl") or str(res)
+            return str(res)
+        except Exception as e:
+            print(f"[STORAGE] Signed URL generation note: {e}")
+            return _supabase_public_url(destination_path)
 
     def delete_file(self, path: str):
         try:

@@ -91,14 +91,52 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
 )
 
+# ── OpenAPI Security Scheme Definition (SEC-015) ─────────────────────────────
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    from fastapi.openapi.utils import get_openapi
+    openapi_schema = get_openapi(
+        title=settings.PROJECT_NAME,
+        version="2.0.0",
+        description="NewsCraft AI Production API with Supabase JWT Authentication",
+        routes=app.routes,
+    )
+    openapi_schema["components"] = openapi_schema.get("components", {})
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter Supabase JWT token as: Bearer <token>",
+        }
+    }
+    openapi_schema["security"] = [{"BearerAuth": []}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
+app.openapi = custom_openapi
+
+@app.get(f"{settings.API_V1_STR}/openapi.json", include_in_schema=False)
+def openapi_alias():
+    return app.openapi()
+
+
+# ── Production Security Middlewares (SEC-008, SEC-013) ───────────────────────
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.rate_limit import GenerationRateLimitMiddleware
+
+app.add_middleware(SecurityHeadersMiddleware, is_production=(settings.ENVIRONMENT == "production"))
+app.add_middleware(GenerationRateLimitMiddleware)
+
+
+# ── CORS (SEC-007) ───────────────────────────────────────────────────────────
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
@@ -114,23 +152,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
 )
-
-@app.middleware("http")
-async def add_cors_header_to_static(request, call_next):
-    response = await call_next(request)
-    if request.url.path.startswith("/static/"):
-        response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
 
 @app.options("/{full_path:path}")
 async def preflight_handler(full_path: str):
     return {"ok": True}
 
 
-@app.api_route("/", methods=["GET", "HEAD"])
+@app.get("/")
+@app.head("/", include_in_schema=False)
 def root():
     return {
         "message": "Welcome to NewsCraft AI API",
@@ -139,13 +171,15 @@ def root():
     }
 
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+@app.get("/health")
+@app.head("/health", include_in_schema=False)
 def health_check():
     """Render health-check endpoint."""
     return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v4_bulletproof"}
 
 
-@app.api_route("/health/generator", methods=["GET", "HEAD"])
+@app.get("/health/generator")
+@app.head("/health/generator", include_in_schema=False)
 async def health_generator():
     """
     Diagnostic endpoint to verify all components for NewsCraft Generation are healthy.

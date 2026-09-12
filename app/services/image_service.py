@@ -25,10 +25,9 @@ class ImageService:
         return image_url
 
         try:
-            logger.info(f"[ImageService] Downloading image: {image_url}")
-            req = urllib.request.Request(image_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=15) as response:
-                img_data = response.read()
+            logger.info(f"[ImageService] Downloading image safely: {image_url}")
+            from app.core.ssrf import safe_fetch_image_bytes
+            img_data, _ = safe_fetch_image_bytes(image_url, max_bytes=10 * 1024 * 1024, timeout=15)
 
             img = Image.open(io.BytesIO(img_data))
             del img_data

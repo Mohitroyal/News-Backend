@@ -121,11 +121,15 @@ def publish_to_spot(
 
     if payload.clipping_id:
         clipping = db.query(Clipping).filter(Clipping.id == payload.clipping_id).first()
-        if clipping:
-            png_url = png_url or clipping.png_url
-            pdf_url = pdf_url or clipping.pdf_url
-            image_url = image_url or clipping.image_url
-            image_urls = image_urls or (clipping.image_urls if isinstance(clipping.image_urls, list) else [])
+        if not clipping or clipping.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to publish this clipping."
+            )
+        png_url = png_url or clipping.png_url
+        pdf_url = pdf_url or clipping.pdf_url
+        image_url = image_url or clipping.image_url
+        image_urls = image_urls or (clipping.image_urls if isinstance(clipping.image_urls, list) else [])
 
     new_post = Post(
         id=uuid.uuid4(),

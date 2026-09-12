@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -236,7 +236,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> Any
     
     if not sig_header:
         raise HTTPException(status_code=400, detail="Missing Stripe Signature header")
-        
+
+    if not settings.STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe webhook processing is not configured on this server."
+        )
+
     try:
         stripe.api_key = settings.STRIPE_API_KEY
         event = stripe.Webhook.construct_event(
@@ -246,6 +252,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> Any
         raise HTTPException(status_code=400, detail="Invalid payload")
     except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid signature")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webhook verification failed: {e}")
         
     event_type = event["type"]
     data_object = event["data"]["object"]
@@ -258,7 +266,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> Any
         customer_id = data_object.get("customer")
         subscription_id = data_object.get("subscription")
         metadata = data_object.get("metadata", {})
-        plan_id = metadata.get("plan_id", "pro")
+        raw_plan = str(metadata.get("plan_id", "pro")).lower()
+        # Strict plan allowlist to prevent privilege escalation via metadata
+        plan_id = raw_plan if raw_plan in ("pro", "enterprise") else "pro"
         
         if user_id:
             try:

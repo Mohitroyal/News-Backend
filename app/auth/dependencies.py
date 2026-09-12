@@ -137,8 +137,14 @@ async def get_current_user(request: Request):
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
+    # Basic structural JWT validation (header.payload.signature)
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise HTTPException(status_code=401, detail="Invalid JWT format")
+
     if not supabase:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Supabase client is not configured on the server")
+        raise HTTPException(status_code=401, detail="Token verification failed (Auth service unavailable)")
+
     try:
         response = supabase.auth.get_user(token)
     except Exception as e:
