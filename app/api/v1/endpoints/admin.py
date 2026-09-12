@@ -23,6 +23,17 @@ ADMIN_EMAILS = [
     "admin@newscraft.ai",
 ]
 
+SUPER_ADMIN_EMAIL = "mohithroyal16450@gmail.com"
+
+
+def verify_superadmin_access(current_user: User):
+    email = (current_user.email or "").lower().strip()
+    if email != SUPER_ADMIN_EMAIL.lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmin privileges required"
+        )
+
 
 def verify_admin_access(current_user: User):
     email = (current_user.email or "").lower().strip()
@@ -188,22 +199,53 @@ def ban_user(
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Ban or unban a user in Supabase Auth.
+    Ban or unban a user in Supabase Auth and local DB.
+    Only superadmin can perform this action.
     Pass duration="none" to unban. Example: "24h", "72h", "876600h" (100 years).
     """
-    verify_admin_access(current_user)
+    verify_superadmin_access(current_user)
     admin_sb = get_supabase_admin_client()
 
+    # Safety check: prevent banning superadmin
     try:
-        if req.duration.lower() == "none":
-            # Unban: clear ban_duration
+        target_user = admin_sb.auth.admin.get_user_by_id(user_id)
+        target_raw = target_user.user if hasattr(target_user, "user") else target_user
+        if target_raw and getattr(target_raw, "email", "").lower().strip() == SUPER_ADMIN_EMAIL.lower():
+            raise HTTPException(status_code=400, detail="Cannot ban the Superadmin")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    is_unban = req.duration.lower() == "none"
+    try:
+        if is_unban:
             admin_sb.auth.admin.update_user_by_id(user_id, {"ban_duration": "none"})
             action = "unbanned"
         else:
             admin_sb.auth.admin.update_user_by_id(user_id, {"ban_duration": req.duration})
             action = f"banned for {req.duration}"
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update ban status: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update ban status in Auth: {e}")
+
+    # Also sync is_banned to profiles table
+    try:
+        admin_sb.from_("profiles").upsert(
+            {"id": user_id, "is_banned": not is_unban},
+            on_conflict="id"
+        ).execute()
+    except Exception as e:
+        print(f"[ADMIN] Profile ban status update warning: {e}")
+
+    # Also update local db
+    try:
+        u_uuid = uuid.UUID(user_id)
+        loc = db.query(User).filter(User.id == u_uuid).first()
+        if loc:
+            loc.is_active = is_unban
+            db.commit()
+    except Exception:
+        pass
 
     return {"success": True, "detail": f"User {user_id} {action}"}
 
@@ -216,29 +258,48 @@ def delete_user(
 ) -> Any:
     """
     Permanently delete a user from Supabase Auth (Layer 1) and the local
-    public.users table (Layer 2).
+    public.users table (Layer 2). Only superadmin can perform this action.
     """
-    verify_admin_access(current_user)
+    verify_superadmin_access(current_user)
     admin_sb = get_supabase_admin_client()
 
-    # 1. Delete from local DB first (FK safety)
+    # Safety check: prevent deleting superadmin
+    try:
+        target_user = admin_sb.auth.admin.get_user_by_id(user_id)
+        target_raw = target_user.user if hasattr(target_user, "user") else target_user
+        if target_raw and getattr(target_raw, "email", "").lower().strip() == SUPER_ADMIN_EMAIL.lower():
+            raise HTTPException(status_code=400, detail="Cannot delete the Superadmin")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    # 1. Delete clippings / foreign key records from local DB first
     try:
         u_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
-
-    local_user = db.query(User).filter(User.id == u_uuid).first()
-    if local_user:
-        db.delete(local_user)
+        db.query(Clipping).filter(Clipping.user_id == u_uuid).delete()
+        local_user = db.query(User).filter(User.id == u_uuid).first()
+        if local_user:
+            db.delete(local_user)
         db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[ADMIN] Local DB user delete warning: {e}")
 
-    # 2. Delete from Supabase auth.users
+    # 2. Delete from Supabase profiles and clippings table
+    try:
+        admin_sb.from_("clippings").delete().eq("user_id", user_id).execute()
+        admin_sb.from_("profiles").delete().eq("id", user_id).execute()
+    except Exception as e:
+        print(f"[ADMIN] Supabase profile delete warning: {e}")
+
+    # 3. Delete from Supabase auth.users
     try:
         admin_sb.auth.admin.delete_user(user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete user from Supabase Auth: {e}")
 
-    return {"success": True, "detail": f"User {user_id} deleted from auth and local DB"}
+    return {"success": True, "detail": f"User {user_id} deleted permanently"}
 
 
 @router.post("/users/{user_id}/sync")
@@ -281,24 +342,21 @@ def sync_auth_user(
 
 @router.get("/stats")
 def get_admin_stats(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     verify_admin_access(current_user)
 
     # 1. Total users — read from Supabase Auth (Layer 1) for accurate count.
-    #    Falls back to local DB count if service role key is not configured.
     try:
         admin_sb = get_supabase_admin_client()
         auth_users_page = admin_sb.auth.admin.list_users(page=1, per_page=1)
-        # Supabase returns total via pagination metadata; if not available, do a full fetch
-        # Use a lightweight approach: fetch page 1 and check total from the response object
-        # Some SDK versions expose .total; otherwise fall back to full count
         total_users = None
         if hasattr(auth_users_page, "total"):
             total_users = auth_users_page.total
         if total_users is None:
-            # Full paginated count
             all_users = []
             page = 1
             per_page = 1000
@@ -313,7 +371,6 @@ def get_admin_stats(
                 page += 1
             total_users = len(all_users)
     except Exception:
-        # Fallback to local DB count
         total_users = db.query(User).count()
 
     # 2. Start of today (UTC)
@@ -333,11 +390,35 @@ def get_admin_stats(
         Clipping.created_at >= start_of_today
     ).scalar() or 0
 
+    # 6. Optional range calculations
+    range_gen_count = None
+    range_active_users = None
+    if from_date or to_date:
+        range_q = db.query(Clipping)
+        if from_date:
+            try:
+                from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+                range_q = range_q.filter(Clipping.created_at >= from_dt)
+            except ValueError:
+                pass
+        if to_date:
+            try:
+                to_dt = datetime.strptime(to_date, "%Y-%m-%d") + timedelta(days=1)
+                range_q = range_q.filter(Clipping.created_at < to_dt)
+            except ValueError:
+                pass
+        range_gen_count = range_q.count()
+        range_active_users = range_q.with_entities(func.count(func.distinct(Clipping.user_id))).scalar() or 0
+
     return {
         "totalUsers": total_users,
         "totalGenerationsToday": gen_today_count,
         "totalGenerationsAllTime": gen_all_count,
         "activeUsersToday": active_today_count,
+        "rangeGenerations": range_gen_count,
+        "rangeActiveUsers": range_active_users,
+        "fromDate": from_date,
+        "toDate": to_date,
         "totalLogos": 0,
     }
 
@@ -379,6 +460,7 @@ def get_admin_users(
             "total_generations": gen_map.get(user_id_str, 0),
             "avatar_url": getattr(u, "avatar_url", "") or "",
             "preferred_language": "English",
+            "is_banned": not getattr(u, "is_active", True) if hasattr(u, "is_active") and u.is_active is not None else False,
         })
 
     return result
@@ -547,13 +629,15 @@ def get_generation_logs(
     user_id: Optional[str] = None,       # filter by specific user
     status: Optional[str] = None,        # filter: completed, failed, processing
     template_id: Optional[str] = None,   # filter by template
+    from_date: Optional[str] = None,     # YYYY-MM-DD
+    to_date: Optional[str] = None,       # YYYY-MM-DD
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     Admin view of ALL clippings across ALL users.
     Shows: who generated it, what headline, which template, when, status, PNG/PDF links.
-    Supports pagination and optional filters by user_id, status, template_id.
+    Supports pagination and optional filters by user_id, status, template_id, from_date, to_date.
     """
     verify_admin_access(current_user)
 
@@ -572,6 +656,20 @@ def get_generation_logs(
 
     if template_id:
         query = query.filter(Clipping.template_id == template_id)
+
+    if from_date:
+        try:
+            from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+            query = query.filter(Clipping.created_at >= from_dt)
+        except ValueError:
+            pass
+
+    if to_date:
+        try:
+            to_dt = datetime.strptime(to_date, "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(Clipping.created_at < to_dt)
+        except ValueError:
+            pass
 
     # Total count for pagination
     total = query.count()
