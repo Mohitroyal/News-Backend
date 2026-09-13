@@ -411,8 +411,8 @@ export const GenerateScreen = () => {
             placeholder="Enter article content..."
             value={content}
             onChange={e => setContent(e.target.value)}
-            rows={2}
-            style={{ ...inputStyle, resize: 'none', lineHeight: 1.4, minHeight: '62px', height: '62px' }}
+            rows={4}
+            style={{ ...inputStyle, resize: 'none', lineHeight: 1.45, minHeight: '108px', height: '108px' }}
           />
         </div>
 
@@ -424,18 +424,18 @@ export const GenerateScreen = () => {
           </div>
 
           {imageUrls.length > 0 && (
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
               {imageUrls.map((url, idx) => (
-                <div key={idx} style={{ position: 'relative', flexShrink: 0, width: '105px', height: '105px', borderRadius: '10px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
+                <div key={idx} style={{ position: 'relative', flexShrink: 0, width: '78px', height: '78px', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,0.1)' }}>
                   <img src={url} alt={`img ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <button
                     onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== idx))}
-                    style={{ position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px', background: '#CC1E1E', border: 'none', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: '3px', right: '3px', width: '20px', height: '20px', background: '#CC1E1E', border: 'none', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                   >
-                    <X style={{ width: '11px', height: '11px' }} strokeWidth={3} />
+                    <X style={{ width: '10px', height: '10px' }} strokeWidth={3} />
                   </button>
                   {/* Radio indicator */}
-                  <div style={{ position: 'absolute', bottom: '4px', left: '4px', width: '16px', height: '16px', background: '#CC1E1E', border: '2px solid #fff', borderRadius: '50%' }} />
+                  <div style={{ position: 'absolute', bottom: '3px', left: '3px', width: '14px', height: '14px', background: '#CC1E1E', border: '2px solid #fff', borderRadius: '50%' }} />
                 </div>
               ))}
             </div>
@@ -446,14 +446,14 @@ export const GenerateScreen = () => {
               onClick={handleImageUpload}
               disabled={loading}
               style={{
-                width: '100%', border: '1.5px dashed #CBD9E8', borderRadius: '12px',
-                background: '#ffffff', padding: '24px 16px', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                width: '100%', border: '1.5px dashed #CBD9E8', borderRadius: '10px',
+                background: '#ffffff', padding: '12px 12px', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px',
               }}
             >
-              <UploadCloud style={{ width: 24, height: 24, color: '#0F487F', opacity: 0.8 }} strokeWidth={2.2} />
-              <span style={{ color: '#475569', fontSize: '14px', fontWeight: 600 }}>Tap to upload image</span>
-              <span style={{ color: '#94A3B8', fontSize: '11.5px' }}>
+              <UploadCloud style={{ width: 20, height: 20, color: '#0F487F', opacity: 0.8 }} strokeWidth={2.2} />
+              <span style={{ color: '#475569', fontSize: '12.5px', fontWeight: 600 }}>Tap to upload image</span>
+              <span style={{ color: '#94A3B8', fontSize: '10.5px' }}>
                 {maxImages - imageUrls.length} remaining · auto-compressed
               </span>
             </button>
