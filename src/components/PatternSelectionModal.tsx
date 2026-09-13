@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, ImageIcon, Images, LayoutTemplate } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 export const PATTERN_GROUPS = [
   {
@@ -88,6 +89,7 @@ export const PatternSelectionModal: React.FC<PatternSelectionModalProps> = ({
   selectedPattern,
   onSelectPattern,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -97,7 +99,7 @@ export const PatternSelectionModal: React.FC<PatternSelectionModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h2 className="text-[18px] font-bold font-serif text-[#0a1a2e]">Select Layout Pattern</h2>
+          <h2 className="text-[18px] font-bold font-serif text-[#0a1a2e]">{t.selectPattern}</h2>
           <button onClick={onClose} className="p-2 -mr-2 text-gray-500 rounded-full hover:bg-gray-100">
             <X className="w-5 h-5" />
           </button>

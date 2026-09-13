@@ -1,5 +1,5 @@
 import { FilePlus, LayoutTemplate, Newspaper } from 'lucide-react';
-import { useGenerationStore, useAuthStore, getReporterPhoto } from '@/store';
+import { useGenerationStore, useAuthStore, getReporterPhoto, getReporterName } from '@/store';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@/lib/i18n';
 
@@ -12,15 +12,16 @@ export const DashboardScreen = () => {
   const recentGenerations = generations.slice(0, 3);
 
   const displayName =
+    getReporterName(user?.email) ||
     (user as any)?.user_metadata?.full_name ||
     (user as any)?.user_metadata?.name ||
-    (user as any)?.email?.split('@')[0] ||
     user?.full_name ||
     user?.firstName ||
+    (user as any)?.email?.split('@')[0] ||
     'Journalist';
 
   const avatarLetter = displayName[0]?.toUpperCase() ?? 'J';
-  const userPhoto = user?.avatarUrl || getReporterPhoto(user?.email);
+  const userPhoto = getReporterPhoto(user?.email) || user?.avatarUrl;
 
   return (
     <div className="w-full px-4 pb-[80px] pt-3">

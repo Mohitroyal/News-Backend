@@ -7,7 +7,7 @@ export interface User {
   lastName?: string;
   avatarUrl?: string;
   createdAt: string;
-  plan: "free" | "pro" | "enterprise";
+  plan: string;
   credits: number;
   role?: string;
 }

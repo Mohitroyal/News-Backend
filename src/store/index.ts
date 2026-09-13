@@ -2,7 +2,36 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User, GenerationConfig, Generation } from "@/types";
 
-// ─── Permanent Reporter Photo Helpers ──────────────────────────────────────────
+// ─── Permanent Reporter Name & Photo Helpers ─────────────────────────────────────
+export const getReporterName = (email?: string): string => {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) return "";
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      const name = localStorage.getItem(`spotnews_reporter_name_${cleanEmail}`);
+      if (name) return name;
+    }
+    const lastName = localStorage.getItem("spotnews_last_reporter_name");
+    if (lastName) return lastName;
+  } catch (e) {
+    console.warn("[NameStore] Error reading reporter name:", e);
+  }
+  return "";
+};
+
+export const saveReporterName = (email: string | undefined, name: string): void => {
+  try {
+    if (!name || typeof window === "undefined" || !window.localStorage) return;
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      localStorage.setItem(`spotnews_reporter_name_${cleanEmail}`, name.trim());
+    }
+    localStorage.setItem("spotnews_last_reporter_name", name.trim());
+  } catch (e) {
+    console.warn("[NameStore] Error saving reporter name:", e);
+  }
+};
+
 export const getReporterPhoto = (email?: string): string => {
   try {
     if (typeof window === "undefined" || !window.localStorage) return "";
@@ -52,20 +81,54 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       login: (user, token) => {
         const email = user?.email || (user as any)?.user_metadata?.email;
+        const storedName = getReporterName(email);
         const storedPhoto = getReporterPhoto(email);
+
+        const existingName =
+          storedName ||
+          (user as any)?.user_metadata?.full_name ||
+          (user as any)?.user_metadata?.name ||
+          user?.full_name ||
+          user?.firstName ||
+          "";
+
         const existingPhoto =
+          storedPhoto ||
           user?.avatarUrl ||
           (user as any)?.user_metadata?.avatar_url ||
           (user as any)?.user_metadata?.picture ||
-          storedPhoto;
+          "";
+
+        const existingMetadata = (user as any)?.user_metadata || {};
+        const updatedMetadata = {
+          ...existingMetadata,
+          ...(existingName ? { full_name: existingName, name: existingName } : {}),
+          ...(existingPhoto ? { avatar_url: existingPhoto, picture: existingPhoto } : {}),
+        };
 
         const enrichedUser: User = {
           ...user,
+          full_name: existingName || user?.full_name || user?.firstName || "",
+          firstName: existingName || user?.firstName || "",
           avatarUrl: existingPhoto || "",
-        };
+          user_metadata: updatedMetadata,
+          role:
+            (user as any)?.role ||
+            (user as any)?.user_metadata?.role ||
+            (user as any)?.app_metadata?.role ||
+            (isSuperAdminUser(user?.email) ? 'admin' : ''),
+          plan:
+            user?.plan ||
+            (user as any)?.subscription_plan ||
+            ((user as any)?.role === 'admin' ? 'admin' : undefined) ||
+            (isSuperAdminUser(user?.email) ? 'admin' : 'free'),
+        } as any;
 
         if (existingPhoto && email) {
           saveReporterPhoto(email, existingPhoto);
+        }
+        if (existingName && email) {
+          saveReporterName(email, existingName);
         }
 
         set({ user: enrichedUser, token, isAuthenticated: true });
@@ -77,9 +140,29 @@ export const useAuthStore = create<AuthStore>()(
           if (!state.user) return { user: null };
           const updatedUser: User = { ...state.user, ...partial };
           const email = updatedUser.email || (updatedUser as any)?.user_metadata?.email;
+          const newName =
+            partial.full_name ||
+            partial.firstName ||
+            (partial as any)?.user_metadata?.full_name ||
+            (partial as any)?.user_metadata?.name;
+
+          if (newName) {
+            saveReporterName(email, newName);
+          }
           if (partial.avatarUrl) {
             saveReporterPhoto(email, partial.avatarUrl);
           }
+
+          // Ensure user_metadata is also kept in sync
+          if (newName || partial.avatarUrl) {
+            const currentMetadata = (updatedUser as any)?.user_metadata || {};
+            (updatedUser as any).user_metadata = {
+              ...currentMetadata,
+              ...(newName ? { full_name: newName, name: newName } : {}),
+              ...(partial.avatarUrl ? { avatar_url: partial.avatarUrl, picture: partial.avatarUrl } : {}),
+            };
+          }
+
           return { user: updatedUser };
         }),
       otpState: null,
@@ -196,3 +279,66 @@ export const useUIStore = create<UIStore>()(
     { name: "newscraft-ui" }
   )
 );
+
+// ─── Admin RBAC Helper ────────────────────────────────────────────────────────
+export const SUPER_ADMIN_EMAILS = [
+  'mohithroyal16450@gmail.com',
+  'baba.journilist@gmail.com',
+];
+
+export const SUPER_ADMIN_EMAIL = 'mohithroyal16450@gmail.com';
+
+/**
+ * Returns true if the user is a superadmin (mohithroyal16450@gmail.com or baba.journilist@gmail.com)
+ */
+export const isSuperAdminUser = (userOrEmail?: any): boolean => {
+  if (!userOrEmail) return false;
+  const email = (
+    typeof userOrEmail === 'string'
+      ? userOrEmail
+      : userOrEmail?.email || userOrEmail?.user_metadata?.email || ''
+  ).trim().toLowerCase();
+  return SUPER_ADMIN_EMAILS.some((e) => e.toLowerCase() === email);
+};
+
+/**
+ * Returns true if the given user or email has admin privileges:
+ * 1. Checks hardcoded admin emails (SUPER_ADMIN_EMAILS + VITE_ADMIN_EMAILS env var)
+ * 2. Checks role / metadata from Supabase Auth & profiles ('admin')
+ * 3. Checks subscription plan ('admin')
+ */
+export const isAdminUser = (userOrEmail?: any): boolean => {
+  if (!userOrEmail) return false;
+
+  const envAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e: string) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  const adminEmails = Array.from(new Set([
+    ...SUPER_ADMIN_EMAILS.map((e) => e.toLowerCase()),
+    ...envAdminEmails,
+  ]));
+
+  if (typeof userOrEmail === 'string') {
+    const cleanEmail = userOrEmail.trim().toLowerCase();
+    return adminEmails.includes(cleanEmail);
+  }
+
+  // Object check
+  const u = userOrEmail;
+  const email = (u.email || u.user_metadata?.email || '').trim().toLowerCase();
+  if (email && adminEmails.includes(email)) return true;
+
+  const role = (
+    u.role ||
+    u.user_metadata?.role ||
+    u.app_metadata?.role ||
+    u.subscription_plan ||
+    u.plan ||
+    ''
+  ).toString().toLowerCase();
+
+  return role === 'admin';
+};
+

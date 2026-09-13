@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
-import { useAuthStore, useUIStore, useGenerationStore, saveReporterPhoto, getReporterPhoto } from '@/store';
+import { useState, useEffect } from 'react';
+import { useAuthStore, useUIStore, useGenerationStore, getReporterPhoto, getReporterName, isAdminUser, isSuperAdminUser } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, Camera, User as UserIcon } from 'lucide-react';
+import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, User as UserIcon, UserCircle, ChevronRight, FileText, History, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -11,7 +11,7 @@ function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () =>
   return (
     <button
       onClick={onToggle}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${enabled ? "bg-blue-600" : "bg-gray-200"}`}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${enabled ? "bg-[#145AB1]" : "bg-gray-200"}`}
     >
       <span
         className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${enabled ? "translate-x-5" : ""}`}
@@ -22,12 +22,12 @@ function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () =>
 
 function SettingsSection({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl overflow-hidden shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] transition-colors duration-300">
-      <div className="px-5 py-4 border-b border-gray-50 dark:border-gray-700 flex items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50">
-        <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <h2 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h2>
+    <div className="bg-[#E8F2FC] border border-[#D0E2F7] rounded-3xl overflow-hidden shadow-sm transition-colors duration-300">
+      <div className="px-5 py-4 border-b border-[#D0E2F7] flex items-center gap-3 bg-[#E8F2FC]">
+        <Icon className="h-4 w-4 text-[#015BB3]" />
+        <h2 className="text-sm font-bold text-[#0A2540]">{title}</h2>
       </div>
-      <div className="divide-y divide-gray-50 dark:divide-gray-700">{children}</div>
+      <div className="divide-y divide-[#D0E2F7]">{children}</div>
     </div>
   );
 }
@@ -36,8 +36,8 @@ function SettingsRow({ label, description, control }: { label: string; descripti
   return (
     <div className="flex items-center justify-between px-5 py-4 gap-4 transition-colors duration-300">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-gray-900 dark:text-white">{label}</p>
-        {description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{description}</p>}
+        <p className="text-sm font-bold text-[#0A2540]">{label}</p>
+        {description && <p className="text-xs text-[#6B7A90] mt-0.5 leading-relaxed">{description}</p>}
       </div>
       <div className="shrink-0">{control}</div>
     </div>
@@ -68,10 +68,54 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 }
 
 export const SettingsScreen = () => {
-  const { user, logout, updateUser } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const resetGenerations = useGenerationStore((state) => state.resetConfig);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  // ── Admin check (checks super admin, user metadata, Supabase profiles table & backend API) ──
+  const [isAdminAccess, setIsAdminAccess] = useState(
+    isAdminUser(user) ||
+    (user as any)?.role === 'admin' ||
+    (user as any)?.app_metadata?.role === 'admin' ||
+    (user as any)?.user_metadata?.role === 'admin'
+  );
+  useEffect(() => {
+    if (
+      isAdminUser(user) ||
+      (user as any)?.role === 'admin' ||
+      (user as any)?.app_metadata?.role === 'admin' ||
+      (user as any)?.user_metadata?.role === 'admin'
+    ) {
+      setIsAdminAccess(true);
+      return;
+    }
+    if (!user?.id) return;
+    (async () => {
+      try {
+        // 1. Check Supabase profiles table
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (prof?.role === 'admin') {
+          setIsAdminAccess(true);
+          return;
+        }
+
+        // 2. Check Backend API
+        const raw = localStorage.getItem('newscraft-auth');
+        const token = raw ? JSON.parse(raw)?.state?.token : null;
+        if (token) {
+          const res = await fetch(
+            'https://news-backend-sjw6.onrender.com/api/v1/admin/stats',
+            { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(6000) }
+          );
+          if (res.status === 200) setIsAdminAccess(true);
+        }
+      } catch { /* silent */ }
+    })();
+  }, [user?.id]);
 
   // Use persistent UI store
   const logoMode = useUIStore((state) => state.logoMode);
@@ -80,36 +124,6 @@ export const SettingsScreen = () => {
   const toggleInnerBorders = useUIStore((state) => state.toggleInnerBorders);
   const { t, language: activeLanguage } = useTranslation();
   const setLanguage = useUIStore((state) => state.setLanguage);
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const size = Math.min(img.width, img.height);
-        const targetSize = 250;
-        canvas.width = targetSize;
-        canvas.height = targetSize;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const offsetX = (img.width - size) / 2;
-          const offsetY = (img.height - size) / 2;
-          ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          saveReporterPhoto(user?.email, dataUrl);
-          updateUser({ avatarUrl: dataUrl });
-          supabase.auth.updateUser({ data: { avatar_url: dataUrl } }).catch(() => {});
-          showToast('Reporter photo updated permanently!', 'success');
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
   const [notifications, setNotifications] = useState({
     emailGenerations: true,
@@ -247,72 +261,138 @@ export const SettingsScreen = () => {
   };
 
   return (
-    <div className="p-6 pb-6 dark:bg-gray-900 transition-colors duration-300">
+    <div className="p-6 pb-6 bg-[#F3F6FB] transition-colors duration-300">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          <div className="w-10 h-10 rounded-xl bg-[#D6E9FF] flex items-center justify-center">
+            <Shield className="w-5 h-5 text-[#015BB3]" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">{t.settings}</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-colors duration-300">{t.manageAcc}</p>
+            <h2 className="text-2xl font-bold text-[#0A2540] transition-colors duration-300">{t.settings}</h2>
+            <p className="text-xs text-[#6B7A90] mt-0.5 transition-colors duration-300">{t.manageAcc}</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-5">
-        {/* Reporter Profile & Photo Card */}
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl p-5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4">
+        {/* Reporter Profile Card */}
+        <div className="bg-[#E8F2FC] border border-[#D0E2F7] rounded-3xl p-5 shadow-sm flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div
-              onClick={() => photoInputRef.current?.click()}
-              className="relative w-16 h-16 rounded-full border-2 border-[#CC1E1E] bg-[#EEF3F8] flex items-center justify-center cursor-pointer shadow-md overflow-hidden shrink-0 active:scale-95 transition-transform"
-              title="Change Reporter Photo"
-            >
-              {user?.avatarUrl || getReporterPhoto(user?.email) ? (
-                <img src={user?.avatarUrl || getReporterPhoto(user?.email)} alt="Reporter Photo" className="w-full h-full object-cover" />
+            <div className="relative w-16 h-16 rounded-full border-2 border-[#CC1E1E] bg-[#D6E9FF] flex items-center justify-center shadow-md overflow-hidden shrink-0">
+              {getReporterPhoto(user?.email) || user?.avatarUrl ? (
+                <img src={getReporterPhoto(user?.email) || user?.avatarUrl} alt="Reporter Photo" className="w-full h-full object-cover" />
               ) : (
-                <div className="flex flex-col items-center justify-center text-[#0D1B2A]">
-                  <UserIcon className="w-7 h-7 text-[#0D1B2A]/60" />
+                <div className="flex flex-col items-center justify-center text-[#0A2540]">
+                  <UserIcon className="w-7 h-7 text-[#0A2540]/60" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
-                <Camera className="w-5 h-5 text-white" />
-              </div>
             </div>
-            <input
-              type="file"
-              ref={photoInputRef}
-              onChange={handlePhotoUpload}
-              accept="image/*"
-              className="hidden"
-            />
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-gray-900 dark:text-white text-base">
-                  {(user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter'}
+                <h3 className="font-bold text-[#0A2540] text-base">
+                  {getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter'}
                 </h3>
-                <span className="bg-[#CC1E1E]/10 text-[#CC1E1E] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                  Reporter
-                </span>
+                {isAdminAccess ? (
+                  <span className="bg-amber-500/15 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 border border-amber-400/30">
+                    <Crown className="w-2.5 h-2.5 text-amber-600" /> Admin
+                  </span>
+                ) : (
+                  <span className="bg-[#CC1E1E]/10 text-[#CC1E1E] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    Reporter
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user?.email || 'reporter@rtiexpress.com'}</p>
-              <button
-                onClick={() => photoInputRef.current?.click()}
-                className="text-xs font-bold text-[#CC1E1E] hover:underline mt-1.5 flex items-center gap-1"
-              >
-                <Camera className="w-3.5 h-3.5" />
-                {user?.avatarUrl ? 'Change Reporter Photo' : 'Upload Reporter Photo'}
-              </button>
+              <p className="text-xs text-[#6B7A90] mt-0.5">{user?.email || 'reporter@rtiexpress.com'}</p>
             </div>
           </div>
         </div>
 
+        {/* Profile Settings Card */}
+        <div
+          onClick={() => navigate('/settings/profile')}
+          className="bg-[#E8F2FC] border border-[#D0E2F7] rounded-[12px] p-4 shadow-sm flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#D6E9FF] flex items-center justify-center shrink-0">
+              <UserCircle className="w-5 h-5 text-[#015BB3]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0A2540]">{t.profileSettings}</h3>
+              <p className="text-xs text-[#6B7A90] mt-0.5">{t.profileSettingsDesc}</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[#6B7A90] shrink-0" />
+        </div>
+
+        {/* Templates Card */}
+        <div
+          onClick={() => navigate('/templates')}
+          className="bg-[#E8F2FC] border border-[#D0E2F7] rounded-[12px] p-4 shadow-sm flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#D6E9FF] flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5 text-[#015BB3]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0A2540]">{t.templatesTitle}</h3>
+              <p className="text-xs text-[#6B7A90] mt-0.5">{t.templatesDesc}</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[#6B7A90] shrink-0" />
+        </div>
+
+        {/* History Card */}
+        <div
+          onClick={() => navigate('/history')}
+          className="bg-[#E8F2FC] border border-[#D0E2F7] rounded-[12px] p-4 shadow-sm flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#D6E9FF] flex items-center justify-center shrink-0">
+              <History className="w-5 h-5 text-[#015BB3]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0A2540]">{t.historyTitle}</h3>
+              <p className="text-xs text-[#6B7A90] mt-0.5">{t.historyDesc}</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[#6B7A90] shrink-0" />
+        </div>
+
+        {/* Admin Panel Card — only visible to approved admins (DB-checked) */}
+        {isAdminAccess && (
+          <div
+            onClick={() => navigate('/admin')}
+            className="bg-gradient-to-r from-[#E8F2FC] to-[#DDF0FF] border-2 border-amber-400/60 rounded-[12px] p-4 shadow-sm flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
+                <Crown className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#0A2540]">
+                    {isSuperAdminUser(user) ? 'Superadmin Control Center' : 'Admin Control Center'}
+                  </h3>
+                  <span className="bg-amber-500 text-white text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shadow-xs">
+                    {isSuperAdminUser(user) ? 'SUPERADMIN' : 'ADMIN'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#6B7A90] mt-0.5">
+                  {isSuperAdminUser(user)
+                    ? 'Manage users, roles, statistics & logos'
+                    : 'Manage users, roles & statistics'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-amber-600 shrink-0" />
+          </div>
+        )}
+
         {/* Appearance */}
         <SettingsSection title={t.appearance} icon={Moon}>
           <SettingsRow
-            label="Inner Border Lines"
-            description="Show borders below the logo and headline."
+            label={t.innerBorders}
+            description={t.innerBordersDesc}
             control={
               <ToggleSwitch
                 enabled={showInnerBorders ?? true}
@@ -332,7 +412,7 @@ export const SettingsScreen = () => {
               <select
                 value={activeLanguage}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 appearance-none font-bold"
+                className="bg-[#F3F6FB] border border-[#DCE6F0] rounded-xl px-3 py-2 text-sm text-[#0A2540] focus:outline-none focus:border-[#145AB1] appearance-none font-bold"
               >
                 <option value="en">English</option>
                 <option value="te">Telugu</option>
@@ -374,7 +454,7 @@ export const SettingsScreen = () => {
             control={
               <button
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="text-xs font-bold text-blue-600 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl active:scale-95 transition-transform"
+                className="text-xs font-bold text-white px-4 py-2 bg-[#145AB1] rounded-xl active:scale-95 transition-transform"
               >
                 {t.updateBtn}
               </button>
@@ -392,23 +472,21 @@ export const SettingsScreen = () => {
           id="logout-btn"
           onClick={() => setIsLogoutModalOpen(true)}
           disabled={isLoggingOut}
-          className="w-full flex items-center justify-between px-5 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm active:scale-[0.98] transition-all duration-200 group"
+          className="w-full flex items-center justify-between px-5 py-4 bg-[#F3F6FB] border border-[#DCE6F0] rounded-2xl shadow-sm active:scale-[0.98] transition-all duration-200 group"
         >
           <div className="flex items-center gap-4">
-            <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-active:bg-gray-200 dark:group-active:bg-gray-600 transition-colors">
-              <LogOut className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+            <div className="w-9 h-9 rounded-xl bg-[#D6E9FF] flex items-center justify-center transition-colors">
+              <LogOut className="w-4 h-4 text-[#015BB3]" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-bold text-gray-900 dark:text-white">{t.logout}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.logoutDesc}</p>
+              <p className="text-sm font-bold text-[#0A2540]">{t.logout}</p>
+              <p className="text-xs text-[#6B7A90] mt-0.5">{t.logoutDesc}</p>
             </div>
           </div>
           {isLoggingOut ? (
-            <div className="w-4 h-4 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" />
+            <div className="w-4 h-4 rounded-full border-2 border-gray-300 border-t-[#015BB3] animate-spin" />
           ) : (
-            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight className="w-4 h-4 text-[#6B7A90]" />
           )}
         </button>
 
@@ -417,7 +495,7 @@ export const SettingsScreen = () => {
           <button
             id="delete-account-btn"
             onClick={() => setIsDeleteModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors py-2 px-3 rounded-xl"
+            className="flex items-center gap-1.5 text-xs text-[#6B7A90] hover:text-red-500 transition-colors py-2 px-3 rounded-xl"
           >
             <Trash2 className="w-3 h-3" />
             {t.deleteAcc}
@@ -436,16 +514,16 @@ export const SettingsScreen = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl max-w-xs w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700"
+              className="bg-[#F3F6FB] rounded-3xl max-w-xs w-full overflow-hidden shadow-2xl border border-[#DCE6F0]"
             >
               {/* Icon header */}
               <div className="pt-7 pb-4 flex flex-col items-center gap-3 px-6">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <LogOut className="w-7 h-7 text-gray-700 dark:text-gray-300" />
+                <div className="w-14 h-14 rounded-2xl bg-[#D6E9FF] flex items-center justify-center">
+                  <LogOut className="w-7 h-7 text-[#015BB3]" />
                 </div>
                 <div className="text-center">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t.logoutTitle}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{t.logoutMessage}</p>
+                  <h3 className="text-lg font-bold text-[#0A2540]">{t.logoutTitle}</h3>
+                  <p className="text-sm text-[#6B7A90] mt-1 leading-relaxed">{t.logoutMessage}</p>
                 </div>
               </div>
 
@@ -455,7 +533,7 @@ export const SettingsScreen = () => {
                   id="logout-confirm-btn"
                   onClick={performLogout}
                   disabled={isLoggingOut}
-                  className="w-full py-3.5 bg-gray-900 dark:bg-gray-700 text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="w-full py-3.5 bg-[#145AB1] text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   {isLoggingOut ? (
                     <>
@@ -473,7 +551,7 @@ export const SettingsScreen = () => {
                   id="logout-cancel-btn"
                   onClick={() => setIsLogoutModalOpen(false)}
                   disabled={isLoggingOut}
-                  className="w-full py-3.5 bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-60"
+                  className="w-full py-3.5 bg-[#EBF1FA] text-[#0A2540] rounded-2xl text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-60"
                 >
                   {t.logoutCancel}
                 </button>
@@ -488,10 +566,10 @@ export const SettingsScreen = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700"
+              className="bg-[#F3F6FB] rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-[#DCE6F0]"
             >
-              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Change Password</h3>
+              <div className="p-6 border-b border-[#DCE6F0]">
+                <h3 className="text-lg font-bold text-[#0A2540]">Change Password</h3>
               </div>
               <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4">
                 {passwordError && (
@@ -504,30 +582,30 @@ export const SettingsScreen = () => {
                     <div className="h-12 w-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
                       <Check className="h-6 w-6" />
                     </div>
-                    <p className="text-gray-900 dark:text-white font-bold">Password Updated!</p>
+                    <p className="text-[#0A2540] font-bold">Password Updated!</p>
                   </div>
                 ) : (
                   <>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500">New Password</label>
+                      <label className="text-xs font-bold text-[#6B7A90]">New Password</label>
                       <input
                         type="password"
                         required
                         placeholder="Min 6 characters"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-[#F3F6FB] border border-[#DCE6F0] rounded-xl px-4 py-3 text-sm text-[#0A2540] focus:outline-none focus:border-[#145AB1]"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-500">Confirm Password</label>
+                      <label className="text-xs font-bold text-[#6B7A90]">Confirm Password</label>
                       <input
                         type="password"
                         required
                         placeholder="Re-enter new password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-[#F3F6FB] border border-[#DCE6F0] rounded-xl px-4 py-3 text-sm text-[#0A2540] focus:outline-none focus:border-[#145AB1]"
                       />
                     </div>
                     <div className="flex gap-3 justify-end pt-2">
@@ -535,14 +613,14 @@ export const SettingsScreen = () => {
                         type="button"
                         disabled={passwordLoading}
                         onClick={() => setIsPasswordModalOpen(false)}
-                        className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-xl w-full"
+                        className="px-4 py-3 text-sm font-bold text-[#6B7A90] bg-[#EBF1FA] rounded-xl w-full"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={passwordLoading}
-                        className="px-4 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl w-full flex items-center justify-center disabled:opacity-60"
+                        className="px-4 py-3 text-sm font-bold text-white bg-[#145AB1] rounded-xl w-full flex items-center justify-center disabled:opacity-60"
                       >
                         {passwordLoading ? 'Updating…' : 'Save'}
                       </button>
@@ -560,34 +638,34 @@ export const SettingsScreen = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700"
+              className="bg-[#F3F6FB] rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-[#DCE6F0]"
             >
-              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Enable 2FA</h3>
+              <div className="p-6 border-b border-[#DCE6F0]">
+                <h3 className="text-lg font-bold text-[#0A2540]">Enable 2FA</h3>
               </div>
               <div className="p-6 space-y-6">
                 <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-2xl border border-gray-200 dark:border-gray-600">
-                    <QrCode className="h-32 w-32 text-gray-900 dark:text-white" />
+                  <div className="bg-[#EBF1FA] p-4 rounded-2xl border border-[#DCE6F0]">
+                    <QrCode className="h-32 w-32 text-[#0A2540]" />
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">
+                  <p className="text-xs text-[#6B7A90] leading-relaxed">
                     Scan with your authenticator app then enter the 6-digit code below.
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500">Verification Code</label>
+                  <label className="text-xs font-bold text-[#6B7A90]">Verification Code</label>
                   <input
                     type="number"
                     placeholder="123456"
                     value={tfaVerificationCode}
                     onChange={(e) => setTfaVerificationCode(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 font-mono text-center tracking-widest"
+                    className="w-full bg-[#F3F6FB] border border-[#DCE6F0] rounded-xl px-4 py-3 text-lg text-[#0A2540] focus:outline-none focus:border-[#145AB1] font-mono text-center tracking-widest"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => { setIsTfaModalOpen(false); setTfaVerificationCode(""); }}
-                    className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-xl w-full"
+                    className="px-4 py-3 text-sm font-bold text-[#6B7A90] bg-[#EBF1FA] rounded-xl w-full"
                   >
                     Cancel
                   </button>
@@ -600,7 +678,7 @@ export const SettingsScreen = () => {
                         alert("Please enter a valid 6-digit code.");
                       }
                     }}
-                    className="px-4 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl w-full"
+                    className="px-4 py-3 text-sm font-bold text-white bg-[#145AB1] rounded-xl w-full"
                   >
                     Verify
                   </button>
@@ -616,25 +694,25 @@ export const SettingsScreen = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-red-100 dark:border-red-900/50"
+              className="bg-[#F3F6FB] rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-red-100"
             >
-              <div className="p-6 border-b border-red-50 dark:border-red-900/30">
+              <div className="p-6 border-b border-red-50">
                 <h3 className="text-lg font-bold text-red-600">Delete Account?</h3>
               </div>
               <div className="p-6 space-y-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                <p className="text-sm text-gray-600 leading-relaxed">
                   This action is irreversible. Type <span className="font-bold text-red-600">DELETE</span> to confirm.
                 </p>
                 <input
                   type="text"
                   value={deleteConfirmationText}
                   onChange={(e) => setDeleteConfirmationText(e.target.value)}
-                  className="w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-900 dark:text-red-300 focus:outline-none focus:border-red-500 font-mono"
+                  className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-900 focus:outline-none focus:border-red-500 font-mono"
                 />
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(""); }}
-                    className="px-4 py-3 text-sm font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-xl w-full"
+                    className="px-4 py-3 text-sm font-bold text-[#6B7A90] bg-[#EBF1FA] rounded-xl w-full"
                   >
                     Cancel
                   </button>

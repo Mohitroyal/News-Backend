@@ -1,7 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Home, FileText, Settings, History, Plus } from 'lucide-react';
-import { useTranslation } from './lib/i18n';
+import { Settings, Plus, Phone, Newspaper } from 'lucide-react';
+// import { useTranslation } from './lib/i18n';
 import mastheadLogo from './assets/rti_express_logo.png';
 import watermarkLogo from './assets/rti_express_watermark.png';
 import { SplashScreen } from './screens/SplashScreen';
@@ -10,14 +10,16 @@ import { SignupScreen } from './screens/SignupScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { GenerateScreen } from './screens/GenerateScreen';
 import { TemplatesScreen } from './screens/TemplatesScreen';
-import { HistoryScreen } from './screens/HistoryScreen';
+import { NewsScreen } from './screens/NewsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { ProfileSettingsScreen } from './screens/ProfileSettingsScreen';
 import { PreviewScreen } from './screens/PreviewScreen';
 import { LoginOtpScreen } from './screens/LoginOtpScreen';
 import { VerifyOtpScreen } from './screens/VerifyOtpScreen';
 import { CreatePasswordScreen } from './screens/CreatePasswordScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
-import { useAuthStore, useUIStore, getReporterPhoto } from './store';
+import { AdminScreen } from './screens/AdminScreen';
+import { useAuthStore, useUIStore, getReporterPhoto, getReporterName, isAdminUser } from './store';
 import { supabase } from './lib/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -26,13 +28,13 @@ import { ErrorBoundary } from './ErrorBoundary';
 
 // Mobile Layout with Bottom Navigation
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
   const { user } = useAuthStore();
-  const userAvatar = user?.avatarUrl || getReporterPhoto(user?.email) || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || (user as any)?.avatar_url;
-  const userName = (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
+  const userAvatar = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || (user as any)?.avatar_url;
+  const userName = getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
   const userInitials = userName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'RP';
+
+  const headerBg = '#015BB3';
 
   return (
     <div className="flex flex-col h-screen bg-[#EEF3F8] transition-colors duration-300 relative font-sans">
@@ -68,93 +70,136 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
 
-      <header className="w-full bg-[#0D1B2A] flex flex-col pt-safe sticky top-0 z-10 shadow-sm">
-        {/* ── Top meta row: EST. 2024 | INDIA  ·  REPORTER: username ── */}
-        <div className="w-full flex items-center justify-between px-4 pt-2 pb-1">
-          <span className="text-white/55 text-[10px] uppercase tracking-wider font-semibold">EST. 2024 | INDIA</span>
-          <span className="text-white/55 text-[10px] uppercase tracking-wider font-semibold">
-            REPORTER: {userName}
-          </span>
-        </div>
+      {/* Main Content Area — masthead scrolls with content */}
+      <main className="flex-1 overflow-y-auto pb-[68px]" style={{ position: 'relative', zIndex: 3 }}>
+        {/* ── Masthead (scrolls with page) ── */}
+        <header className="w-full flex flex-col pt-safe" style={{ background: '#EAF1FB' }}>
+          <div style={{ background: headerBg, paddingBottom: '10px' }}>
+            {/* ── Main Header Content ── */}
+            <div className="w-full flex items-start justify-between px-3 pt-3 pb-2 gap-2">
+              {/* Left Column: Logo + Title + Date below */}
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <div className="flex items-center gap-2">
+                  {/* Logo box */}
+                  <div className="rounded-[8px] flex items-center justify-center h-[46px] overflow-hidden bg-white p-1 border border-[#0B56A6]/20 shrink-0">
+                    <img src={mastheadLogo} alt="Spot News Logo" className="h-full w-auto object-contain" style={{ maxWidth: '90px', borderRadius: '4px' }} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white text-[24px] leading-tight tracking-wide" style={{ fontFamily: "'Georgia', serif" }}>
+                      Spot News<br/>24x7
+                    </span>
+                  </div>
+                </div>
 
-        {/* ── Logo + Title row with Top-Right Profile Avatar ── */}
-        <div className="w-full flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-3">
-            {/* Logo box */}
-            <div className="rounded-[8px] flex items-center justify-center h-[46px] overflow-hidden">
-              <img src={mastheadLogo} alt="RTI Express Logo" className="h-full w-auto object-contain" style={{ maxWidth: '90px', borderRadius: '4px' }} />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-white text-[24px] leading-none tracking-widest" style={{ fontFamily: "'Georgia', serif" }}>{t.rtiExpress}</span>
-              <span className="text-white/50 text-[11px] uppercase font-bold tracking-widest mt-0.5">24X7</span>
+                {/* Date text (italic serif font) */}
+                <span className="text-white/75 text-[11px] tracking-wide font-medium font-serif italic pt-0.5 whitespace-nowrap">
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+
+              {/* Right Column: Profile Avatar -> Reporter Name UP, REPORTERS WANTED -> Phone Number pulled DOWN */}
+              <div className="flex flex-col items-end text-right gap-0.5 pt-0.5 shrink-0">
+                <Link to="/settings" className="flex flex-col items-center gap-0.5 active:scale-95 transition-transform" title="Reporter Profile">
+                  {userAvatar ? (
+                    <img
+                      src={userAvatar}
+                      alt="Reporter Profile"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-[#CC1E1E] shadow-md bg-white"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#1e3a5f] border-2 border-[#CC1E1E] flex items-center justify-center text-white font-bold text-sm shadow-md">
+                      {userInitials}
+                    </div>
+                  )}
+                  <div className="flex flex-col items-center leading-tight text-center mt-0.5">
+                    <span className="text-white/65 text-[8.5px] uppercase tracking-wider font-extrabold">REPORTER:</span>
+                    <span className="text-white/95 text-[9.5px] uppercase tracking-wider font-extrabold">{userName}</span>
+                  </div>
+                </Link>
+
+                {/* REPORTERS WANTED + Phone Number pulled DOWN to cover space */}
+                <div className="flex flex-col items-end text-right mt-5">
+                  {/* REPORTERS WANTED in Red */}
+                  <strong style={{ fontWeight: 900, fontFamily: "'Georgia', serif", fontSize: '11px', letterSpacing: '0.4px', color: '#FF3333' }}>
+                    REPORTERS WANTED
+                  </strong>
+
+                  {/* | Phone Icon + 7668886666 in White */}
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 700 }}>|</span>
+                    <Phone style={{ width: '13px', height: '13px', color: '#FF3333', flexShrink: 0 }} strokeWidth={2.5} />
+                    <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '12px', letterSpacing: '0.5px', color: '#ffffff' }}>
+                      7668886666
+                    </strong>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Top-Right Profile Avatar Badge */}
-          <Link to="/settings" className="flex items-center gap-2 active:scale-95 transition-transform" title="Reporter Profile">
-            {userAvatar ? (
-              <img
-                src={userAvatar}
-                alt="Reporter Profile"
-                className="w-10 h-10 rounded-full object-cover border-2 border-[#CC1E1E] shadow-md bg-white"
+          {/* ── Smooth Wave Divider Transition (Matching Green Drawn Wave) ── */}
+          <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, background: '#EAF1FB' }}>
+            <svg
+              viewBox="0 0 1440 240"
+              preserveAspectRatio="none"
+              style={{ position: 'relative', display: 'block', width: '100%', height: '50px' }}
+            >
+              {/* Dark blue wave shape matching user's green drawn line:
+                  Starts low on left -> peaks high under Spot News -> dips deep down under Reporters Wanted -> curves up slightly at right */}
+              <path
+                d="M0,0 L1440,0 L1440,100 C1100,240 500,10 0,170 Z"
+                fill={headerBg}
               />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-[#1e3a5f] border-2 border-[#CC1E1E] flex items-center justify-center text-white font-bold text-sm shadow-md">
-                {userInitials}
-              </div>
-            )}
-          </Link>
-        </div>
+            </svg>
+          </div>
+        </header>
 
-        {/* ── Date bar ── */}
-        <div className="w-full flex items-center justify-center px-4 py-1.5 bg-[#0D1B2A]">
-          <span className="text-white/60 text-[11px] tracking-wide font-medium">
-            {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </span>
-        </div>
-
-        {/* ── Red ticker bar ── */}
-        <div className="w-full bg-[#CC1E1E] py-2 px-4 flex items-center gap-3">
-          <span className="bg-white text-[#CC1E1E] text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full whitespace-nowrap">
-            {t.latest}
-          </span>
-          <span className="text-white text-[12px] truncate">
-            Welcome to Spot News 24x7 · {t.tickerText}
-          </span>
-        </div>
-      </header>
-
-      {/* Main Content Area (Scrollable) */}
-      <main className="flex-1 overflow-y-auto pb-4" style={{ position: 'relative', zIndex: 3 }}>
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
       </main>
 
 
-      {/* Bottom Navigation */}
-      <nav className="bg-[#0D1B2A] fixed bottom-0 w-full pb-safe flex justify-around items-center h-[70px] z-20">
-        <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <Home className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.home}</span>
-        </Link>
-        <Link to="/templates" className={`flex flex-col items-center gap-1 ${isActive('/templates') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <FileText className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.templates}</span>
-        </Link>
-        
-        {/* Center FAB */}
-        <Link to="/generate" className="relative -top-5 flex items-center justify-center w-[48px] h-[48px] bg-[#CC1E1E] rounded-full text-white shadow-[0_4px_12px_rgba(204,30,30,0.4)] active:scale-95 transition-transform z-50">
-          <Plus className="w-[22px] h-[22px]" strokeWidth={2.5} />
+      <nav className="fixed bottom-0 left-0 right-0 w-full pb-safe flex items-center justify-around h-[68px] z-30 shadow-lg rounded-t-[20px]" style={{ background: '#FFFFFF' }}>
+        {/* 1. News Tab */}
+        <Link
+          to="/news"
+          className="flex flex-col items-center justify-center flex-1 h-full pt-1 active:scale-95 transition-transform"
+        >
+          <Newspaper className="w-6 h-6" style={{ color: '#0C447C' }} />
+          <span className="text-[11px] font-semibold mt-1" style={{ color: '#0C447C' }}>
+            News
+          </span>
         </Link>
 
-        <Link to="/history" className={`flex flex-col items-center gap-1 ${isActive('/history') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <History className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.history}</span>
+        {/* 2. Create Tab (Center Raised) */}
+        <Link
+          to="/generate"
+          className="flex flex-col items-center justify-center flex-1 relative h-full active:scale-95 transition-transform"
+        >
+          <div
+            className="absolute -top-5 w-[56px] h-[56px] rounded-full flex items-center justify-center shadow-lg"
+            style={{ background: '#D32F2F', border: '3px solid #FFFFFF', boxShadow: '0 0 0 3px #D32F2F, 0 4px 12px rgba(211,47,47,0.45)' }}
+          >
+            <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
+          </div>
+          <span
+            className="text-[11px] font-semibold mt-[22px]"
+            style={{ color: '#A32D2D' }}
+          >
+            Create
+          </span>
         </Link>
-        <Link to="/settings" className={`flex flex-col items-center gap-1 ${isActive('/settings') ? 'text-[#CC1E1E]' : 'text-white/40'}`}>
-          <Settings className="w-6 h-6" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">{t.settings}</span>
+
+        {/* 3. Settings Tab */}
+        <Link
+          to="/settings"
+          className="flex flex-col items-center justify-center flex-1 h-full pt-1 active:scale-95 transition-transform"
+        >
+          <Settings className="w-6 h-6" style={{ color: '#0C447C' }} />
+          <span className="text-[11px] font-semibold mt-1" style={{ color: '#0C447C' }}>
+            Settings
+          </span>
         </Link>
       </nav>
     </div>
@@ -167,7 +212,67 @@ function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
+  const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const setPendingCropImageSrc = useUIStore((state) => state.setPendingCropImageSrc);
+
+  const [isAdminVerified, setIsAdminVerified] = useState(false);
+
+  const isAdmin =
+    isAdminVerified ||
+    isAdminUser(user) ||
+    (user as any)?.role === 'admin' ||
+    (user as any)?.app_metadata?.role === 'admin' ||
+    (user as any)?.user_metadata?.role === 'admin';
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user?.id) {
+        setIsAdminVerified(false);
+        return;
+      }
+      if (
+        isAdminUser(user) ||
+        (user as any)?.role === 'admin' ||
+        (user as any)?.app_metadata?.role === 'admin' ||
+        (user as any)?.user_metadata?.role === 'admin'
+      ) {
+        setIsAdminVerified(true);
+        return;
+      }
+
+      try {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (prof?.role === 'admin') {
+          updateUser({ role: 'admin' } as any);
+          setIsAdminVerified(true);
+          return;
+        }
+      } catch { /* silent */ }
+
+      try {
+        const token = useAuthStore.getState().token;
+        if (token) {
+          const res = await fetch(
+            'https://news-backend-sjw6.onrender.com/api/v1/admin/stats',
+            { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }
+          );
+          const isDbAdmin = res.status === 200;
+          if (isDbAdmin) {
+            updateUser({ role: 'admin' } as any);
+          }
+          setIsAdminVerified(isDbAdmin);
+        }
+      } catch {
+        setIsAdminVerified(false);
+      }
+    };
+    checkAdminRole();
+  }, [user?.id]);
 
   useEffect(() => {
     // Initialize Google Auth plugin
@@ -180,7 +285,7 @@ function App() {
     // Listen for deep links (e.g. Supabase OAuth callback)
     CapacitorApp.addListener('appUrlOpen', async (event) => {
       if (event.url.includes('access_token')) {
-        await Browser.close().catch(() => {});
+        await Browser.close().catch(() => { });
         const urlObj = new URL(event.url);
         // Supabase passes tokens in the hash like #access_token=...&refresh_token=...
         const hashStr = urlObj.hash.startsWith('#') ? urlObj.hash.substring(1) : urlObj.hash;
@@ -218,9 +323,12 @@ function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         const email = session.user?.email;
+        const savedName = getReporterName(email);
         const savedPhoto = getReporterPhoto(email);
         const userObj = {
           ...session.user,
+          full_name: savedName || (session.user as any)?.user_metadata?.full_name || (session.user as any)?.user_metadata?.name || (session.user as any)?.full_name || '',
+          firstName: savedName || (session.user as any)?.user_metadata?.full_name || '',
           avatarUrl: savedPhoto || (session.user as any)?.user_metadata?.avatar_url || (session.user as any)?.user_metadata?.picture || '',
         };
         login(userObj as any, session.access_token);
@@ -241,58 +349,75 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/login" 
-          element={!isAuthenticated ? <LoginScreen /> : <Navigate to="/" />} 
+        <Route
+          path="/login"
+          element={!isAuthenticated ? <LoginScreen /> : <Navigate to="/" />}
         />
-        <Route 
-          path="/login/otp" 
-          element={!isAuthenticated ? <LoginOtpScreen /> : <Navigate to="/" />} 
+        <Route
+          path="/login/otp"
+          element={!isAuthenticated ? <LoginOtpScreen /> : <Navigate to="/" />}
         />
-        <Route 
-          path="/login/verify" 
-          element={!isAuthenticated ? <VerifyOtpScreen /> : <Navigate to="/" />} 
+        <Route
+          path="/login/verify"
+          element={!isAuthenticated ? <VerifyOtpScreen /> : <Navigate to="/" />}
         />
-        <Route 
-          path="/signup" 
-          element={!isAuthenticated ? <SignupScreen /> : <Navigate to="/" />} 
+        <Route
+          path="/signup"
+          element={!isAuthenticated ? <SignupScreen /> : <Navigate to="/" />}
         />
-        <Route 
-          path="/create-password" 
-          element={<CreatePasswordScreen />} 
+        <Route
+          path="/create-password"
+          element={<CreatePasswordScreen />}
         />
-        <Route 
-          path="/reset-password" 
-          element={<CreatePasswordScreen />} 
+        <Route
+          path="/reset-password"
+          element={<CreatePasswordScreen />}
         />
-        <Route 
-          path="/forgot-password" 
-          element={<ForgotPasswordScreen />} 
+        <Route
+          path="/forgot-password"
+          element={<ForgotPasswordScreen />}
         />
-        
-        <Route 
-          path="/preview/:id" 
-          element={isAuthenticated ? <PreviewScreen /> : <Navigate to="/login" />} 
+
+        {/* ── Admin Route (standalone, only for verified admins) ── */}
+        <Route
+          path="/admin"
+          element={
+            !isAuthenticated ? (
+              <Navigate to="/login" replace />
+            ) : isAdmin ? (
+              <AdminScreen />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
         />
-        
-        <Route 
-          path="/*" 
+
+        <Route
+          path="/preview/:id"
+          element={isAuthenticated ? <PreviewScreen /> : <Navigate to="/login" />}
+        />
+
+        <Route
+          path="/*"
           element={
             isAuthenticated ? (
               <MainLayout>
                 <Routes>
-                  <Route path="/" element={<DashboardScreen />} />
+                  <Route path="/" element={<GenerateScreen />} />
+                  <Route path="/dashboard" element={<DashboardScreen />} />
                   <Route path="/generate" element={<GenerateScreen />} />
                   <Route path="/templates" element={<TemplatesScreen />} />
-                  <Route path="/history" element={<HistoryScreen />} />
+                  <Route path="/news" element={<NewsScreen />} />
+                  <Route path="/history" element={<NewsScreen />} />
                   <Route path="/settings" element={<SettingsScreen />} />
+                  <Route path="/settings/profile" element={<ProfileSettingsScreen />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </MainLayout>
             ) : (
               <Navigate to="/login" />
             )
-          } 
+          }
         />
       </Routes>
     </Router>

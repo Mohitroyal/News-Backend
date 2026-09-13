@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build Artifacts & Binaries
+*.apk
+*.diff
+sec*.txt
+

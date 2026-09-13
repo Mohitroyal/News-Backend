@@ -169,12 +169,12 @@ export const PreviewScreen = () => {
     );
   }
 
-  const handleDownload = async (format: 'png' | 'pdf') => {
+  const handleDownload = async (format: 'jpg' | 'pdf') => {
     setDownloading(true);
     try {
       let blob;
-      if (format === 'png') {
-        if (!generation.png_url) throw new Error("PNG URL not available");
+      if (format === 'jpg') {
+        if (!generation.png_url) throw new Error("JPG URL not available");
         const res = await fetch(generation.png_url);
         blob = await res.blob();
       } else {
@@ -233,8 +233,8 @@ export const PreviewScreen = () => {
     setIsShareSheetOpen(false);
 
     try {
-      const title = 'RTI EXPRESS';
-      const text = 'RTI EXPRESS WANTED REPORTERS: 7668886666';
+      const title = generation.config?.headline || 'RTI EXPRESS';
+      const text = `${generation.config?.headline || ''}\n\nRTI EXPRESS – India’s First Breaking News App.`;
 
       // Fetch image blob
       const res = await fetch(generation.png_url);
@@ -247,7 +247,7 @@ export const PreviewScreen = () => {
           let base64data = reader.result as string;
           if (base64data.includes(',')) base64data = base64data.split(',')[1];
           try {
-            const tempFileName = `newscraft-share-${generation.id}.png`;
+            const tempFileName = `newscraft-share-${generation.id}.jpg`;
             const writeResult = await Filesystem.writeFile({
               path: tempFileName,
               data: base64data,
@@ -273,7 +273,7 @@ export const PreviewScreen = () => {
         // Try Web Share API if supported
         if (navigator.share) {
           try {
-            const file = new File([blob], `newscraft-${generation.id}.png`, { type: blob.type });
+            const file = new File([blob], `newscraft-${generation.id}.jpg`, { type: blob.type });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               await navigator.share({
                 title,
@@ -341,7 +341,7 @@ export const PreviewScreen = () => {
   return (
     <div className="h-screen bg-[#dceef8] flex flex-col fixed inset-0 z-50 font-sans text-[#0a1a2e]">
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
-      <div className="h-16 bg-[#0a2540] border-b-[3px] border-[#cc2222] flex items-center px-4 shrink-0 shadow-sm relative z-20">
+      <div className="h-16 bg-[#015BB3] border-b-[3px] border-[#145AB1] flex items-center px-4 shrink-0 shadow-sm relative z-20">
         <button
           onClick={() => {
             if (generation.status === 'processing' || generation.status === 'pending') {
@@ -357,7 +357,7 @@ export const PreviewScreen = () => {
         <div className="flex flex-col flex-1 truncate">
           <span className="text-white font-bold text-[17px] tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>Preview</span>
           <span className="text-[10px] text-[#a0c4dc] tracking-wider truncate">
-            clipping_{generation.id.slice(0, 8)}.png
+            clipping_{generation.id.slice(0, 8)}.jpg
           </span>
         </div>
       </div>
@@ -430,11 +430,11 @@ export const PreviewScreen = () => {
             </div>
 
             {/* HINT BAR */}
-            <div className="w-full bg-[#0a2540] rounded-[6px] py-[10px] px-[14px] flex items-center justify-center gap-2 shadow-sm animate-in zoom-in-95 duration-500 fill-mode-both" style={{ animationDelay: '400ms' }}>
-              <div className="w-3.5 h-3.5 rounded-full bg-[#a0c4dc]/20 flex items-center justify-center shrink-0">
-                <span className="text-[#a0c4dc] text-[9px] font-bold font-serif italic">i</span>
+            <div className="w-full bg-[#015BB3] rounded-[6px] py-[10px] px-[14px] flex items-center justify-center gap-2 shadow-sm animate-in zoom-in-95 duration-500 fill-mode-both" style={{ animationDelay: '400ms' }}>
+              <div className="w-3.5 h-3.5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <span className="text-white text-[9px] font-bold font-serif italic">i</span>
               </div>
-              <span className="text-[#a0c4dc] text-[10px] font-medium tracking-wide">Checking every 3 seconds &middot; Do not close this screen</span>
+              <span className="text-white text-[10px] font-medium tracking-wide">Checking every 3 seconds &middot; Do not close this screen</span>
             </div>
           </div>
         )}
@@ -483,8 +483,8 @@ export const PreviewScreen = () => {
         {(generation.png_url) && (
           <div className="flex flex-col items-center w-full h-full relative animate-in fade-in duration-500 pb-2">
              <div className="flex flex-col items-center mb-4 shrink-0 relative">
-               <div className="absolute inset-0 bg-[#0a2540] rounded-full opacity-0 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.4s' }} />
-               <div className="w-12 h-12 rounded-full bg-[#0a2540] flex items-center justify-center mb-2 shadow-sm animate-in zoom-in duration-500" style={{ animationTimingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)' }}>
+               <div className="absolute inset-0 bg-[#015BB3] rounded-full opacity-0 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.4s' }} />
+               <div className="w-12 h-12 rounded-full bg-[#015BB3] flex items-center justify-center mb-2 shadow-sm animate-in zoom-in duration-500" style={{ animationTimingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)' }}>
                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" style={{ strokeDasharray: 24, strokeDashoffset: 24, animation: 'draw 0.4s ease-out 0.3s forwards' }} />
                  </svg>
@@ -505,19 +505,19 @@ export const PreviewScreen = () => {
              <div className="w-full shrink-0 flex flex-col gap-2">
                 <div className="flex w-full gap-2">
                   <button
-                    onClick={() => handleDownload('png')}
+                    onClick={() => handleDownload('jpg')}
                     disabled={downloading}
                     className="flex-1 py-[14px] bg-[#cc2222] hover:bg-[#ff3333] active:bg-[#a01b1b] text-white rounded-[8px] font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-[0_4px_12px_rgba(204,34,34,0.3)] animate-in slide-in-from-bottom-2 duration-300 delay-200 fill-mode-both relative overflow-hidden group"
                   >
                     <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:animate-[shimmerSweep_1s_ease-out]" />
                     <Download className="w-4 h-4 shrink-0" />
-                    <span>Save PNG</span>
+                    <span>Save JPG</span>
                   </button>
 
                   <button
                     onClick={() => handleDownload('pdf')}
                     disabled={downloading}
-                    className="flex-1 py-[14px] bg-[#0a2540] hover:bg-[#071a2d] active:bg-[#071a2d] text-[#7bbce0] rounded-[8px] font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-[0_4px_12px_rgba(10,37,64,0.3)] animate-in slide-in-from-bottom-2 duration-300 delay-300 fill-mode-both relative overflow-hidden group"
+                    className="flex-1 py-[14px] bg-[#015BB3] hover:bg-[#145AB1] active:bg-[#015BB3] text-white rounded-[8px] font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-[0_4px_12px_rgba(1,91,179,0.3)] animate-in slide-in-from-bottom-2 duration-300 delay-300 fill-mode-both relative overflow-hidden group"
                   >
                     <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:animate-[shimmerSweep_1s_ease-out]" />
                     <FileDown className="w-4 h-4 shrink-0" />

@@ -11,7 +11,7 @@
 @variant md (@media (min-width: 768px));
 
 body {
-  background-color: #dceef8;
+  background-color: #EAF1FB;
   color: #0a2540;
 }
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
