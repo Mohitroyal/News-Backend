@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Settings, Plus, Phone, Newspaper } from 'lucide-react';
+import { Settings, Plus, Newspaper } from 'lucide-react';
 // import { useTranslation } from './lib/i18n';
 import mastheadLogo from './assets/rti_express_logo.png';
 import watermarkLogo from './assets/rti_express_watermark.png';
@@ -71,83 +71,64 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
 
       {/* Main Content Area — masthead scrolls with content */}
-      <main className="flex-1 overflow-y-auto pb-[68px]" style={{ position: 'relative', zIndex: 3 }}>
+      <main className="flex-1 overflow-y-auto pb-[76px]" style={{ position: 'relative', zIndex: 3 }}>
         {/* ── Masthead (scrolls with page) ── */}
         <header className="w-full flex flex-col pt-safe" style={{ background: '#EAF1FB' }}>
-          <div style={{ background: headerBg, paddingBottom: '10px' }}>
+          <div style={{ background: headerBg, paddingBottom: '4px' }}>
             {/* ── Main Header Content ── */}
-            <div className="w-full flex items-start justify-between px-3 pt-3 pb-2 gap-2">
+            <div className="w-full flex items-start justify-between px-3.5 pt-3.5 pb-2 gap-2">
               {/* Left Column: Logo + Title + Date below */}
-              <div className="flex flex-col gap-1.5 shrink-0">
+              <div className="flex flex-col gap-1 shrink-0">
                 <div className="flex items-center gap-2">
                   {/* Logo box */}
                   <div className="rounded-[8px] flex items-center justify-center h-[46px] overflow-hidden bg-white p-1 border border-[#0B56A6]/20 shrink-0">
-                    <img src={mastheadLogo} alt="Spot News Logo" className="h-full w-auto object-contain" style={{ maxWidth: '90px', borderRadius: '4px' }} />
+                    <img src={mastheadLogo} alt="Spot News Logo" className="h-full w-auto object-contain" style={{ maxWidth: '92px', borderRadius: '4px' }} />
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-white text-[24px] leading-tight tracking-wide" style={{ fontFamily: "'Georgia', serif" }}>
+                  <div className="flex flex-col justify-center">
+                    <span className="font-bold text-white text-[23px] leading-[1.15] tracking-wide" style={{ fontFamily: "'Georgia', serif" }}>
                       Spot News<br/>24x7
                     </span>
                   </div>
                 </div>
 
                 {/* Date text (italic serif font) */}
-                <span className="text-white/75 text-[11px] tracking-wide font-medium font-serif italic pt-0.5 whitespace-nowrap">
+                <span className="text-white/90 text-[11.5px] tracking-wide font-medium font-serif italic pt-1 whitespace-nowrap">
                   {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </span>
               </div>
 
-              {/* Right Column: Profile Avatar -> Reporter Name UP, REPORTERS WANTED -> Phone Number pulled DOWN */}
-              <div className="flex flex-col items-end text-right gap-0.5 pt-0.5 shrink-0">
+              {/* Right Column: Profile Avatar -> Reporter Name UP */}
+              <div className="flex flex-col items-end text-right pt-0.5 shrink-0">
                 <Link to="/settings" className="flex flex-col items-center gap-0.5 active:scale-95 transition-transform" title="Reporter Profile">
                   {userAvatar ? (
                     <img
                       src={userAvatar}
                       alt="Reporter Profile"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-[#CC1E1E] shadow-md bg-white"
+                      className="w-11 h-11 rounded-full object-cover border-2 border-[#CC1E1E] shadow-sm bg-white"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-[#1e3a5f] border-2 border-[#CC1E1E] flex items-center justify-center text-white font-bold text-sm shadow-md">
+                    <div className="w-11 h-11 rounded-full bg-[#1e3a5f] border-2 border-[#CC1E1E] flex items-center justify-center text-white font-bold text-sm shadow-sm">
                       {userInitials}
                     </div>
                   )}
-                  <div className="flex flex-col items-center leading-tight text-center mt-0.5">
-                    <span className="text-white/65 text-[8.5px] uppercase tracking-wider font-extrabold">REPORTER:</span>
-                    <span className="text-white/95 text-[9.5px] uppercase tracking-wider font-extrabold">{userName}</span>
+                  <div className="flex flex-col items-center leading-tight text-center mt-1">
+                    <span className="text-white/80 text-[8.5px] uppercase tracking-wider font-extrabold">REPORTER:</span>
+                    <span className="text-white text-[9.5px] uppercase tracking-wider font-extrabold">{userName}</span>
                   </div>
                 </Link>
-
-                {/* REPORTERS WANTED + Phone Number pulled DOWN to cover space */}
-                <div className="flex flex-col items-end text-right mt-5">
-                  {/* REPORTERS WANTED in Red */}
-                  <strong style={{ fontWeight: 900, fontFamily: "'Georgia', serif", fontSize: '11px', letterSpacing: '0.4px', color: '#FF3333' }}>
-                    REPORTERS WANTED
-                  </strong>
-
-                  {/* | Phone Icon + 7668886666 in White */}
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 700 }}>|</span>
-                    <Phone style={{ width: '13px', height: '13px', color: '#FF3333', flexShrink: 0 }} strokeWidth={2.5} />
-                    <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '12px', letterSpacing: '0.5px', color: '#ffffff' }}>
-                      7668886666
-                    </strong>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* ── Smooth Wave Divider Transition (Matching Green Drawn Wave) ── */}
+          {/* ── Smooth Wave Divider Transition ── */}
           <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, background: '#EAF1FB' }}>
             <svg
-              viewBox="0 0 1440 240"
+              viewBox="0 0 1440 120"
               preserveAspectRatio="none"
-              style={{ position: 'relative', display: 'block', width: '100%', height: '50px' }}
+              style={{ position: 'relative', display: 'block', width: '100%', height: '36px' }}
             >
-              {/* Dark blue wave shape matching user's green drawn line:
-                  Starts low on left -> peaks high under Spot News -> dips deep down under Reporters Wanted -> curves up slightly at right */}
               <path
-                d="M0,0 L1440,0 L1440,100 C1100,240 500,10 0,170 Z"
+                d="M0,0 L1440,0 L1440,20 C1100,75 600,8 0,30 Z"
                 fill={headerBg}
               />
             </svg>
@@ -160,14 +141,14 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       </main>
 
 
-      <nav className="fixed bottom-0 left-0 right-0 w-full pb-safe flex items-center justify-around h-[68px] z-30 shadow-lg rounded-t-[20px]" style={{ background: '#FFFFFF' }}>
+      <nav className="fixed bottom-0 left-0 right-0 w-full pb-safe flex items-center justify-around h-[68px] z-30 shadow-md border-t border-[#E2EDF8]" style={{ background: '#FFFFFF' }}>
         {/* 1. News Tab */}
         <Link
           to="/news"
           className="flex flex-col items-center justify-center flex-1 h-full pt-1 active:scale-95 transition-transform"
         >
           <Newspaper className="w-6 h-6" style={{ color: '#0C447C' }} />
-          <span className="text-[11px] font-semibold mt-1" style={{ color: '#0C447C' }}>
+          <span className="text-[11px] font-bold mt-1" style={{ color: '#0C447C' }}>
             News
           </span>
         </Link>
@@ -178,14 +159,24 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           className="flex flex-col items-center justify-center flex-1 relative h-full active:scale-95 transition-transform"
         >
           <div
-            className="absolute -top-5 w-[56px] h-[56px] rounded-full flex items-center justify-center shadow-lg"
-            style={{ background: '#D32F2F', border: '3px solid #FFFFFF', boxShadow: '0 0 0 3px #D32F2F, 0 4px 12px rgba(211,47,47,0.45)' }}
+            className="absolute -top-5 w-[54px] h-[54px] rounded-full flex items-center justify-center"
+            style={{
+              background: '#FFFFFF',
+              border: '2.5px solid #CC1E1E',
+              padding: '3px',
+              boxShadow: '0 4px 12px rgba(204,30,30,0.22)',
+            }}
           >
-            <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
+            <div
+              className="w-full h-full rounded-full flex items-center justify-center"
+              style={{ background: '#CC1E1E' }}
+            >
+              <Plus className="w-7 h-7 text-white" strokeWidth={2.8} />
+            </div>
           </div>
           <span
-            className="text-[11px] font-semibold mt-[22px]"
-            style={{ color: '#A32D2D' }}
+            className="text-[11px] font-bold mt-[26px]"
+            style={{ color: '#CC1E1E' }}
           >
             Create
           </span>
@@ -197,7 +188,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           className="flex flex-col items-center justify-center flex-1 h-full pt-1 active:scale-95 transition-transform"
         >
           <Settings className="w-6 h-6" style={{ color: '#0C447C' }} />
-          <span className="text-[11px] font-semibold mt-1" style={{ color: '#0C447C' }}>
+          <span className="text-[11px] font-bold mt-1" style={{ color: '#0C447C' }}>
             Settings
           </span>
         </Link>

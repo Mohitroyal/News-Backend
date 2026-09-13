@@ -26,10 +26,10 @@ const GEN_STAGES = [
 // ─── Shared card style ────────────────────────────────────────────────────────
 const cardStyle: React.CSSProperties = {
   background: '#F4F8FD',
-  borderRadius: '14px',
-  padding: '16px',
+  borderRadius: '16px',
+  padding: '16px 18px',
   marginBottom: '14px',
-  border: '1px solid #DCE6F2',
+  border: '1.5px solid #D6E4F5',
 };
 
 const labelStyle: React.CSSProperties = {
@@ -37,7 +37,7 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   fontSize: '12px',
   fontWeight: 700,
-  color: '#0C447C',
+  color: '#0F487F',
   marginBottom: '12px',
   display: 'flex',
   alignItems: 'center',
@@ -50,20 +50,20 @@ const sectionLabelStyle: React.CSSProperties = {
   fontStyle: 'normal',
   fontSize: '13px',
   fontWeight: 900,
-  color: '#0C447C',
+  color: '#0F487F',
   marginBottom: '12px',
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  letterSpacing: '0.8px',
+  letterSpacing: '0.6px',
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   background: '#ffffff',
-  border: '1px solid #DCE6F2',
-  borderRadius: '10px',
-  padding: '14px',
+  border: '1px solid #D6E4F5',
+  borderRadius: '12px',
+  padding: '13px 16px',
   color: '#0F172A',
   fontSize: '15px',
   outline: 'none',
@@ -338,8 +338,8 @@ export const GenerateScreen = () => {
 
 
       {/* ── Page title ── */}
-      <div style={{ background: 'transparent', paddingTop: '18px', paddingBottom: '10px', marginBottom: '4px' }}>
-        <h1 style={{ color: '#123A66', fontSize: '20px', fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0, textAlign: 'center', letterSpacing: '0.3px', paddingLeft: '16px', paddingRight: '16px' }}>
+      <div style={{ background: 'transparent', paddingTop: '20px', paddingBottom: '14px' }}>
+        <h1 style={{ color: '#163E6C', fontSize: '22px', fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0, textAlign: 'center', letterSpacing: '0.2px' }}>
           New Newspaper Clipping
         </h1>
       </div>
@@ -351,8 +351,8 @@ export const GenerateScreen = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={sectionLabelStyle}>
-                <Notebook style={{ width: 20, height: 20 }} strokeWidth={2.5} />
-                <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.8px' }}>ACTIVE LOGO</strong>
+                <Notebook style={{ width: 19, height: 19, color: '#0F487F' }} strokeWidth={2.4} />
+                <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.6px', color: '#0F487F' }}>ACTIVE LOGO</strong>
               </div>
               <span style={{ color: '#0F172A', fontSize: '16px', fontWeight: 700 }}>{selectedTemplateDetails.name}</span>
               {activeLogos.length === 0 && !logosLoading && (
@@ -364,17 +364,17 @@ export const GenerateScreen = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 onClick={() => setIsAdvancedModalOpen(true)}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#165099', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#1254A8', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(18,84,168,0.2)' }}
                 title="Advanced Customization"
               >
-                <SlidersHorizontal style={{ width: 18, height: 18 }} />
+                <SlidersHorizontal style={{ width: 18, height: 18 }} strokeWidth={2.2} />
               </button>
               <button
                 onClick={() => {
                   refreshActiveLogos();
                   setIsLogoModalOpen(true);
                 }}
-                style={{ background: '#145AB1', color: '#fff', border: 'none', borderRadius: '20px', padding: '8px 20px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', letterSpacing: '0.2px' }}
+                style={{ background: '#1254A8', color: '#ffffff', border: 'none', borderRadius: '20px', padding: '9px 22px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', letterSpacing: '0.2px', boxShadow: '0 2px 6px rgba(18,84,168,0.2)' }}
               >
                 Change
               </button>
@@ -386,41 +386,41 @@ export const GenerateScreen = () => {
 
 
 
-        {/* ── SECTION 4: HEADLINE ── */}
+        {/* ── SECTION 2: HEADLINE ── */}
         <div style={cardStyle}>
           <div style={sectionLabelStyle}>
-            <FileText style={{ width: 20, height: 20 }} strokeWidth={2.5} />
-            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.8px' }}>HEADLINE</strong>
+            <FileText style={{ width: 19, height: 19, color: '#0F487F' }} strokeWidth={2.4} />
+            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.6px', color: '#0F487F' }}>HEADLINE</strong>
           </div>
           <input
             type="text"
-            placeholder={t.enterHeadline}
+            placeholder="Enter headline"
             value={headline}
             onChange={e => setHeadline(e.target.value)}
             style={inputStyle}
           />
         </div>
 
-        {/* ── SECTION 5: ARTICLE CONTENT ── */}
+        {/* ── SECTION 3: ARTICLE CONTENT ── */}
         <div style={cardStyle}>
           <div style={sectionLabelStyle}>
-            <Pencil style={{ width: 20, height: 20 }} strokeWidth={2.5} />
-            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.8px' }}>ARTICLE CONTENT</strong>
+            <Pencil style={{ width: 19, height: 19, color: '#0F487F' }} strokeWidth={2.4} />
+            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.6px', color: '#0F487F' }}>ARTICLE CONTENT</strong>
           </div>
           <textarea
-            placeholder={t.enterArticleContent}
+            placeholder="Enter article content..."
             value={content}
             onChange={e => setContent(e.target.value)}
-            rows={5}
-            style={{ ...inputStyle, resize: 'none', lineHeight: 1.6 }}
+            rows={4}
+            style={{ ...inputStyle, resize: 'none', lineHeight: 1.5, minHeight: '96px' }}
           />
         </div>
 
-        {/* ── SECTION 6: FEATURED IMAGES ── */}
+        {/* ── SECTION 4: FEATURED IMAGES ── */}
         <div style={cardStyle}>
           <div style={sectionLabelStyle}>
-            <ImageIcon style={{ width: 20, height: 20 }} strokeWidth={2.5} />
-            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.8px' }}>FEATURED IMAGES</strong>
+            <ImageIcon style={{ width: 19, height: 19, color: '#0F487F' }} strokeWidth={2.4} />
+            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.6px', color: '#0F487F' }}>FEATURED IMAGES</strong>
           </div>
 
           {imageUrls.length > 0 && (
@@ -446,12 +446,11 @@ export const GenerateScreen = () => {
               onClick={handleImageUpload}
               disabled={loading}
               style={{
-                width: '100%', border: '1.5px dashed #C8D6E5', borderRadius: '10px',
-                background: '#ffffff', padding: '24px 0', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                width: '100%', border: '1.5px dashed #CBD9E8', borderRadius: '12px',
+                background: '#ffffff', padding: '22px 16px', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
               }}
             >
-              <ImageIcon style={{ width: '28px', height: '28px', color: '#94A3B8' }} strokeWidth={1.5} />
               <span style={{ color: '#475569', fontSize: '14px', fontWeight: 600 }}>Tap to upload image</span>
               <span style={{ color: '#94A3B8', fontSize: '12px' }}>
                 {maxImages - imageUrls.length} remaining · auto-compressed
@@ -465,7 +464,7 @@ export const GenerateScreen = () => {
         {/* ── Generate button (Normal Flow) ── */}
         <div style={{ marginTop: '16px', marginBottom: '24px' }}>
           {loading && currentStage && (
-            <div style={{ background: '#0D1B2A', borderRadius: '12px 12px 0 0', padding: '10px 16px' }}>
+            <div style={{ background: '#0D1B2A', borderRadius: '14px 14px 0 0', padding: '10px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: '#fff', fontSize: '11px', fontWeight: 600 }}>{currentStage.label}</span>
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontFamily: 'monospace' }}>{currentStage.pct}%</span>
@@ -479,11 +478,12 @@ export const GenerateScreen = () => {
             onClick={handleGenerate}
             disabled={loading || !headline || !content}
             style={{
-              width: '100%', padding: '18px 0', background: '#D32F2F',
-              color: '#fff', border: 'none', fontWeight: 700, fontSize: '16px', borderRadius: (loading && currentStage) ? '0 0 12px 12px' : '12px',
+              width: '100%', padding: '16px 0', background: '#D65B5B',
+              color: '#ffffff', border: 'none', fontWeight: 700, fontSize: '18px', borderRadius: (loading && currentStage) ? '0 0 14px 14px' : '14px',
               fontFamily: "'Georgia', serif", cursor: (loading || !headline || !content) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              opacity: (loading || !headline || !content) ? 0.65 : 1,
+              opacity: (loading || !headline || !content) ? 0.75 : 1,
+              boxShadow: '0 2px 6px rgba(214, 91, 91, 0.25)',
             }}
           >
             {loading ? (
