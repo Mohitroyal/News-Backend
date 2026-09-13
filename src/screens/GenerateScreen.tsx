@@ -26,46 +26,46 @@ const GEN_STAGES = [
 // ─── Shared card style ────────────────────────────────────────────────────────
 const cardStyle: React.CSSProperties = {
   background: '#F4F8FD',
-  borderRadius: '14px',
-  padding: '8px 12px',
-  marginBottom: '6px',
+  borderRadius: '16px',
+  padding: '13px 16px',
+  marginBottom: '11px',
   border: '1.5px solid #D6E4F5',
 };
 
 const labelStyle: React.CSSProperties = {
   fontFamily: "'Inter', sans-serif",
   textTransform: 'uppercase',
-  fontSize: '11px',
+  fontSize: '12px',
   fontWeight: 700,
   color: '#0F487F',
-  marginBottom: '6px',
+  marginBottom: '8px',
   display: 'flex',
   alignItems: 'center',
-  gap: '6px',
-  letterSpacing: '0.8px'
+  gap: '8px',
+  letterSpacing: '1px'
 };
 
 const sectionLabelStyle: React.CSSProperties = {
   fontFamily: "system-ui, -apple-system, Arial, sans-serif",
   fontStyle: 'normal',
-  fontSize: '11.5px',
+  fontSize: '12.5px',
   fontWeight: 900,
   color: '#0F487F',
-  marginBottom: '4px',
+  marginBottom: '8px',
   display: 'flex',
   alignItems: 'center',
-  gap: '6px',
-  letterSpacing: '0.5px',
+  gap: '7px',
+  letterSpacing: '0.6px',
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   background: '#ffffff',
   border: '1px solid #D6E4F5',
-  borderRadius: '10px',
-  padding: '6px 12px',
+  borderRadius: '12px',
+  padding: '11px 14px',
   color: '#0F172A',
-  fontSize: '13.5px',
+  fontSize: '15px',
   outline: 'none',
   boxSizing: 'border-box',
 };
@@ -338,8 +338,8 @@ export const GenerateScreen = () => {
 
 
       {/* ── Page title ── */}
-      <div style={{ background: 'transparent', paddingTop: '6px', paddingBottom: '4px' }}>
-        <h1 style={{ color: '#163E6C', fontSize: '18px', fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0, textAlign: 'center', letterSpacing: '0.2px' }}>
+      <div style={{ background: 'transparent', paddingTop: '14px', paddingBottom: '10px' }}>
+        <h1 style={{ color: '#163E6C', fontSize: '21px', fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0, textAlign: 'center', letterSpacing: '0.2px' }}>
           New Newspaper Clipping
         </h1>
       </div>
@@ -351,12 +351,12 @@ export const GenerateScreen = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={sectionLabelStyle}>
-                <Notebook style={{ width: 16, height: 16, color: '#0F487F' }} strokeWidth={2.4} />
-                <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '11.5px', letterSpacing: '0.5px', color: '#0F487F' }}>ACTIVE LOGO</strong>
+                <Notebook style={{ width: 18, height: 18, color: '#0F487F' }} strokeWidth={2.4} />
+                <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '12.5px', letterSpacing: '0.6px', color: '#0F487F' }}>ACTIVE LOGO</strong>
               </div>
-              <span style={{ color: '#0F172A', fontSize: '14.5px', fontWeight: 700 }}>{selectedTemplateDetails.name}</span>
+              <span style={{ color: '#0F172A', fontSize: '15.5px', fontWeight: 700 }}>{selectedTemplateDetails.name}</span>
               {activeLogos.length === 0 && !logosLoading && (
-                <div style={{ color: '#D32F2F', fontSize: '10px', fontWeight: 600, marginTop: '2px' }}>
+                <div style={{ color: '#D32F2F', fontSize: '11px', fontWeight: 600, marginTop: '2px' }}>
                   No logos currently active
                 </div>
               )}
@@ -364,17 +364,17 @@ export const GenerateScreen = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 onClick={() => setIsAdvancedModalOpen(true)}
-                style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1254A8', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(18,84,168,0.2)' }}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1254A8', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(18,84,168,0.2)' }}
                 title="Advanced Customization"
               >
-                <SlidersHorizontal style={{ width: 16, height: 16 }} strokeWidth={2.2} />
+                <SlidersHorizontal style={{ width: 18, height: 18 }} strokeWidth={2.2} />
               </button>
               <button
                 onClick={() => {
                   refreshActiveLogos();
                   setIsLogoModalOpen(true);
                 }}
-                style={{ background: '#1254A8', color: '#ffffff', border: 'none', borderRadius: '18px', padding: '6px 18px', fontWeight: 700, fontSize: '12px', cursor: 'pointer', letterSpacing: '0.2px', boxShadow: '0 2px 5px rgba(18,84,168,0.2)' }}
+                style={{ background: '#1254A8', color: '#ffffff', border: 'none', borderRadius: '20px', padding: '8px 20px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', letterSpacing: '0.2px', boxShadow: '0 2px 6px rgba(18,84,168,0.2)' }}
               >
                 Change
               </button>
@@ -389,8 +389,8 @@ export const GenerateScreen = () => {
         {/* ── SECTION 2: HEADLINE ── */}
         <div style={cardStyle}>
           <div style={sectionLabelStyle}>
-            <FileText style={{ width: 16, height: 16, color: '#0F487F' }} strokeWidth={2.4} />
-            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '11.5px', letterSpacing: '0.5px', color: '#0F487F' }}>HEADLINE</strong>
+            <FileText style={{ width: 18, height: 18, color: '#0F487F' }} strokeWidth={2.4} />
+            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '12.5px', letterSpacing: '0.6px', color: '#0F487F' }}>HEADLINE</strong>
           </div>
           <input
             type="text"
@@ -404,38 +404,38 @@ export const GenerateScreen = () => {
         {/* ── SECTION 3: ARTICLE CONTENT ── */}
         <div style={cardStyle}>
           <div style={sectionLabelStyle}>
-            <Pencil style={{ width: 16, height: 16, color: '#0F487F' }} strokeWidth={2.4} />
-            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '11.5px', letterSpacing: '0.5px', color: '#0F487F' }}>ARTICLE CONTENT</strong>
+            <Pencil style={{ width: 18, height: 18, color: '#0F487F' }} strokeWidth={2.4} />
+            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '12.5px', letterSpacing: '0.6px', color: '#0F487F' }}>ARTICLE CONTENT</strong>
           </div>
           <textarea
             placeholder="Enter article content..."
             value={content}
             onChange={e => setContent(e.target.value)}
-            rows={2}
-            style={{ ...inputStyle, resize: 'none', lineHeight: 1.35, minHeight: '52px', height: '52px' }}
+            rows={3}
+            style={{ ...inputStyle, resize: 'none', lineHeight: 1.45, minHeight: '80px', height: '80px' }}
           />
         </div>
 
         {/* ── SECTION 4: FEATURED IMAGES ── */}
         <div style={cardStyle}>
           <div style={sectionLabelStyle}>
-            <ImageIcon style={{ width: 16, height: 16, color: '#0F487F' }} strokeWidth={2.4} />
-            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '11.5px', letterSpacing: '0.5px', color: '#0F487F' }}>FEATURED IMAGES</strong>
+            <ImageIcon style={{ width: 18, height: 18, color: '#0F487F' }} strokeWidth={2.4} />
+            <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '12.5px', letterSpacing: '0.6px', color: '#0F487F' }}>FEATURED IMAGES</strong>
           </div>
 
           {imageUrls.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
               {imageUrls.map((url, idx) => (
-                <div key={idx} style={{ position: 'relative', flexShrink: 0, width: '68px', height: '68px', borderRadius: '8px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
+                <div key={idx} style={{ position: 'relative', flexShrink: 0, width: '76px', height: '76px', borderRadius: '10px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
                   <img src={url} alt={`img ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <button
                     onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== idx))}
-                    style={{ position: 'absolute', top: '3px', right: '3px', width: '18px', height: '18px', background: '#CC1E1E', border: 'none', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: '3px', right: '3px', width: '20px', height: '20px', background: '#CC1E1E', border: 'none', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                   >
                     <X style={{ width: '10px', height: '10px' }} strokeWidth={3} />
                   </button>
                   {/* Radio indicator */}
-                  <div style={{ position: 'absolute', bottom: '3px', left: '3px', width: '14px', height: '14px', background: '#CC1E1E', border: '2px solid #fff', borderRadius: '50%' }} />
+                  <div style={{ position: 'absolute', bottom: '3px', left: '3px', width: '15px', height: '15px', background: '#CC1E1E', border: '2px solid #fff', borderRadius: '50%' }} />
                 </div>
               ))}
             </div>
@@ -446,13 +446,13 @@ export const GenerateScreen = () => {
               onClick={handleImageUpload}
               disabled={loading}
               style={{
-                width: '100%', border: '1.5px dashed #CBD9E8', borderRadius: '10px',
-                background: '#ffffff', padding: '10px 12px', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
+                width: '100%', border: '1.5px dashed #CBD9E8', borderRadius: '12px',
+                background: '#ffffff', padding: '16px 14px', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px',
               }}
             >
-              <span style={{ color: '#475569', fontSize: '13px', fontWeight: 600 }}>Tap to upload image</span>
-              <span style={{ color: '#94A3B8', fontSize: '11px' }}>
+              <span style={{ color: '#475569', fontSize: '13.5px', fontWeight: 600 }}>Tap to upload image</span>
+              <span style={{ color: '#94A3B8', fontSize: '11.5px' }}>
                 {maxImages - imageUrls.length} remaining · auto-compressed
               </span>
             </button>
@@ -462,10 +462,10 @@ export const GenerateScreen = () => {
         {/* Font and Columns moved to Advanced Modal */}
 
         {/* ── Generate button (Normal Flow) ── */}
-        <div style={{ marginTop: '6px', marginBottom: '8px' }}>
+        <div style={{ marginTop: '10px', marginBottom: '8px' }}>
           {loading && currentStage && (
-            <div style={{ background: '#0D1B2A', borderRadius: '12px 12px 0 0', padding: '8px 14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <div style={{ background: '#0D1B2A', borderRadius: '14px 14px 0 0', padding: '10px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: '#fff', fontSize: '11px', fontWeight: 600 }}>{currentStage.label}</span>
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontFamily: 'monospace' }}>{currentStage.pct}%</span>
               </div>
@@ -478,8 +478,8 @@ export const GenerateScreen = () => {
             onClick={handleGenerate}
             disabled={loading || !headline || !content}
             style={{
-              width: '100%', padding: '11px 0', background: '#D65B5B',
-              color: '#ffffff', border: 'none', fontWeight: 700, fontSize: '17px', borderRadius: (loading && currentStage) ? '0 0 12px 12px' : '12px',
+              width: '100%', padding: '14px 0', background: '#D65B5B',
+              color: '#ffffff', border: 'none', fontWeight: 700, fontSize: '18px', borderRadius: (loading && currentStage) ? '0 0 14px 14px' : '14px',
               fontFamily: "'Georgia', serif", cursor: (loading || !headline || !content) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               opacity: (loading || !headline || !content) ? 0.75 : 1,
