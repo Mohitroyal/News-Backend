@@ -73,8 +73,8 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Main Content Area — masthead scrolls with content */}
       <main className="flex-1 overflow-y-auto pb-[76px]" style={{ position: 'relative', zIndex: 3 }}>
         {/* ── Masthead (scrolls with page) ── */}
-        <header className="w-full flex flex-col pt-safe" style={{ background: '#EAF1FB' }}>
-          <div style={{ background: headerBg, paddingBottom: '4px' }}>
+        <header className="w-full flex flex-col pt-safe" style={{ background: '#EAF2FB' }}>
+          <div style={{ background: headerBg, paddingBottom: '12px' }}>
             {/* ── Main Header Content ── */}
             <div className="w-full flex items-start justify-between px-3.5 pt-3.5 pb-2 gap-2">
               {/* Left Column: Logo + Title + Date below */}
@@ -121,14 +121,14 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           {/* ── Smooth Wave Divider Transition ── */}
-          <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, background: '#EAF1FB' }}>
+          <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, background: '#EAF2FB' }}>
             <svg
-              viewBox="0 0 1440 120"
+              viewBox="0 0 1440 240"
               preserveAspectRatio="none"
-              style={{ position: 'relative', display: 'block', width: '100%', height: '36px' }}
+              style={{ position: 'relative', display: 'block', width: '100%', height: '52px' }}
             >
               <path
-                d="M0,0 L1440,0 L1440,20 C1100,75 600,8 0,30 Z"
+                d="M0,0 L1440,0 L1440,100 C1100,240 500,10 0,170 Z"
                 fill={headerBg}
               />
             </svg>
