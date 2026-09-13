@@ -340,7 +340,7 @@ export const GenerateScreen = () => {
       {/* ── Page title ── */}
       <div style={{ background: 'transparent', paddingTop: '10px', paddingBottom: '6px' }}>
         <h1 style={{ color: '#163E6C', fontSize: '19px', fontWeight: 700, fontFamily: "'Georgia', serif", margin: 0, textAlign: 'center', letterSpacing: '0.2px' }}>
-          New Newspaper Clipping
+          Newspaper Clipping
         </h1>
       </div>
 
