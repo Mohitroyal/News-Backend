@@ -119,6 +119,13 @@ def get_auth_users(
     ).group_by(Clipping.user_id).all()
     gen_map = {str(r[0]): r[1] for r in gen_counts if r[0]}
 
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_counts = db.query(
+        Clipping.user_id,
+        func.count(Clipping.id).label("total_today")
+    ).filter(Clipping.created_at >= today_start).group_by(Clipping.user_id).all()
+    today_gen_map = {str(r[0]): r[1] for r in today_counts if r[0]}
+
     result = []
     for au in auth_users:
         # Normalise Supabase user object → plain dict
@@ -189,6 +196,7 @@ def get_auth_users(
             "email_confirmed_at": au_data.get("email_confirmed_at"),
             "in_local_db": local is not None,
             "total_generations": gen_map.get(uid, 0),
+            "generations_today": today_gen_map.get(uid, 0),
         })
 
     # Sort by created_at descending
@@ -446,6 +454,13 @@ def get_admin_users(
 
     gen_map = {str(r[0]): r[1] for r in gen_counts if r[0]}
 
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_counts = db.query(
+        Clipping.user_id,
+        func.count(Clipping.id).label("total_today")
+    ).filter(Clipping.created_at >= today_start).group_by(Clipping.user_id).all()
+    today_gen_map = {str(r[0]): r[1] for r in today_counts if r[0]}
+
     result = []
     for u in users:
         email = (u.email or "").lower()
@@ -463,6 +478,7 @@ def get_admin_users(
             "created_at": u.created_at.isoformat() if u.created_at else "",
             "last_sign_in_at": None,
             "total_generations": gen_map.get(user_id_str, 0),
+            "generations_today": today_gen_map.get(user_id_str, 0),
             "avatar_url": getattr(u, "avatar_url", "") or "",
             "preferred_language": "English",
             "is_banned": not getattr(u, "is_active", True) if hasattr(u, "is_active") and u.is_active is not None else False,
