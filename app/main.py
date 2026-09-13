@@ -139,23 +139,43 @@ app.add_middleware(GenerationRateLimitMiddleware)
 
 # ── CORS (SEC-007) ───────────────────────────────────────────────────────────
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi import Request
 
 origins = [
     "https://news-front.vercel.app",
     "https://news-frount.vercel.app",
+    "http://localhost",
+    "https://localhost",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "capacitor://localhost",
+    "ionic://localhost",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"[UNHANDLED_EXCEPTION] {request.method} {request.url.path}: {exc}")
+    origin = request.headers.get("origin", "*")
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "message": str(exc) or "Internal server error"},
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 @app.options("/{full_path:path}")
 async def preflight_handler(full_path: str):

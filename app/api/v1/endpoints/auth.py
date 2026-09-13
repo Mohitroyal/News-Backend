@@ -57,6 +57,13 @@ async def send_otp(
             detail="Invalid Indian mobile number. Must be a valid 10-digit number starting with 6, 7, 8, or 9.",
         )
 
+    # Ensure table exists (auto-migration failsafe)
+    try:
+        from app.db.session import engine
+        OTPVerification.__table__.create(bind=engine, checkfirst=True)
+    except Exception as dbe:
+        logger.warning(f"[DB_ENSURE_TABLE] {dbe}")
+
     now = datetime.now(timezone.utc)
     client_ip = _get_client_ip(request)
 
@@ -205,6 +212,13 @@ async def verify_otp(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid Indian mobile number format.",
         )
+
+    # Ensure table exists (auto-migration failsafe)
+    try:
+        from app.db.session import engine
+        OTPVerification.__table__.create(bind=engine, checkfirst=True)
+    except Exception as dbe:
+        logger.warning(f"[DB_ENSURE_TABLE] {dbe}")
 
     now = datetime.now(timezone.utc)
 
