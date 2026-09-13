@@ -143,19 +143,18 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
               />
             </svg>
 
-            {/* Wanted reporters in wave */}
-            <div style={{ position: 'absolute', top: '2px', left: '14px', zIndex: 2, lineHeight: 1 }}>
+            {/* Wanted reporters on right side below reporter name in red */}
+            <div style={{ position: 'absolute', bottom: '5px', right: '14px', zIndex: 2, lineHeight: 1, textAlign: 'right' }}>
               <a
                 href="tel:7668886666"
                 style={{
-                  color: '#FFFFFF',
+                  color: '#CC1E1E',
                   fontSize: '11px',
-                  fontWeight: 600,
+                  fontWeight: 800,
                   letterSpacing: '0.2px',
                   fontFamily: "'Inter', sans-serif",
-                  opacity: 0.95,
                   textDecoration: 'none',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.25)'
+                  display: 'inline-block'
                 }}
               >
                 Wanted reporters:-7668886666
