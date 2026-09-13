@@ -1,79 +1,124 @@
-import axios from 'axios';
+import api from '@/lib/axios';
 
-const authKey = import.meta.env.VITE_MSG91_AUTHKEY || '<ADD_AUTHKEY_HERE>';
-const templateId = import.meta.env.VITE_MSG91_TEMPLATE_ID || '<ADD_TEMPLATE_ID_HERE>';
+export interface SendOTPPayload {
+  phone?: string;
+  identifier?: string;
+  mobile?: string;
+}
+
+export interface VerifyOTPPayload {
+  phone?: string;
+  mobile?: string;
+  otp: string;
+  reqId?: string;
+}
+
+export interface OTPResponse {
+  success: boolean;
+  type?: 'success' | 'error';
+  message: string;
+  token?: string;
+  token_type?: string;
+  user?: any;
+}
+
+function normalizePhone(input?: string): string {
+  if (!input) return '';
+  let cleaned = input.trim();
+  if (!cleaned.startsWith('+')) {
+    if (cleaned.length === 10) {
+      cleaned = `+91${cleaned}`;
+    } else if (cleaned.length === 12 && cleaned.startsWith('91')) {
+      cleaned = `+${cleaned}`;
+    } else {
+      cleaned = `+${cleaned}`;
+    }
+  }
+  return cleaned;
+}
+
+function extractErrorMessage(err: any): string {
+  if (err?.response?.data) {
+    const data = err.response.data;
+    if (typeof data.message === 'string' && data.message) return data.message;
+    if (typeof data.detail === 'string' && data.detail) return data.detail;
+    if (Array.isArray(data.detail) && data.detail.length > 0) {
+      return data.detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join(', ');
+    }
+  }
+  if (err?.message) return err.message;
+  return 'An unexpected error occurred. Please try again.';
+}
 
 /**
- * A service that mimics the MSG91 SendOTP React Native SDK interface,
- * but uses the standard REST APIs directly for Web/Capacitor compatibility.
+ * Service to connect directly to the backend MSG91 OTP endpoints:
+ * - POST /api/auth/send-otp
+ * - POST /api/auth/verify-otp
  */
 export const OTPWidget = {
   /**
-   * Mock initialization.
+   * Initialization helper
    */
   initializeWidget: () => {
-    console.log('MSG91 OTP Service initialized with:', { templateId });
+    console.log('[OTPService] Backend MSG91 OTP service ready');
   },
 
   /**
-   * Send OTP to a mobile number
+   * Send 6-digit OTP to mobile number via backend MSG91 Flow API
    */
-  sendOTP: async (data: { identifier: string }) => {
+  sendOTP: async (data: SendOTPPayload): Promise<OTPResponse> => {
+    const phone = normalizePhone(data.phone || data.identifier || data.mobile);
+    if (!phone) {
+      throw new Error('Please enter a valid phone number');
+    }
+
     try {
-      const response = await axios.post('https://control.msg91.com/api/v5/otp', {
-        template_id: templateId,
-        mobile: data.identifier
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'authkey': authKey
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response && error.response.data) {
-        throw error.response.data;
-      }
-      throw error;
+      const response = await api.post('/api/auth/send-otp', { phone });
+      return {
+        success: response.data.success ?? true,
+        type: 'success',
+        message: response.data.message || 'OTP sent successfully',
+      };
+    } catch (err: any) {
+      const message = extractErrorMessage(err);
+      throw new Error(message);
     }
   },
 
   /**
-   * Retry sending OTP
+   * Retry/Resend OTP
    */
-  retryOTP: async (data: { reqId: string, retryType?: string, mobile?: string }) => {
-    try {
-      const response = await axios.post(`https://control.msg91.com/api/v5/otp/retry?retrytype=${data.retryType || 'text'}&mobile=${data.mobile}`, {}, {
-        headers: {
-          'Content-Type': 'application/json',
-          'authkey': authKey
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response && error.response.data) {
-        throw error.response.data;
-      }
-      throw error;
-    }
+  retryOTP: async (data: { reqId?: string; retryType?: string; mobile?: string; phone?: string }): Promise<OTPResponse> => {
+    return OTPWidget.sendOTP({ phone: data.mobile || data.phone });
   },
 
   /**
-   * Verify the received OTP
+   * Verify 6-digit OTP via backend
    */
-  verifyOTP: async (data: { reqId: string, otp: string, mobile?: string }) => {
-    try {
-      const response = await axios.get(`https://control.msg91.com/api/v5/otp/verify?otp=${data.otp}&mobile=${data.mobile}`, {
-        headers: {
-          'authkey': authKey
-        }
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response && error.response.data) {
-        throw error.response.data;
-      }
-      throw error;
+  verifyOTP: async (data: VerifyOTPPayload): Promise<OTPResponse> => {
+    const phone = normalizePhone(data.phone || data.mobile);
+    const otp = data.otp?.trim();
+
+    if (!phone) {
+      throw new Error('Missing phone number for OTP verification');
     }
-  }
+    if (!otp || otp.length !== 6) {
+      throw new Error('Please enter a valid 6-digit OTP');
+    }
+
+    try {
+      const response = await api.post('/api/auth/verify-otp', { phone, otp });
+      return {
+        success: response.data.success ?? true,
+        type: 'success',
+        message: response.data.message || 'OTP verified successfully',
+        token: response.data.token,
+        token_type: response.data.token_type,
+        user: response.data.user,
+      };
+    } catch (err: any) {
+      const message = extractErrorMessage(err);
+      throw new Error(message);
+    }
+  },
 };
