@@ -116,12 +116,12 @@ export const useAuthStore = create<AuthStore>()(
             (user as any)?.role ||
             (user as any)?.user_metadata?.role ||
             (user as any)?.app_metadata?.role ||
-            (isSuperAdminUser(user?.email) ? 'admin' : ''),
+            (isSuperAdminUser(user) ? 'admin' : ''),
           plan:
             user?.plan ||
             (user as any)?.subscription_plan ||
             ((user as any)?.role === 'admin' ? 'admin' : undefined) ||
-            (isSuperAdminUser(user?.email) ? 'admin' : 'free'),
+            (isSuperAdminUser(user) ? 'admin' : 'free'),
         } as any;
 
         if (existingPhoto && email) {
@@ -286,29 +286,55 @@ export const SUPER_ADMIN_EMAILS = [
   'baba.journilist@gmail.com',
 ];
 
+export const SUPER_ADMIN_PHONES = [
+  '9346843889',
+  '7668886666',
+];
+
 export const SUPER_ADMIN_EMAIL = 'mohithroyal16450@gmail.com';
 
 /**
- * Returns true if the user is a superadmin (mohithroyal16450@gmail.com or baba.journilist@gmail.com)
+ * Returns true if the user is a superadmin:
+ * - Emails: mohithroyal16450@gmail.com or baba.journilist@gmail.com
+ * - Phones: 9346843889 or 7668886666
  */
 export const isSuperAdminUser = (userOrEmail?: any): boolean => {
   if (!userOrEmail) return false;
+
+  // Check phone number
+  const phone = (
+    typeof userOrEmail === 'string'
+      ? userOrEmail
+      : userOrEmail?.phone_number || userOrEmail?.phone || (userOrEmail as any)?.user_metadata?.phone || ''
+  ).replace(/\D/g, '');
+
+  if (phone && SUPER_ADMIN_PHONES.some((p) => phone.endsWith(p))) {
+    return true;
+  }
+
   const email = (
     typeof userOrEmail === 'string'
       ? userOrEmail
       : userOrEmail?.email || userOrEmail?.user_metadata?.email || ''
   ).trim().toLowerCase();
+
+  if (email && SUPER_ADMIN_PHONES.some((p) => email.includes(p))) {
+    return true;
+  }
+
   return SUPER_ADMIN_EMAILS.some((e) => e.toLowerCase() === email);
 };
 
 /**
  * Returns true if the given user or email has admin privileges:
- * 1. Checks hardcoded admin emails (SUPER_ADMIN_EMAILS + VITE_ADMIN_EMAILS env var)
- * 2. Checks role / metadata from Supabase Auth & profiles ('admin')
- * 3. Checks subscription plan ('admin')
+ * 1. Checks isSuperAdminUser (including superadmin phones)
+ * 2. Checks hardcoded admin emails (SUPER_ADMIN_EMAILS + VITE_ADMIN_EMAILS env var)
+ * 3. Checks role / metadata from Supabase Auth & profiles ('admin')
+ * 4. Checks subscription plan ('admin')
  */
 export const isAdminUser = (userOrEmail?: any): boolean => {
   if (!userOrEmail) return false;
+  if (isSuperAdminUser(userOrEmail)) return true;
 
   const envAdminEmails = (import.meta.env.VITE_ADMIN_EMAILS ?? '')
     .split(',')
