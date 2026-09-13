@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGenerationStore, useUIStore, useAuthStore, getReporterPhoto, getReporterName } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Image as ImageIcon, X, ArrowLeft, Newspaper, CheckCircle2, Notebook, FileText, Pencil, SlidersHorizontal } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, ArrowLeft, Newspaper, CheckCircle2, Notebook, FileText, Pencil, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { generationService, compressImage } from '@/services/generation.service';
 import { TEMPLATES_LIST } from '@/lib/constants';
 import { getActivePublicationLogos, type PublicationLogo } from '@/services/admin.service';
@@ -326,7 +326,7 @@ export const GenerateScreen = () => {
   };
 
   return (
-    <div style={{ background: '#EAF2FB', minHeight: '100%', paddingBottom: '16px' }}>
+    <div style={{ background: '#EAF2FB', minHeight: '100%', paddingBottom: '8px' }}>
 
       {cropImageSrc && (
         <ImageCropModal
@@ -417,25 +417,25 @@ export const GenerateScreen = () => {
         </div>
 
         {/* ── SECTION 4: FEATURED IMAGES ── */}
-        <div style={cardStyle}>
+        <div style={{ ...cardStyle, marginBottom: '8px' }}>
           <div style={sectionLabelStyle}>
             <ImageIcon style={{ width: 16, height: 16, color: '#0F487F' }} strokeWidth={2.4} />
             <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '12px', letterSpacing: '0.5px', color: '#0F487F' }}>FEATURED IMAGES</strong>
           </div>
 
           {imageUrls.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
               {imageUrls.map((url, idx) => (
-                <div key={idx} style={{ position: 'relative', flexShrink: 0, width: '68px', height: '68px', borderRadius: '8px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
+                <div key={idx} style={{ position: 'relative', flexShrink: 0, width: '105px', height: '105px', borderRadius: '10px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)' }}>
                   <img src={url} alt={`img ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <button
                     onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== idx))}
-                    style={{ position: 'absolute', top: '3px', right: '3px', width: '18px', height: '18px', background: '#CC1E1E', border: 'none', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px', background: '#CC1E1E', border: 'none', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                   >
-                    <X style={{ width: '10px', height: '10px' }} strokeWidth={3} />
+                    <X style={{ width: '11px', height: '11px' }} strokeWidth={3} />
                   </button>
                   {/* Radio indicator */}
-                  <div style={{ position: 'absolute', bottom: '3px', left: '3px', width: '14px', height: '14px', background: '#CC1E1E', border: '2px solid #fff', borderRadius: '50%' }} />
+                  <div style={{ position: 'absolute', bottom: '4px', left: '4px', width: '16px', height: '16px', background: '#CC1E1E', border: '2px solid #fff', borderRadius: '50%' }} />
                 </div>
               ))}
             </div>
@@ -446,13 +446,14 @@ export const GenerateScreen = () => {
               onClick={handleImageUpload}
               disabled={loading}
               style={{
-                width: '100%', border: '1.5px dashed #CBD9E8', borderRadius: '10px',
-                background: '#ffffff', padding: '12px 12px', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
+                width: '100%', border: '1.5px dashed #CBD9E8', borderRadius: '12px',
+                background: '#ffffff', padding: '24px 16px', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
               }}
             >
-              <span style={{ color: '#475569', fontSize: '13px', fontWeight: 600 }}>Tap to upload image</span>
-              <span style={{ color: '#94A3B8', fontSize: '11px' }}>
+              <UploadCloud style={{ width: 24, height: 24, color: '#0F487F', opacity: 0.8 }} strokeWidth={2.2} />
+              <span style={{ color: '#475569', fontSize: '14px', fontWeight: 600 }}>Tap to upload image</span>
+              <span style={{ color: '#94A3B8', fontSize: '11.5px' }}>
                 {maxImages - imageUrls.length} remaining · auto-compressed
               </span>
             </button>
@@ -462,7 +463,7 @@ export const GenerateScreen = () => {
         {/* Font and Columns moved to Advanced Modal */}
 
         {/* ── Generate button (Normal Flow) ── */}
-        <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+        <div style={{ marginTop: '6px', marginBottom: '6px' }}>
           {loading && currentStage && (
             <div style={{ background: '#0D1B2A', borderRadius: '12px 12px 0 0', padding: '8px 14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
