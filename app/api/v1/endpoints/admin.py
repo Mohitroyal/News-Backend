@@ -20,15 +20,20 @@ router = APIRouter()
 
 ADMIN_EMAILS = [
     "mohithroyal16450@gmail.com",
+    "baba.journilist@gmail.com",
     "admin@newscraft.ai",
 ]
 
-SUPER_ADMIN_EMAIL = "mohithroyal16450@gmail.com"
+SUPER_ADMIN_EMAILS = [
+    "mohithroyal16450@gmail.com",
+    "baba.journilist@gmail.com",
+]
+SUPER_ADMIN_EMAIL = "mohithroyal16450@gmail.com"  # backward compatibility reference
 
 
 def verify_superadmin_access(current_user: User):
     email = (current_user.email or "").lower().strip()
-    if email != SUPER_ADMIN_EMAIL.lower():
+    if email not in [e.lower() for e in SUPER_ADMIN_EMAILS]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superadmin privileges required"
@@ -209,9 +214,9 @@ def ban_user(
     # Safety check: prevent banning superadmin
     try:
         target_user = admin_sb.auth.admin.get_user_by_id(user_id)
-        target_raw = target_user.user if hasattr(target_user, "user") else target_user
-        if target_raw and getattr(target_raw, "email", "").lower().strip() == SUPER_ADMIN_EMAIL.lower():
-            raise HTTPException(status_code=400, detail="Cannot ban the Superadmin")
+        target_email = getattr(target_raw, "email", "").lower().strip() if target_raw else ""
+        if target_email in [e.lower() for e in SUPER_ADMIN_EMAILS]:
+            raise HTTPException(status_code=400, detail="Cannot ban a Superadmin")
     except HTTPException:
         raise
     except Exception:
@@ -266,9 +271,9 @@ def delete_user(
     # Safety check: prevent deleting superadmin
     try:
         target_user = admin_sb.auth.admin.get_user_by_id(user_id)
-        target_raw = target_user.user if hasattr(target_user, "user") else target_user
-        if target_raw and getattr(target_raw, "email", "").lower().strip() == SUPER_ADMIN_EMAIL.lower():
-            raise HTTPException(status_code=400, detail="Cannot delete the Superadmin")
+        target_email = getattr(target_raw, "email", "").lower().strip() if target_raw else ""
+        if target_email in [e.lower() for e in SUPER_ADMIN_EMAILS]:
+            raise HTTPException(status_code=400, detail="Cannot delete a Superadmin")
     except HTTPException:
         raise
     except Exception:
