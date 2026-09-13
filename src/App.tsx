@@ -184,16 +184,27 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
 
       <nav className="fixed bottom-0 left-0 right-0 w-full pb-safe flex items-center justify-around h-[68px] z-30 shadow-md border-t border-[#E2EDF8]" style={{ background: '#FFFFFF' }}>
-        {/* 1. News Tab */}
-        <Link
-          to="/news"
-          className="flex flex-col items-center justify-center flex-1 h-full pt-1 active:scale-95 transition-transform"
+        {/* 1. e-paper Tab */}
+        <a
+          href="https://www.fouziyapublications.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={async (e) => {
+            e.preventDefault();
+            try {
+              await Browser.open({ url: 'https://www.fouziyapublications.com/' });
+            } catch {
+              window.open('https://www.fouziyapublications.com/', '_blank');
+            }
+          }}
+          className="flex flex-col items-center justify-center flex-1 h-full pt-1 active:scale-95 transition-transform no-underline"
+          style={{ textDecoration: 'none' }}
         >
           <Newspaper className="w-6 h-6" style={{ color: '#0C447C' }} />
           <span className="text-[11px] font-bold mt-1" style={{ color: '#0C447C' }}>
-            News
+            e-paper
           </span>
-        </Link>
+        </a>
 
         {/* 2. Create Tab (Center Raised) */}
         <Link
