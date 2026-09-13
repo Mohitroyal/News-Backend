@@ -131,7 +131,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           {/* ── Smooth Wave Divider Transition ── */}
-          <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, background: '#EAF2FB' }}>
+          <div style={{ width: '100%', overflow: 'hidden', lineHeight: 0, background: '#EAF2FB', position: 'relative' }}>
             <svg
               viewBox="0 0 1440 240"
               preserveAspectRatio="none"
@@ -142,6 +142,25 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 fill={headerBg}
               />
             </svg>
+
+            {/* Wanted reporters in wave */}
+            <div style={{ position: 'absolute', top: '2px', left: '14px', zIndex: 2, lineHeight: 1 }}>
+              <a
+                href="tel:7668886666"
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.2px',
+                  fontFamily: "'Inter', sans-serif",
+                  opacity: 0.95,
+                  textDecoration: 'none',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.25)'
+                }}
+              >
+                Wanted reporters:-7668886666
+              </a>
+            </div>
           </div>
         </header>
 
