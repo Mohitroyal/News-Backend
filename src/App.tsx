@@ -214,7 +214,6 @@ function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const login = useAuthStore((state) => state.login);
-  const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const setPendingCropImageSrc = useUIStore((state) => state.setPendingCropImageSrc);
 
@@ -345,8 +344,6 @@ function App() {
   }, []);
 
   if (isInitializing) return <SplashScreen />;
-
-  const isAdmin = isAdminUser(user);
 
   return (
     <Router>
