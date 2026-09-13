@@ -28,12 +28,39 @@ SUPER_ADMIN_EMAILS = [
     "mohithroyal16450@gmail.com",
     "baba.journilist@gmail.com",
 ]
+SUPER_ADMIN_PHONES = [
+    "9346843889",
+    "7668886666",
+]
 SUPER_ADMIN_EMAIL = "mohithroyal16450@gmail.com"  # backward compatibility reference
 
 
+def is_superadmin(user_or_email_or_phone: Any) -> bool:
+    if not user_or_email_or_phone:
+        return False
+    email = ""
+    phone = ""
+    if isinstance(user_or_email_or_phone, str):
+        val = user_or_email_or_phone.strip().lower()
+        if "@" in val:
+            email = val
+        else:
+            phone = re.sub(r"\D", "", val)
+    else:
+        email = (getattr(user_or_email_or_phone, "email", "") or "").strip().lower()
+        phone = re.sub(r"\D", "", getattr(user_or_email_or_phone, "phone_number", "") or "")
+
+    if email and any(email == e.lower() for e in SUPER_ADMIN_EMAILS):
+        return True
+    if phone and any(phone.endswith(p) for p in SUPER_ADMIN_PHONES):
+        return True
+    if email and any(p in email for p in SUPER_ADMIN_PHONES):
+        return True
+    return False
+
+
 def verify_superadmin_access(current_user: User):
-    email = (current_user.email or "").lower().strip()
-    if email not in [e.lower() for e in SUPER_ADMIN_EMAILS]:
+    if not is_superadmin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superadmin privileges required"
@@ -41,6 +68,8 @@ def verify_superadmin_access(current_user: User):
 
 
 def verify_admin_access(current_user: User):
+    if is_superadmin(current_user):
+        return
     email = (current_user.email or "").lower().strip()
     is_admin_email = email in [e.lower() for e in ADMIN_EMAILS]
     is_admin_plan = (current_user.subscription_plan or "").lower() == "admin"
@@ -223,7 +252,7 @@ def ban_user(
     try:
         target_user = admin_sb.auth.admin.get_user_by_id(user_id)
         target_email = getattr(target_raw, "email", "").lower().strip() if target_raw else ""
-        if target_email in [e.lower() for e in SUPER_ADMIN_EMAILS]:
+        if is_superadmin(target_email):
             raise HTTPException(status_code=400, detail="Cannot ban a Superadmin")
     except HTTPException:
         raise
@@ -280,7 +309,7 @@ def delete_user(
     try:
         target_user = admin_sb.auth.admin.get_user_by_id(user_id)
         target_email = getattr(target_raw, "email", "").lower().strip() if target_raw else ""
-        if target_email in [e.lower() for e in SUPER_ADMIN_EMAILS]:
+        if is_superadmin(target_email):
             raise HTTPException(status_code=400, detail="Cannot delete a Superadmin")
     except HTTPException:
         raise

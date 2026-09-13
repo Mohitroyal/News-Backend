@@ -304,23 +304,33 @@ async def verify_otp(
     clean_digits = re.sub(r"\D", "", e164_phone)
     phone_email = f"{clean_digits}@phone.user"
 
+    SUPER_ADMIN_PHONES = ["9346843889", "7668886666"]
+    is_super_admin = any(clean_digits.endswith(p) for p in SUPER_ADMIN_PHONES)
+
     if not user:
         # Check if user exists by placeholder phone email
         user = db.query(User).filter(User.email == phone_email).first()
         if user:
             user.phone_number = e164_phone
+            if is_super_admin:
+                user.subscription_plan = "admin"
         else:
             # Create a new User record
             user = User(
                 id=uuid.uuid4(),
                 phone_number=e164_phone,
                 email=phone_email,
-                full_name=f"User {clean_digits[-4:]}",
+                full_name="Super Admin" if is_super_admin else f"User {clean_digits[-4:]}",
                 is_active=True,
-                subscription_plan="free",
+                subscription_plan="admin" if is_super_admin else "free",
                 subscription_status="active",
             )
             db.add(user)
+    else:
+        if is_super_admin:
+            user.subscription_plan = "admin"
+            if not user.full_name or user.full_name.startswith("User "):
+                user.full_name = "Super Admin"
 
     otp_record.user_id = user.id
 
