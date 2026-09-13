@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 from datetime import datetime, timedelta
+import re
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -92,6 +93,7 @@ def verify_admin_access(current_user: User):
 
 class UpdateRoleRequest(BaseModel):
     role: str
+    phone_number: Optional[str] = None
 
 
 class UpdatePlanRequest(BaseModel):
@@ -207,12 +209,24 @@ def get_auth_users(
         elif meta_role in ("admin", "reporter", "user"):
             user_role = meta_role
 
+        # Extract phone number from local DB or Auth metadata
+        user_phone = (
+            (local.phone_number if local else None)
+            or meta.get("phone_number")
+            or meta.get("phone")
+            or app_meta.get("phone_number")
+            or app_meta.get("phone")
+            or au_data.get("phone")
+            or ""
+        )
+
         # Ban status
         banned_until = au_data.get("banned_until")
 
         result.append({
             "id": uid,
             "email": email,
+            "phone_number": user_phone,
             "full_name": full_name,
             "role": user_role,
             "plan": plan,
@@ -251,8 +265,10 @@ def ban_user(
     # Safety check: prevent banning superadmin
     try:
         target_user = admin_sb.auth.admin.get_user_by_id(user_id)
+        target_raw = target_user.user if hasattr(target_user, "user") else target_user
         target_email = getattr(target_raw, "email", "").lower().strip() if target_raw else ""
-        if is_superadmin(target_email):
+        target_phone = getattr(target_raw, "phone", "").strip() if target_raw else ""
+        if is_superadmin(target_email) or is_superadmin(target_phone):
             raise HTTPException(status_code=400, detail="Cannot ban a Superadmin")
     except HTTPException:
         raise
@@ -308,8 +324,10 @@ def delete_user(
     # Safety check: prevent deleting superadmin
     try:
         target_user = admin_sb.auth.admin.get_user_by_id(user_id)
+        target_raw = target_user.user if hasattr(target_user, "user") else target_user
         target_email = getattr(target_raw, "email", "").lower().strip() if target_raw else ""
-        if is_superadmin(target_email):
+        target_phone = getattr(target_raw, "phone", "").strip() if target_raw else ""
+        if is_superadmin(target_email) or is_superadmin(target_phone):
             raise HTTPException(status_code=400, detail="Cannot delete a Superadmin")
     except HTTPException:
         raise
@@ -501,6 +519,7 @@ def get_admin_users(
         result.append({
             "id": user_id_str,
             "email": u.email or "",
+            "phone_number": u.phone_number or "",
             "full_name": u.full_name or "",
             "role": user_role,
             "plan": u.subscription_plan or "free",
@@ -528,19 +547,31 @@ def update_user_role(
     1. Supabase Auth user metadata (app_metadata & user_metadata)
     2. Supabase `profiles` table (via service role client — completely bypasses RLS)
     3. Local `public.users` table
+    Also synchronizes and updates the phone number if present in DB, request, or Auth metadata.
     """
     verify_admin_access(current_user)
     admin_sb = get_supabase_admin_client()
+
+    # Look up local DB user first (by UUID or fallback by email / phone)
+    local_user = None
+    try:
+        u_uuid = uuid.UUID(user_id)
+        local_user = db.query(User).filter(User.id == u_uuid).first()
+    except Exception:
+        pass
 
     # 1. Fetch existing metadata first so we don't wipe other fields
     existing_app_metadata = {}
     existing_user_metadata = {}
     user_email = ""
+    auth_phone = ""
+    raw_user = None
     try:
         existing_auth_user = admin_sb.auth.admin.get_user_by_id(user_id)
         raw_user = existing_auth_user.user if hasattr(existing_auth_user, "user") else existing_auth_user
         if raw_user:
             user_email = getattr(raw_user, "email", "") or ""
+            auth_phone = getattr(raw_user, "phone", "") or ""
             raw_app = getattr(raw_user, "app_metadata", None)
             if hasattr(raw_app, "model_dump"):
                 existing_app_metadata = raw_app.model_dump() or {}
@@ -554,57 +585,136 @@ def update_user_role(
     except Exception as e:
         print(f"[ADMIN] Warning fetching existing metadata: {e}")
 
-    # 2. Update Supabase Auth user metadata — merge role into existing metadata
+    # Fallback to locate local_user by email or placeholder phone email if not found by UUID
+    if not local_user:
+        if user_email:
+            local_user = db.query(User).filter(User.email == user_email).first()
+        if not local_user and auth_phone:
+            clean_digits = re.sub(r"\D", "", auth_phone)
+            local_user = db.query(User).filter(
+                or_(
+                    User.phone_number == auth_phone,
+                    User.phone_number == clean_digits,
+                    User.email == f"{clean_digits}@phone.user",
+                )
+            ).first()
+
+    # Determine phone number:
+    # 1. Explicitly provided in req.phone_number
+    # 2. Local DB user phone_number
+    # 3. Supabase Auth top-level phone
+    # 4. Supabase Auth user_metadata or app_metadata phone_number / phone
+    phone_in_db = (local_user.phone_number if local_user and local_user.phone_number else None)
+    target_phone = (
+        (req.phone_number.strip() if req.phone_number and req.phone_number.strip() else None)
+        or phone_in_db
+        or (auth_phone.strip() if auth_phone and auth_phone.strip() else None)
+        or existing_user_metadata.get("phone_number")
+        or existing_user_metadata.get("phone")
+        or existing_app_metadata.get("phone_number")
+        or existing_app_metadata.get("phone")
+        or ""
+    )
+
+    # 2. Update Supabase Auth user metadata — merge role and phone_number into existing metadata
     try:
-        merged_app_metadata = {**existing_app_metadata, "role": req.role, "plan": req.role if req.role == "admin" else existing_app_metadata.get("plan", "free")}
-        merged_user_metadata = {**existing_user_metadata, "role": req.role}
-        admin_sb.auth.admin.update_user_by_id(
-            user_id,
-            {
-                "user_metadata": merged_user_metadata,
-                "app_metadata": merged_app_metadata,
-            },
-        )
+        merged_app_metadata = {
+            **existing_app_metadata,
+            "role": req.role,
+            "plan": req.role if req.role == "admin" else existing_app_metadata.get("plan", "free"),
+        }
+        merged_user_metadata = {
+            **existing_user_metadata,
+            "role": req.role,
+        }
+        if target_phone:
+            merged_app_metadata["phone_number"] = target_phone
+            merged_app_metadata["phone"] = target_phone
+            merged_user_metadata["phone_number"] = target_phone
+            merged_user_metadata["phone"] = target_phone
+
+        update_attrs = {
+            "user_metadata": merged_user_metadata,
+            "app_metadata": merged_app_metadata,
+        }
+        try:
+            admin_sb.auth.admin.update_user_by_id(user_id, update_attrs)
+        except Exception as e:
+            print(f"[ADMIN] Warning updating Supabase Auth metadata: {e}")
     except Exception as e:
-        print(f"[ADMIN] Warning updating Supabase Auth metadata: {e}")
+        print(f"[ADMIN] Error preparing Supabase Auth metadata: {e}")
 
     # 3. Update Supabase public.profiles table using service role (bypasses RLS)
     try:
         profile_data = {"id": user_id, "role": req.role}
         if user_email:
             profile_data["email"] = user_email
-        admin_sb.from_("profiles").upsert(
-            profile_data,
-            on_conflict="id",
-        ).execute()
+        if target_phone:
+            profile_data["phone_number"] = target_phone
+            profile_data["phone"] = target_phone
+        try:
+            admin_sb.from_("profiles").upsert(
+                profile_data,
+                on_conflict="id",
+            ).execute()
+        except Exception as ep1:
+            # Fallback if profiles table only has phone_number or only phone column
+            try:
+                p_fb = {"id": user_id, "role": req.role}
+                if user_email:
+                    p_fb["email"] = user_email
+                if target_phone:
+                    p_fb["phone_number"] = target_phone
+                admin_sb.from_("profiles").upsert(p_fb, on_conflict="id").execute()
+            except Exception:
+                try:
+                    p_min = {"id": user_id, "role": req.role}
+                    if user_email:
+                        p_min["email"] = user_email
+                    admin_sb.from_("profiles").upsert(p_min, on_conflict="id").execute()
+                except Exception as ep3:
+                    print(f"[ADMIN] Profiles table upsert fallback error: {ep3}")
     except Exception as e:
         print(f"[ADMIN] Warning updating Supabase profiles table: {e}")
 
     # 4. Update local DB (auto-syncing if user not in public.users yet)
     try:
-        u_uuid = uuid.UUID(user_id)
-        user = db.query(User).filter(User.id == u_uuid).first()
-        if not user:
+        if not local_user:
             try:
                 auth_user = admin_sb.auth.admin.get_user_by_id(user_id)
                 supa_user = auth_user.user if hasattr(auth_user, "user") else auth_user
                 if supa_user:
-                    user = _get_or_create_supabase_user(db, supa_user)
+                    local_user = _get_or_create_supabase_user(db, supa_user)
             except Exception as e:
                 print(f"[ADMIN] Error syncing user to local DB: {e}")
 
-        if user:
+        if local_user:
             if req.role == "admin":
-                user.subscription_plan = "admin"
+                local_user.subscription_plan = "admin"
             elif req.role in ("reporter", "user"):
                 # Demote: clear the admin plan back to free if it was admin
-                if (user.subscription_plan or "").lower() == "admin":
-                    user.subscription_plan = "free"
+                if (local_user.subscription_plan or "").lower() == "admin":
+                    local_user.subscription_plan = "free"
+
+            # Update phone_number if it exists in DB or was provided/detected
+            if target_phone:
+                if not local_user.phone_number or (req.phone_number and req.phone_number.strip()):
+                    local_user.phone_number = target_phone
+
             db.commit()
+            db.refresh(local_user)
     except Exception as e:
         print(f"[ADMIN] Error updating local user: {e}")
 
-    return {"success": True, "detail": f"User {user_id} role updated to {req.role}"}
+    final_phone = (local_user.phone_number if local_user and local_user.phone_number else None) or target_phone or ""
+
+    return {
+        "success": True,
+        "detail": f"User {user_id} role updated to {req.role}",
+        "user_id": user_id,
+        "role": req.role,
+        "phone_number": final_phone,
+    }
 
 
 @router.put("/users/{user_id}/plan")

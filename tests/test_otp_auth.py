@@ -392,3 +392,119 @@ def test_token_authenticates_protected_endpoint():
     me_data = me_res.json()
     assert me_data["success"] is True
     assert me_data["data"]["phone_number"] == "+919876543210"
+
+
+# ─── 15. Update User Role Synchronizes Phone Number from DB ───────────────────
+def test_update_user_role_syncs_phone_number_from_db():
+    db = TestingSessionLocal()
+    admin_id = uuid.uuid4()
+    admin_user = User(
+        id=admin_id,
+        email="mohithroyal16450@gmail.com",
+        full_name="Super Admin",
+        phone_number="+919346843889",
+        subscription_plan="admin",
+        is_active=True,
+    )
+    target_id = uuid.uuid4()
+    target_user = User(
+        id=target_id,
+        email="target@example.com",
+        full_name="Target User",
+        phone_number="+919876543210",
+        subscription_plan="free",
+        is_active=True,
+    )
+    db.add(admin_user)
+    db.add(target_user)
+    db.commit()
+    db.close()
+
+    from app.core.security import create_access_token
+    admin_token = create_access_token(subject=str(admin_id))
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    with patch("app.api.v1.endpoints.admin.get_supabase_admin_client") as mock_sb:
+        mock_admin = mock_sb.return_value
+        mock_admin.auth.admin.get_user_by_id.return_value = {
+            "email": "target@example.com",
+            "app_metadata": {},
+            "user_metadata": {},
+        }
+        mock_admin.auth.admin.update_user_by_id.return_value = {}
+        mock_admin.from_.return_value.upsert.return_value.execute.return_value = {}
+
+        res = client.put(
+            f"/api/v1/admin/users/{str(target_id)}/role",
+            json={"role": "reporter"},
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["success"] is True
+        assert data["role"] == "reporter"
+        assert data["phone_number"] == "+919876543210"
+
+        # Verify DB updated and phone preserved
+        verify_db = TestingSessionLocal()
+        u = verify_db.query(User).filter(User.id == target_id).first()
+        assert u is not None
+        assert u.phone_number == "+919876543210"
+        verify_db.close()
+
+
+# ─── 16. Update User Role Updates New Phone Number in DB and Auth ─────────────
+def test_update_user_role_updates_new_phone_number():
+    db = TestingSessionLocal()
+    admin_id = uuid.uuid4()
+    admin_user = User(
+        id=admin_id,
+        email="mohithroyal16450@gmail.com",
+        full_name="Super Admin",
+        subscription_plan="admin",
+        is_active=True,
+    )
+    target_id = uuid.uuid4()
+    target_user = User(
+        id=target_id,
+        email="target2@example.com",
+        full_name="Target User 2",
+        phone_number=None,
+        subscription_plan="free",
+        is_active=True,
+    )
+    db.add(admin_user)
+    db.add(target_user)
+    db.commit()
+    db.close()
+
+    from app.core.security import create_access_token
+    admin_token = create_access_token(subject=str(admin_id))
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    with patch("app.api.v1.endpoints.admin.get_supabase_admin_client") as mock_sb:
+        mock_admin = mock_sb.return_value
+        mock_admin.auth.admin.get_user_by_id.return_value = {
+            "email": "target2@example.com",
+            "app_metadata": {},
+            "user_metadata": {},
+        }
+        mock_admin.auth.admin.update_user_by_id.return_value = {}
+        mock_admin.from_.return_value.upsert.return_value.execute.return_value = {}
+
+        res = client.put(
+            f"/api/v1/admin/users/{str(target_id)}/role",
+            json={"role": "reporter", "phone_number": "+917668886666"},
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["success"] is True
+        assert data["phone_number"] == "+917668886666"
+
+        verify_db = TestingSessionLocal()
+        u = verify_db.query(User).filter(User.id == target_id).first()
+        assert u is not None
+        assert u.phone_number == "+917668886666"
+        verify_db.close()
+

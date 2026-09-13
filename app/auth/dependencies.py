@@ -60,6 +60,16 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
         or ""
     ).lower()
 
+    phone = (
+        data.get("phone")
+        or getattr(supabase_user, "phone", None)
+        or user_metadata.get("phone_number")
+        or user_metadata.get("phone")
+        or app_metadata.get("phone_number")
+        or app_metadata.get("phone")
+        or None
+    )
+
     if not supabase_id_str:
         raise HTTPException(status_code=401, detail="Invalid Supabase user: missing id")
 
@@ -72,8 +82,14 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     # 1. Look up by primary key (same UUID as Supabase auth)
     user = db.query(User).filter(User.id == supabase_uuid).first()
     if user:
+        modified = False
         if meta_role == "admin" and (user.subscription_plan or "").lower() != "admin":
             user.subscription_plan = "admin"
+            modified = True
+        if phone and not user.phone_number:
+            user.phone_number = phone
+            modified = True
+        if modified:
             try:
                 db.commit()
                 db.refresh(user)
@@ -85,18 +101,19 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     if email:
         user = db.query(User).filter(User.email == email).first()
         if user:
+            modified = False
             if meta_role == "admin" and (user.subscription_plan or "").lower() != "admin":
                 user.subscription_plan = "admin"
+                modified = True
+            if phone and not user.phone_number:
+                user.phone_number = phone
+                modified = True
             # Align the local id with Supabase auth id if they differ
             if user.id != supabase_uuid:
                 print(f"[AUTH] Updating local user id {user.id} → {supabase_uuid} for {email}")
-                try:
-                    user.id = supabase_uuid
-                    db.commit()
-                    db.refresh(user)
-                except Exception:
-                    db.rollback()
-            else:
+                user.id = supabase_uuid
+                modified = True
+            if modified:
                 try:
                     db.commit()
                     db.refresh(user)
@@ -114,6 +131,7 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     new_user = User(
         id=supabase_uuid,
         email=email,
+        phone_number=phone,
         full_name=full_name,
         is_active=True,
         subscription_plan=init_plan,
@@ -122,7 +140,7 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    print(f"[AUTH] Auto-created local user for {email} (id={supabase_uuid}, plan={init_plan})")
+    print(f"[AUTH] Auto-created local user for {email} (id={supabase_uuid}, plan={init_plan}, phone={phone})")
     return new_user
 
 
