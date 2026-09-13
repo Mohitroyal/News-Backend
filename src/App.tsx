@@ -147,7 +147,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             <div
               style={{
                 position: 'absolute',
-                top: '4px',
+                top: '2px',
                 left: 0,
                 width: '100%',
                 display: 'flex',
@@ -162,13 +162,13 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 href="tel:7668886666"
                 style={{
                   color: '#FF3838',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  letterSpacing: '0.2px',
+                  fontSize: '13px',
+                  fontWeight: 900,
+                  letterSpacing: '0.1px',
                   fontFamily: "'Inter', sans-serif",
                   textDecoration: 'none',
                   display: 'inline-block',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.45)'
+                  textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                 }}
               >
                 Wanted reporters:-7668886666
