@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Image as ImageIcon, X, ArrowLeft, Newspaper, CheckCircle2, Notebook, FileText, Pencil, SlidersHorizontal } from 'lucide-react';
 import { generationService, compressImage } from '@/services/generation.service';
 import { TEMPLATES_LIST } from '@/lib/constants';
+import { getActivePublicationLogos, type PublicationLogo } from '@/services/admin.service';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import type { Language } from '@/types';
 import { LiveNewspaperPreview } from '@/components/LiveNewspaperPreview';
@@ -112,11 +113,56 @@ export const GenerateScreen = () => {
 
   const currentStage = stageIndex >= 0 ? GEN_STAGES[Math.min(stageIndex, GEN_STAGES.length - 1)] : null;
 
+  const [activeLogos, setActiveLogos] = useState<PublicationLogo[]>([]);
+  const [logosLoading, setLogosLoading] = useState(true);
+
   const selectedPattern = currentConfig.layoutPattern || 'A';
   const selectedBorderColour = currentConfig.borderColour || '#cc2222';
   const selectedHeadingBgColour = currentConfig.headingBgColour || '#fff3f3';
   const selectedTemplateId = currentConfig.templateId || 'rti_express';
-  const selectedTemplateDetails = TEMPLATES_LIST.find(t => t.id === selectedTemplateId) || TEMPLATES_LIST[0];
+
+  // Load active publication logos from backend / local storage
+  const refreshActiveLogos = async () => {
+    try {
+      setLogosLoading(true);
+      const logos = await getActivePublicationLogos();
+      if (logos && logos.length > 0) {
+        setActiveLogos(logos);
+        const currentIsActive = logos.some(
+          (l) => l.publication_code === selectedTemplateId || l.id === selectedTemplateId
+        );
+        if (!currentIsActive) {
+          setConfig({ templateId: logos[0].publication_code as any });
+        }
+      } else {
+        setActiveLogos([]);
+      }
+    } catch (err) {
+      console.warn('Failed to load active logos:', err);
+    } finally {
+      setLogosLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshActiveLogos();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'spotnews_admin_publication_logos') {
+        refreshActiveLogos();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const selectedLogo = activeLogos.find(
+    (l) => l.publication_code === selectedTemplateId || l.id === selectedTemplateId
+  ) || (activeLogos.length > 0 ? activeLogos[0] : null);
+
+  const selectedTemplateDetails = selectedLogo
+    ? { id: selectedLogo.publication_code, name: selectedLogo.name, logo_url: selectedLogo.logo_url }
+    : (TEMPLATES_LIST.find((t) => t.id === selectedTemplateId) || { id: selectedTemplateId, name: 'RTI Express', logo_url: '' });
 
   useEffect(() => {
     if (selectedTemplateId === 'rti_express') {
@@ -199,6 +245,15 @@ export const GenerateScreen = () => {
 
   const handleGenerate = async () => {
     if (!headline || !content) return;
+    if (activeLogos.length > 0) {
+      const isSelectedActive = activeLogos.some(
+        (l) => l.publication_code === selectedTemplateId || l.id === selectedTemplateId
+      );
+      if (!isSelectedActive) {
+        alert('The selected publication logo has been disabled by the administrator. Please choose an active logo.');
+        return;
+      }
+    }
     setLoading(true); setStageIndex(0);
     try {
       const reporterName = getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
@@ -300,6 +355,11 @@ export const GenerateScreen = () => {
                 <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.8px' }}>ACTIVE LOGO</strong>
               </div>
               <span style={{ color: '#0F172A', fontSize: '16px', fontWeight: 700 }}>{selectedTemplateDetails.name}</span>
+              {activeLogos.length === 0 && !logosLoading && (
+                <div style={{ color: '#D32F2F', fontSize: '11px', fontWeight: 600, marginTop: '2px' }}>
+                  No logos currently active
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
@@ -310,7 +370,10 @@ export const GenerateScreen = () => {
                 <SlidersHorizontal style={{ width: 18, height: 18 }} />
               </button>
               <button
-                onClick={() => setIsLogoModalOpen(true)}
+                onClick={() => {
+                  refreshActiveLogos();
+                  setIsLogoModalOpen(true);
+                }}
                 style={{ background: '#145AB1', color: '#fff', border: 'none', borderRadius: '20px', padding: '8px 20px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', letterSpacing: '0.2px' }}
               >
                 Change
@@ -462,30 +525,49 @@ export const GenerateScreen = () => {
               </button>
             </div>
             <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '12px', paddingBottom: '100px', display: 'flex', flexDirection: 'column', gap: '8px', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-              {TEMPLATES_LIST.map(template => {
-                const isSelected = selectedTemplateId === template.id;
-                return (
-                  <button
-                    key={template.id}
-                    onClick={() => { setConfig({ templateId: template.id }); setIsLogoModalOpen(false); }}
-                    style={{
-                      background: isSelected ? 'rgba(204,30,30,0.15)' : 'rgba(255,255,255,0.05)',
-                      border: `1.5px solid ${isSelected ? '#CC1E1E' : 'rgba(255,255,255,0.08)'}`,
-                      borderRadius: '10px', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px',
-                      cursor: 'pointer', textAlign: 'left',
-                    }}
-                  >
-                    <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.08)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Newspaper style={{ width: '20px', height: '20px', color: 'rgba(255,255,255,0.6)' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}>{template.name}</div>
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{template.id}</div>
-                    </div>
-                    {isSelected && <CheckCircle2 style={{ width: '18px', height: '18px', color: '#CC1E1E', flexShrink: 0 }} />}
-                  </button>
-                );
-              })}
+              {activeLogos.length === 0 ? (
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
+                  {logosLoading ? 'Loading available logos…' : 'No publication logos are currently active. Please contact your administrator.'}
+                </div>
+              ) : (
+                activeLogos.map((logo) => {
+                  const isSelected = selectedTemplateId === logo.publication_code || selectedTemplateId === logo.id;
+                  return (
+                    <button
+                      key={logo.id || logo.publication_code}
+                      onClick={() => {
+                        setConfig({ templateId: logo.publication_code as any });
+                        setIsLogoModalOpen(false);
+                      }}
+                      style={{
+                        background: isSelected ? 'rgba(204,30,30,0.15)' : 'rgba(255,255,255,0.05)',
+                        border: `1.5px solid ${isSelected ? '#CC1E1E' : 'rgba(255,255,255,0.08)'}`,
+                        borderRadius: '10px',
+                        padding: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%',
+                      }}
+                    >
+                      <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.08)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', padding: '4px' }}>
+                        {logo.logo_url ? (
+                          <img src={logo.logo_url} alt={logo.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <Newspaper style={{ width: '22px', height: '22px', color: 'rgba(255,255,255,0.6)' }} />
+                        )}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}>{logo.name}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{logo.publication_code}</div>
+                      </div>
+                      {isSelected && <CheckCircle2 style={{ width: '18px', height: '18px', color: '#CC1E1E', flexShrink: 0 }} />}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

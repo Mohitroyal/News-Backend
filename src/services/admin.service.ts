@@ -652,29 +652,60 @@ export const deleteUser = async (
   }
 };
 
+// Helper to ensure logos always have an image asset even if URL is empty in database
+const enrichLogoWithAsset = (logo: any): PublicationLogo => {
+  const code = (logo.publication_code || '').toLowerCase();
+  let fallbackUrl = recoveredLogo;
+  if (code.includes('rti') || code.includes('bharath')) {
+    fallbackUrl = rtiExpressLogo;
+  }
+  return {
+    id: String(logo.id || `pub_${code}`),
+    name: logo.name || 'Publication',
+    publication_code: code,
+    logo_url: logo.logo_url || fallbackUrl,
+    is_active: logo.is_active !== false,
+    created_at: logo.created_at || new Date().toISOString(),
+  };
+};
+
 // ─── Publication Logos ────────────────────────────────────────────────────────
 export const getPublicationLogos = async (): Promise<PublicationLogo[]> => {
-  // 1. Try Supabase publication_logos table
+  // 1. Try Backend Admin API first (reliable, bypasses RLS, auto-seeds)
+  try {
+    const res = await api.get('/api/v1/admin/logos');
+    if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      const enriched = res.data.map(enrichLogoWithAsset);
+      try {
+        localStorage.setItem(LOCAL_LOGOS_KEY, JSON.stringify(enriched));
+      } catch { /* silent */ }
+      return enriched;
+    }
+  } catch (err) {
+    console.warn('[AdminService] Backend /admin/logos unavailable, trying Supabase / local:', err);
+  }
+
+  // 2. Try Supabase publication_logos table
   try {
     const { data, error } = await supabase
       .from('publication_logos')
       .select('*')
       .order('created_at', { ascending: true });
     if (!error && Array.isArray(data) && data.length > 0) {
-      return data;
+      return data.map(enrichLogoWithAsset);
     }
   } catch {
     /* fallback to local */
   }
 
-  // 2. Try localStorage custom logos
+  // 3. Try localStorage custom logos
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = localStorage.getItem(LOCAL_LOGOS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map(enrichLogoWithAsset);
         }
       }
     }
@@ -682,8 +713,24 @@ export const getPublicationLogos = async (): Promise<PublicationLogo[]> => {
     /* parse error */
   }
 
-  // 3. Fallback to default publication brand logos
+  // 4. Fallback to default publication brand logos
   return DEFAULT_PUBLICATION_LOGOS;
+};
+
+export const getActivePublicationLogos = async (): Promise<PublicationLogo[]> => {
+  // 1. Try Backend active logos endpoint (public, unauthenticated/authenticated)
+  try {
+    const res = await api.get('/api/v1/admin/logos/active');
+    if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      return res.data.map(enrichLogoWithAsset);
+    }
+  } catch (err) {
+    console.warn('[AdminService] Backend /admin/logos/active unavailable:', err);
+  }
+
+  // 2. Fallback: fetch all and filter by is_active !== false
+  const all = await getPublicationLogos();
+  return all.filter((l) => l.is_active !== false);
 };
 
 export const addPublicationLogo = async (
@@ -698,13 +745,13 @@ export const addPublicationLogo = async (
   const newLogo: PublicationLogo = {
     id: `logo_${Date.now()}`,
     name: cleanName,
-    logo_url: cleanUrl,
+    logo_url: cleanUrl || recoveredLogo,
     publication_code: cleanCode,
     is_active: true,
     created_at: new Date().toISOString(),
   };
 
-  // Update local storage
+  // Update local storage optimistically
   try {
     const current = await getPublicationLogos();
     const updated = [newLogo, ...current.filter((l) => l.publication_code !== cleanCode)];
@@ -713,13 +760,27 @@ export const addPublicationLogo = async (
     /* local error */
   }
 
-  // Attempt Supabase insert
+  // 1. Try Backend API first
+  try {
+    await api.post('/api/v1/admin/logos', {
+      name: cleanName,
+      publication_code: cleanCode,
+      logo_url: cleanUrl,
+      is_active: true,
+    });
+    return { success: true };
+  } catch (err) {
+    console.warn('[addPublicationLogo] Backend API error, attempting Supabase insert:', err);
+  }
+
+  // 2. Attempt Supabase insert
   try {
     const { error } = await supabase.from('publication_logos').insert([
       {
         name: cleanName,
         logo_url: cleanUrl,
         publication_code: cleanCode,
+        is_active: true,
       },
     ]);
     if (error) {
@@ -745,7 +806,7 @@ export const updatePublicationLogo = async (
   try {
     const current = await getPublicationLogos();
     const updated = current.map((l) => {
-      if (l.id === id) {
+      if (l.id === id || l.publication_code === id) {
         return {
           ...l,
           ...(updates.name !== undefined ? { name: updates.name.trim() } : {}),
@@ -761,9 +822,17 @@ export const updatePublicationLogo = async (
     /* local error */
   }
 
-  // Attempt Supabase update
+  // 1. Try Backend API first
   try {
-    const payload: Record<string, any> = {};
+    await api.put(`/api/v1/admin/logos/${encodeURIComponent(id)}`, updates);
+    return { success: true };
+  } catch (err) {
+    console.warn('[updatePublicationLogo] Backend API error, attempting direct Supabase:', err);
+  }
+
+  // 2. Direct Supabase update fallback
+  try {
+    const payload: any = {};
     if (updates.name !== undefined) payload.name = updates.name.trim();
     if (updates.logo_url !== undefined) payload.logo_url = updates.logo_url.trim();
     if (updates.publication_code !== undefined) {
@@ -824,15 +893,24 @@ export const toggleLogoActive = async (
   id: string,
   is_active: boolean
 ): Promise<{ success: boolean }> => {
-  // Update local storage
+  // 1. Update local storage immediately for fast responsive UI
   try {
     const current = await getPublicationLogos();
-    const updated = current.map((l) => (l.id === id ? { ...l, is_active } : l));
+    const updated = current.map((l) => (l.id === id || l.publication_code === id ? { ...l, is_active } : l));
     localStorage.setItem(LOCAL_LOGOS_KEY, JSON.stringify(updated));
   } catch {
     /* silent */
   }
 
+  // 2. Call backend Admin API (uses service role key to bypass RLS and persist to database)
+  try {
+    await api.put(`/api/v1/admin/logos/${encodeURIComponent(id)}`, { is_active });
+    return { success: true };
+  } catch (err) {
+    console.warn('[toggleLogoActive] Backend API error, attempting direct Supabase:', err);
+  }
+
+  // 3. Direct Supabase fallback
   try {
     await supabase
       .from('publication_logos')
@@ -846,15 +924,24 @@ export const toggleLogoActive = async (
 };
 
 export const removePublicationLogo = async (id: string): Promise<{ success: boolean }> => {
-  // Update local storage
+  // 1. Update local storage
   try {
     const current = await getPublicationLogos();
-    const updated = current.filter((l) => l.id !== id);
+    const updated = current.filter((l) => l.id !== id && l.publication_code !== id);
     localStorage.setItem(LOCAL_LOGOS_KEY, JSON.stringify(updated));
   } catch {
     /* silent */
   }
 
+  // 2. Try Backend API
+  try {
+    await api.delete(`/api/v1/admin/logos/${encodeURIComponent(id)}`);
+    return { success: true };
+  } catch (err) {
+    console.warn('[removePublicationLogo] Backend API error, attempting Supabase delete:', err);
+  }
+
+  // 3. Fallback Supabase
   try {
     await supabase.from('publication_logos').delete().eq('id', id);
   } catch {
