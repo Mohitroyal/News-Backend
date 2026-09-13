@@ -736,3 +736,176 @@ def get_generation_logs(
         "total_pages": (total + page_size - 1) // page_size,
         "results": results,
     }
+
+
+# ── Publication Logos Management ──────────────────────────────────────────────
+
+class CreateLogoRequest(BaseModel):
+    name: str
+    publication_code: str
+    logo_url: str = ""
+    is_active: bool = True
+
+
+class UpdateLogoRequest(BaseModel):
+    name: Optional[str] = None
+    publication_code: Optional[str] = None
+    logo_url: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+DEFAULT_SEEDED_LOGOS = [
+    {"name": "Spot News 24x7", "publication_code": "spot_news_24x7", "logo_url": "", "is_active": True},
+    {"name": "RTI Express", "publication_code": "rti_express", "logo_url": "", "is_active": True},
+    {"name": "Bharath Reporter", "publication_code": "bharath_reporter", "logo_url": "", "is_active": True},
+    {"name": "National News 24x7", "publication_code": "national_news", "logo_url": "", "is_active": True},
+]
+
+
+def _seed_logos_if_needed(admin_sb):
+    """Seed standard brand publication logos if table is empty"""
+    try:
+        check = admin_sb.from_("publication_logos").select("id").limit(1).execute()
+        if not check.data:
+            print("[LOGOS] Seeding initial publication logos...")
+            for item in DEFAULT_SEEDED_LOGOS:
+                try:
+                    admin_sb.from_("publication_logos").insert([item]).execute()
+                except Exception as se:
+                    print(f"[LOGOS] Seed item warning: {se}")
+    except Exception as e:
+        print(f"[LOGOS] Auto-seed check warning: {e}")
+
+
+@router.get("/logos/active")
+def get_active_logos() -> Any:
+    """
+    Public endpoint for reporters and client app:
+    Returns only currently ACTIVE publication logos.
+    """
+    try:
+        admin_sb = get_supabase_admin_client()
+        _seed_logos_if_needed(admin_sb)
+        res = admin_sb.from_("publication_logos").select("*").eq("is_active", True).order("created_at", desc=False).execute()
+        return res.data or []
+    except Exception as e:
+        print(f"[LOGOS] Warning reading active logos: {e}")
+        return [l for l in DEFAULT_SEEDED_LOGOS if l.get("is_active")]
+
+
+@router.get("/logos")
+def get_all_logos(
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Admin endpoint: Returns all publication logos with their active/inactive status.
+    """
+    verify_admin_access(current_user)
+    try:
+        admin_sb = get_supabase_admin_client()
+        _seed_logos_if_needed(admin_sb)
+        res = admin_sb.from_("publication_logos").select("*").order("created_at", desc=False).execute()
+        return res.data or []
+    except Exception as e:
+        print(f"[LOGOS] Warning reading all logos: {e}")
+        return DEFAULT_SEEDED_LOGOS
+
+
+@router.post("/logos")
+def create_logo(
+    req: CreateLogoRequest,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Admin endpoint: Create a new publication brand logo.
+    """
+    verify_admin_access(current_user)
+    admin_sb = get_supabase_admin_client()
+    clean_code = req.publication_code.strip().lower().replace(" ", "_")
+    clean_name = req.name.strip()
+    payload = {
+        "name": clean_name,
+        "publication_code": clean_code,
+        "logo_url": req.logo_url.strip(),
+        "is_active": req.is_active,
+    }
+    try:
+        res = admin_sb.from_("publication_logos").insert([payload]).execute()
+        return {"success": True, "data": res.data[0] if res.data else payload}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create publication logo: {e}")
+
+
+@router.put("/logos/{logo_id}")
+def update_logo(
+    logo_id: str,
+    req: UpdateLogoRequest,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Admin endpoint: Update or toggle active/inactive status of a publication logo.
+    """
+    verify_admin_access(current_user)
+    admin_sb = get_supabase_admin_client()
+    payload = {}
+    if req.name is not None:
+        payload["name"] = req.name.strip()
+    if req.publication_code is not None:
+        payload["publication_code"] = req.publication_code.strip().lower().replace(" ", "_")
+    if req.logo_url is not None:
+        payload["logo_url"] = req.logo_url.strip()
+    if req.is_active is not None:
+        payload["is_active"] = req.is_active
+
+    if not payload:
+        return {"success": True, "detail": "No fields to update"}
+
+    try:
+        # 1. Try update by id
+        up_res = admin_sb.from_("publication_logos").update(payload).eq("id", logo_id).execute()
+        if up_res.data:
+            return {"success": True, "data": up_res.data[0]}
+
+        # 2. Try update by publication_code
+        up_res = admin_sb.from_("publication_logos").update(payload).eq("publication_code", logo_id).execute()
+        if up_res.data:
+            return {"success": True, "data": up_res.data[0]}
+
+        # 3. Try stripped code (e.g. 'pub_rti_express' -> 'rti_express')
+        clean_code = logo_id.replace("pub_", "")
+        up_res = admin_sb.from_("publication_logos").update(payload).eq("publication_code", clean_code).execute()
+        if up_res.data:
+            return {"success": True, "data": up_res.data[0]}
+
+        # 4. If not found in database, insert it with the desired active status
+        insert_data = {
+            "name": req.name or clean_code.replace("_", " ").title(),
+            "publication_code": clean_code,
+            "logo_url": req.logo_url or "",
+            "is_active": req.is_active if req.is_active is not None else True,
+        }
+        ins_res = admin_sb.from_("publication_logos").insert([insert_data]).execute()
+        return {"success": True, "data": ins_res.data[0] if ins_res.data else insert_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update publication logo: {e}")
+
+
+@router.delete("/logos/{logo_id}")
+def delete_logo(
+    logo_id: str,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Admin endpoint: Delete a publication logo.
+    """
+    verify_admin_access(current_user)
+    admin_sb = get_supabase_admin_client()
+    try:
+        del_res = admin_sb.from_("publication_logos").delete().eq("id", logo_id).execute()
+        if not del_res.data:
+            clean_code = logo_id.replace("pub_", "")
+            del_res = admin_sb.from_("publication_logos").delete().eq("publication_code", clean_code).execute()
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete publication logo: {e}")
+

@@ -9,7 +9,7 @@ from app.schemas.all import ClippingCreate, Clipping as ClippingSchema
 from app.services.grok_service import grok_service
 from app.services.render_service import render_service
 from app.services.storage_service import storage_service, _rewrite_to_absolute
-from app.auth.dependencies import get_current_active_user
+from app.auth.dependencies import get_current_active_user, get_supabase_admin_client
 from app.core.config import settings
 from app.models.user import User
 import uuid
@@ -238,6 +238,23 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                         else:
                             clipping.custom_layout["image_layout"] = "pattern_b" # default fallback for weird layout strings
                 
+                # Ensure requested template or logo is active in publication_logos
+                try:
+                    admin_sb = get_supabase_admin_client()
+                    logos_check = admin_sb.table("publication_logos").select("publication_code, is_active").execute()
+                    if logos_check.data:
+                        disabled_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is False]
+                        active_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is not False]
+                        if (template_id in disabled_codes or clipping.logo_id in disabled_codes) and active_codes:
+                            fallback_logo = active_codes[0]
+                            print(f"[LOGO DISABLED] {template_id} or {clipping.logo_id} was disabled by admin. Falling back to {fallback_logo}")
+                            template_id = fallback_logo
+                            clipping.template_id = fallback_logo
+                            if clipping.logo_id in disabled_codes:
+                                clipping.logo_id = fallback_logo
+                except Exception as logo_err:
+                    print(f"[LOGO CHECK WARNING] {logo_err}")
+
                 print(f"[COMPLETED] {stage} -> {template_id}"); sys.stdout.flush()
 
                 # --- [7] HTML Generation & [6] Layout Rendering ---
