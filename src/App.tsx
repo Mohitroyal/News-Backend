@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Settings, Plus, Newspaper } from 'lucide-react';
 // import { useTranslation } from './lib/i18n';
@@ -29,6 +29,8 @@ import { ErrorBoundary } from './ErrorBoundary';
 // Mobile Layout with Bottom Navigation
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   // const { t } = useTranslation();
+  const location = useLocation();
+  const isGeneratePage = location.pathname === '/' || location.pathname === '/generate';
   const { user } = useAuthStore();
   const userAvatar = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || (user as any)?.avatar_url;
   const userName = getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
@@ -70,8 +72,11 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
 
-      {/* Main Content Area — masthead scrolls with content */}
-      <main className="flex-1 overflow-y-auto pb-[76px]" style={{ position: 'relative', zIndex: 3 }}>
+      {/* Main Content Area — masthead scrolls with content on other pages, locked without scroll on generation page */}
+      <main
+        className={`flex-1 flex flex-col ${isGeneratePage ? 'overflow-hidden pb-[68px]' : 'overflow-y-auto pb-[76px]'}`}
+        style={{ position: 'relative', zIndex: 3 }}
+      >
         {/* ── Masthead (scrolls with page) ── */}
         <header className="w-full flex flex-col pt-safe" style={{ background: '#EAF2FB' }}>
           <div style={{ background: headerBg, paddingBottom: '12px' }}>

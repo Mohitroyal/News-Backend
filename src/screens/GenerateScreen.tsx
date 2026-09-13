@@ -326,7 +326,7 @@ export const GenerateScreen = () => {
   };
 
   return (
-    <div style={{ background: '#EAF2FB', minHeight: '100%', paddingBottom: '4px' }}>
+    <div style={{ background: '#EAF2FB', height: '100%', overflow: 'hidden', overscrollBehavior: 'none', display: 'flex', flexDirection: 'column' }}>
 
       {cropImageSrc && (
         <ImageCropModal
