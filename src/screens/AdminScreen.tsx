@@ -272,6 +272,7 @@ export const AdminScreen = () => {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<string>('');
   const [editPlan, setEditPlan] = useState<string>('');
+  const [editPhone, setEditPhone] = useState<string>('');
   const [editSaving, setEditSaving] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
@@ -394,6 +395,7 @@ export const AdminScreen = () => {
     setEditingUserId(u.id);
     setEditRole(u.role ?? 'user');
     setEditPlan(u.plan ?? 'free');
+    setEditPhone(u.phone_number ?? '');
   };
 
   const cancelEdit = () => { setEditingUserId(null); };
@@ -413,8 +415,8 @@ export const AdminScreen = () => {
     let planSuccess = true;
     let errorMsg: string | undefined;
 
-    if (editRole !== u.role) {
-      const r1 = await updateUserRole(u.id, editRole as any);
+    if (editRole !== u.role || editPhone !== (u.phone_number ?? '')) {
+      const r1 = await updateUserRole(u.id, editRole as any, editPhone.trim() || u.phone_number);
       if (!r1.success) {
         roleSuccess = false;
         errorMsg = r1.error;
@@ -636,6 +638,7 @@ export const AdminScreen = () => {
     const matchesSearch =
       !q ||
       u.email.toLowerCase().includes(q) ||
+      (u.phone_number && u.phone_number.toLowerCase().includes(q)) ||
       (u.full_name || '').toLowerCase().includes(q) ||
       (u.role || '').toLowerCase().includes(q) ||
       (u.plan || '').toLowerCase().includes(q);
@@ -1340,7 +1343,14 @@ export const AdminScreen = () => {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-[#6B7A90] truncate mt-0.5">{u.email}</p>
+                        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                          <p className="text-xs text-[#6B7A90] truncate">{u.email}</p>
+                          {u.phone_number && (
+                            <span className="text-[11px] font-semibold text-[#015BB3] bg-[#E8F2FC] border border-[#D0E2F7] px-2 py-0.5 rounded-md">
+                              📞 {u.phone_number}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-[11px] text-[#8FA3B8] mt-0.5 flex-wrap">
                           <span>Joined {formatDate(u.created_at)}</span>
                           {u.last_sign_in_at && (
@@ -1640,6 +1650,17 @@ export const AdminScreen = () => {
                     <div>
                       <p className="text-xs text-[#6B7A90]">Target Account</p>
                       <p className="text-sm font-bold text-[#0A2540]">{targetUser.email}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#0A2540] mb-1">Phone Number</label>
+                      <input
+                        type="text"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        placeholder="e.g. +919876543210"
+                        className="w-full bg-[#E8F2FC] border border-[#D0E2F7] rounded-xl px-3 py-2 text-xs font-bold text-[#0A2540] focus:outline-none"
+                      />
                     </div>
 
                     <div>

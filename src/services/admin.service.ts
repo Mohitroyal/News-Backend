@@ -8,6 +8,7 @@ import recoveredLogo from '@/assets/recovered_logo.png';
 export interface AdminUserProfile {
   id: string;
   email: string;
+  phone_number?: string;
   full_name: string;
   role: 'admin' | 'reporter' | 'user';
   plan: string;
@@ -393,6 +394,7 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
         return {
           id: uid,
           email: u.email || '',
+          phone_number: u.phone_number || '',
           full_name: u.full_name || u.name || (u.email ? u.email.split('@')[0] : 'User'),
           role: u.role || 'user',
           plan: u.plan || 'free',
@@ -426,6 +428,7 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
         return {
           id: uid,
           email: u.email || '',
+          phone_number: u.phone_number || '',
           full_name: u.full_name || u.name || (u.email ? u.email.split('@')[0] : 'User'),
           role: u.role || 'user',
           plan: u.plan || 'free',
@@ -448,8 +451,8 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
   // 3. Fallback: Supabase Client Query
   try {
     const [{ data: users }, { data: profiles }, { data: genData }] = await Promise.all([
-      supabase.from('users').select('id, email, full_name, avatar_url, created_at, preferred_language').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, role, plan, last_sign_in_at, is_banned'),
+      supabase.from('users').select('id, email, full_name, avatar_url, created_at, preferred_language, phone_number').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, role, plan, last_sign_in_at, is_banned, phone_number'),
       supabase.from('clippings').select('user_id'),
     ]);
 
@@ -472,6 +475,7 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
       userMap.set(uid, {
         id: uid,
         email: u.email ?? '',
+        phone_number: u.phone_number ?? profileMap[uid]?.phone_number ?? '',
         full_name: u.full_name ?? '',
         avatar_url: u.avatar_url ?? '',
         created_at: u.created_at ?? '',
@@ -497,6 +501,7 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
         userMap.set(uid, {
           id: uid,
           email: p.email ?? '',
+          phone_number: p.phone_number ?? '',
           full_name: p.full_name ?? 'User',
           avatar_url: '',
           created_at: p.created_at ?? '',
@@ -521,11 +526,16 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
 // ─── Edit User Role / Plan ────────────────────────────────────────────────────
 export const updateUserRole = async (
   userId: string,
-  role: 'admin' | 'reporter' | 'user'
+  role: 'admin' | 'reporter' | 'user',
+  phoneNumber?: string
 ): Promise<{ success: boolean; error?: string }> => {
   // 1. Primary: Use Backend API (runs with service_role key, safely bypassing RLS)
   try {
-    const res = await api.put(`/api/v1/admin/users/${userId}/role`, { role });
+    const payload: any = { role };
+    if (phoneNumber && phoneNumber.trim()) {
+      payload.phone_number = phoneNumber.trim();
+    }
+    const res = await api.put(`/api/v1/admin/users/${userId}/role`, payload);
     if (res.status >= 200 && res.status < 300) {
       // Force-refresh the Supabase session so the promoted user's JWT picks
       // up the new app_metadata.role immediately — no sign-out/in needed.
