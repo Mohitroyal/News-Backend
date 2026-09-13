@@ -71,7 +71,8 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE clippings ADD COLUMN IF NOT EXISTS show_inner_borders BOOLEAN DEFAULT TRUE;"))
-        print("  [SUCCESS] All database tables (clippings, posts, likes, comments) and columns verified.", flush=True)
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20) UNIQUE;"))
+        print("  [SUCCESS] All database tables (clippings, posts, likes, comments, otp_verifications) and columns verified.", flush=True)
     except Exception as e:
         print(f"  [WARNING] DB auto-migration skipped or failed: {e}", flush=True)
     print("="*60 + "\n", flush=True)
@@ -272,7 +273,9 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Directly attach routers without prefix for root calls
-from app.api.v1.endpoints import generate, upload, posts
+from app.api.v1.endpoints import generate, upload, posts, auth
+app.include_router(auth.router, prefix="/api/auth", tags=["auth_api_direct"])
+app.include_router(auth.router, prefix="/auth", tags=["auth_direct"])
 app.include_router(generate.router, prefix="/generate", tags=["generation_direct"])
 app.include_router(upload.router, tags=["upload_direct"])
 app.include_router(posts.router, prefix="/posts", tags=["posts_direct"])

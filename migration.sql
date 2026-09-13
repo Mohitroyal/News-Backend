@@ -30,8 +30,10 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS subscription_id TEXT;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS subscription_plan TEXT DEFAULT 'free';
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'active';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone_number TEXT UNIQUE;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_users_phone_number ON public.users(phone_number);
 
 -- Drop deprecated columns (only if safe — remove comment to enable)
 -- ALTER TABLE public.users DROP COLUMN IF EXISTS hashed_password;
@@ -167,6 +169,32 @@ ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS amount INTEGER;
 ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'usd';
 ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS status TEXT;
 ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+
+
+-- ── OTP VERIFICATIONS TABLE ───────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.otp_verifications (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    phone_number  VARCHAR(20) NOT NULL,
+    user_id       UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    otp_hash      VARCHAR(255) NOT NULL,
+    purpose       VARCHAR(50) DEFAULT 'login' NOT NULL,
+    attempts      INTEGER DEFAULT 0 NOT NULL,
+    max_attempts  INTEGER DEFAULT 5 NOT NULL,
+    consumed      BOOLEAN DEFAULT FALSE NOT NULL,
+    request_id    VARCHAR(100),
+    ip_address    VARCHAR(45),
+    created_at    TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    expires_at    TIMESTAMPTZ NOT NULL,
+    verified_at   TIMESTAMPTZ,
+    updated_at    TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_otp_phone_purpose_consumed ON public.otp_verifications(phone_number, purpose, consumed);
+CREATE INDEX IF NOT EXISTS idx_otp_phone_created_at ON public.otp_verifications(phone_number, created_at);
+CREATE INDEX IF NOT EXISTS idx_otp_expires_consumed ON public.otp_verifications(expires_at, consumed);
+CREATE INDEX IF NOT EXISTS idx_otp_user_id ON public.otp_verifications(user_id);
+
 
 
 -- ── ROW LEVEL SECURITY (recommended) ─────────────────────────

@@ -11,6 +11,7 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, index=True, nullable=False)
+    phone_number = Column(String, unique=True, index=True, nullable=True)
     full_name = Column(String)
     is_active = Column(Boolean(), default=True)
 
@@ -27,6 +28,7 @@ class User(Base):
     clippings = relationship("Clipping", back_populates="owner")
     payments = relationship("Payment", back_populates="user")
     usage = relationship("Usage", back_populates="user")
+    otps = relationship("OTPVerification", back_populates="user")
 
     @property
     def plan(self) -> str:

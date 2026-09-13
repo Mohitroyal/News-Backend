@@ -76,6 +76,18 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     EMAILS_FROM_EMAIL: Optional[str] = None
 
+    # MSG91 OTP Authentication (SMS Flow in India)
+    MSG91_AUTHKEY: Optional[str] = None
+    MSG91_TEMPLATE_ID: str = "6aa6743fd25ea4d3f50e4a63"
+    MSG91_SENDER_ID: str = "FOUZIA"
+
+    # OTP Security & Rate Limiting Policies
+    OTP_EXPIRY_MINUTES: int = 10
+    OTP_MAX_ATTEMPTS: int = 5
+    OTP_SEND_LIMIT: int = 3
+    OTP_SEND_WINDOW_MINUTES: int = 15
+    OTP_COOLDOWN_SECONDS: int = 60
+
     def get_cors_origins(self) -> List[str]:
         """Return merged CORS list including FRONTEND_URL if set."""
         origins = list(self.CORS_ORIGINS)

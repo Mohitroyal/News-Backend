@@ -33,6 +33,9 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
     The local user.id is set to the same UUID as the Supabase auth user.id so that
     all foreign-key references (clippings.user_id, etc.) are stable.
     """
+    if isinstance(supabase_user, User):
+        return supabase_user
+
     # Normalise — Supabase SDK returns an object; we may also call this with a dict
     if hasattr(supabase_user, "__dict__"):
         data = supabase_user.__dict__
@@ -124,10 +127,10 @@ def _get_or_create_supabase_user(db: Session, supabase_user) -> User:
 
 
 
-async def get_current_user(request: Request):
+async def get_current_user(request: Request, db: Session = Depends(get_db)):
     """
-    Validate the Supabase JWT from the Authorization header.
-    Returns the raw Supabase user object.
+    Validate either an internal application JWT or a Supabase JWT from Authorization header.
+    Returns User instance or Supabase user object.
     """
     auth = request.headers.get("Authorization")
     if not auth:
@@ -137,7 +140,27 @@ async def get_current_user(request: Request):
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
 
-    # Basic structural JWT validation (header.payload.signature)
+    # 1. Check if token is an internal application JWT (issued by verify-otp)
+    if settings.SECRET_KEY:
+        try:
+            from jose import jwt
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            sub = payload.get("sub")
+            if sub:
+                try:
+                    user_uuid = uuid.UUID(str(sub))
+                    user = db.query(User).filter(User.id == user_uuid).first()
+                    if user:
+                        return user
+                except Exception:
+                    user = db.query(User).filter((User.phone_number == str(sub)) | (User.email == str(sub))).first()
+                    if user:
+                        return user
+        except Exception:
+            # Fall through to Supabase JWT verification
+            pass
+
+    # 2. Structural JWT validation (header.payload.signature)
     parts = token.split(".")
     if len(parts) != 3:
         raise HTTPException(status_code=401, detail="Invalid JWT format")

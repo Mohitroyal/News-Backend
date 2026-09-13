@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.models.clipping import Clipping, CustomTemplate, Usage, Payment
 from app.models.post import Post, PostLike, PostComment
+from app.models.otp import OTPVerification
 
 __all__ = [
     "User",
@@ -11,4 +12,5 @@ __all__ = [
     "Post",
     "PostLike",
     "PostComment",
+    "OTPVerification",
 ]
