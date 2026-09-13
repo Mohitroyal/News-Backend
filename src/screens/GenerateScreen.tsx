@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useGenerationStore, useUIStore, useAuthStore, getReporterPhoto } from '@/store';
+import { useGenerationStore, useUIStore, useAuthStore, getReporterPhoto, getReporterName } from '@/store';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Image as ImageIcon, X, ArrowLeft, Newspaper, CheckCircle2, Notebook, FileText, Pencil, SlidersHorizontal } from 'lucide-react';
 import { generationService, compressImage } from '@/services/generation.service';
@@ -9,6 +9,7 @@ import type { Language } from '@/types';
 import { LiveNewspaperPreview } from '@/components/LiveNewspaperPreview';
 import { PatternSelectionModal } from '@/components/PatternSelectionModal';
 import { BORDER_COLOURS, HEADING_BG_COLOURS } from '@/constants/colours';
+import { useTranslation } from '@/lib/i18n';
 
 // ─── Generation stage labels + progress ──────────────────────────────────────
 const GEN_STAGES = [
@@ -69,6 +70,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export const GenerateScreen = () => {
+  const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const currentConfig = useGenerationStore((state) => state.currentConfig);
   const addGeneration = useGenerationStore((state) => state.addGeneration);
@@ -195,13 +197,12 @@ export const GenerateScreen = () => {
     }
   };
 
-  // ─── Generate clipping ──────────────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!headline || !content) return;
     setLoading(true); setStageIndex(0);
     try {
-      const reporterName = (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
-      const reporterImage = user?.avatarUrl || getReporterPhoto(user?.email) || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || '';
+      const reporterName = getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
+      const reporterImage = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || '';
 
       const configToSave = {
         ...currentConfig, headline, articleContent: content, language, fontFamily,
@@ -253,7 +254,7 @@ export const GenerateScreen = () => {
         resetConfig();
         setHeadline('');
         setContent('');
-        setLanguage('en');
+        setLanguage('te');
         setFontFamily('playfair');
         setLayoutColumns(3);
         setImageUrls([]);
@@ -330,7 +331,7 @@ export const GenerateScreen = () => {
           </div>
           <input
             type="text"
-            placeholder="Enter headline"
+            placeholder={t.enterHeadline}
             value={headline}
             onChange={e => setHeadline(e.target.value)}
             style={inputStyle}
@@ -344,7 +345,7 @@ export const GenerateScreen = () => {
             <strong style={{ fontWeight: 900, fontFamily: "system-ui, -apple-system, Arial, sans-serif", fontSize: '13px', letterSpacing: '0.8px' }}>ARTICLE CONTENT</strong>
           </div>
           <textarea
-            placeholder="Enter article content..."
+            placeholder={t.enterArticleContent}
             value={content}
             onChange={e => setContent(e.target.value)}
             rows={5}
@@ -455,7 +456,7 @@ export const GenerateScreen = () => {
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-              <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: 800, fontFamily: "'Georgia', serif", margin: 0 }}>Select Logo</h2>
+              <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: 800, fontFamily: "'Georgia', serif", margin: 0 }}>{t.selectLogo}</h2>
               <button onClick={() => setIsLogoModalOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X style={{ width: '16px', height: '16px' }} />
               </button>

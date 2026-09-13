@@ -390,6 +390,7 @@ export const SettingsScreen = () => {
 
         {/* Appearance */}
         <SettingsSection title={t.appearance} icon={Moon}>
+
           <SettingsRow
             label={t.innerBorders}
             description={t.innerBordersDesc}

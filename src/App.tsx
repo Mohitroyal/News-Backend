@@ -208,9 +208,11 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
+
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
   const login = useAuthStore((state) => state.login);
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
@@ -300,8 +302,6 @@ function App() {
           });
           if (data.session) {
             login(data.session.user as any, data.session.access_token);
-            // Force reload to dashboard
-            window.location.href = '/';
           }
         }
       }
@@ -335,8 +335,8 @@ function App() {
       }
     });
 
-    // Simulate splash screen / capacitor initialization
-    const timer = setTimeout(() => setIsInitializing(false), 2000);
+    // Initial splash screen dismiss timer (runs once on cold start only)
+    const timer = setTimeout(() => setIsInitializing(false), 1200);
     return () => {
       clearTimeout(timer);
       authListener.subscription.unsubscribe();
@@ -345,6 +345,8 @@ function App() {
   }, []);
 
   if (isInitializing) return <SplashScreen />;
+
+  const isAdmin = isAdminUser(user);
 
   return (
     <Router>
