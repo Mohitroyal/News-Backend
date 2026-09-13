@@ -90,7 +90,7 @@ export const VerifyOtpScreen = () => {
           <p className="text-gray-600 text-xs mb-4">Please enter your mobile number to request an OTP code.</p>
           <Link 
             to="/login/otp" 
-            className="inline-block w-full py-2.5 bg-[#0a2540] hover:bg-[#12395d] text-white text-xs font-bold rounded-md transition-colors"
+            className="inline-block w-full py-2.5 bg-[#015BB3] hover:bg-[#1254A8] text-white text-xs font-bold rounded-md transition-colors"
           >
             Go to Mobile Login
           </Link>

@@ -310,9 +310,9 @@ export const LoginScreen = () => {
             <button
               type="button"
               onClick={() => navigate('/login/otp')}
-              className="w-full py-[12px] bg-[#0a2540] hover:bg-[#12395d] active:bg-[#07192c] text-white rounded-[6px] font-bold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer font-serif"
+              className="w-full py-[12px] bg-[#015BB3] hover:bg-[#1254A8] active:bg-[#0c4387] text-white rounded-[8px] font-bold text-sm tracking-wide transition-all shadow-[0_2px_8px_rgba(1,91,179,0.25)] flex items-center justify-center gap-2 cursor-pointer font-serif border border-[#0B56A6]/20"
             >
-              <Phone className="w-4 h-4 text-[#a0c4dc]" />
+              <Phone className="w-4 h-4 text-white" />
               Login with Mobile OTP
             </button>
 
@@ -320,7 +320,7 @@ export const LoginScreen = () => {
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full py-[12px] bg-white active:bg-gray-50 border border-[#b8d4e8] text-[#0a1a2e] rounded-[6px] font-bold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
+              className="w-full py-[12px] bg-white active:bg-gray-50 border border-[#b8d4e8] text-[#0a1a2e] rounded-[8px] font-bold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-3 disabled:opacity-70 cursor-pointer"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -335,11 +335,11 @@ export const LoginScreen = () => {
           <div className="mt-8 text-center flex flex-col gap-2">
             <p className="text-[#a0c4dc] text-xs font-medium">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-[#0a2540] font-bold hover:underline transition-colors">
+              <Link to="/signup" className="text-[#015BB3] font-bold hover:underline transition-colors">
                 Sign Up
               </Link>
             </p>
-            <Link to="/login/otp" className="text-[#0a2540] text-xs font-bold hover:underline transition-colors mt-2">
+            <Link to="/login/otp" className="text-[#015BB3] text-xs font-bold hover:underline transition-colors mt-2">
               Login with OTP instead
             </Link>
           </div>
