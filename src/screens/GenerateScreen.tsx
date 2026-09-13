@@ -344,7 +344,7 @@ export const GenerateScreen = () => {
         </h1>
       </div>
 
-      <div style={{ padding: '0 12px' }}>
+      <div style={{ padding: '0 12px', paddingBottom: '120px' }}>
 
         {/* ── SECTION 1: ACTIVE LOGO ── */}
         <div style={cardStyle}>

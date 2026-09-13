@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Settings, Plus, Newspaper } from 'lucide-react';
 // import { useTranslation } from './lib/i18n';
@@ -28,8 +28,6 @@ import { ErrorBoundary } from './ErrorBoundary';
 
 // Mobile Layout with Bottom Navigation
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
-  const location = useLocation();
-  const isGeneratePage = location.pathname === '/' || location.pathname === '/generate';
   // const { t } = useTranslation();
   const { user } = useAuthStore();
   const userAvatar = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || (user as any)?.avatar_url;
@@ -72,14 +70,14 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
 
-      {/* Main Content Area — masthead scrolls with content on long pages, locked without scroll on generation page */}
+      {/* Main Content Area — masthead scrolls with content on all devices */}
       <main
-        className={`flex-1 flex flex-col ${isGeneratePage ? 'overflow-hidden pb-[68px]' : 'overflow-y-auto pb-[76px]'}`}
+        className="flex-1 flex flex-col overflow-y-auto pb-[92px]"
         style={{
           position: 'relative',
           zIndex: 3,
-          overscrollBehavior: isGeneratePage ? 'none' : 'auto',
-          touchAction: isGeneratePage ? 'pan-x' : 'auto'
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
         }}
       >
         {/* ── Masthead (scrolls with page) ── */}
