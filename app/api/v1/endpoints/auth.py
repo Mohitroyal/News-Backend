@@ -346,12 +346,67 @@ async def verify_otp(
             detail="Failed to complete authentication. Please try again.",
         )
 
-    # Sync mobile OTP user to Supabase public.profiles table so Supabase client queries also see them
+    # Sync mobile OTP user to Supabase Auth (auth.users) so they appear in Supabase Dashboard -> Authentication -> Users
     try:
         admin_sb = get_supabase_admin_client()
+
+        # 1. Check if user already exists in Supabase Auth by ID
+        existing_auth_user = None
+        try:
+            get_res = admin_sb.auth.admin.get_user_by_id(str(user.id))
+            existing_auth_user = get_res.user if hasattr(get_res, "user") else get_res
+        except Exception:
+            existing_auth_user = None
+
+        if not existing_auth_user:
+            # Register user directly in Supabase auth.users
+            user_attrs = {
+                "id": str(user.id),
+                "phone": e164_phone,
+                "phone_confirm": True,
+                "email": user.email or phone_email,
+                "email_confirm": True,
+                "user_metadata": {
+                    "full_name": user.full_name,
+                    "name": user.full_name,
+                    "phone_number": e164_phone,
+                    "phone": e164_phone,
+                },
+                "app_metadata": {
+                    "provider": "phone",
+                    "providers": ["phone"],
+                },
+            }
+            try:
+                admin_sb.auth.admin.create_user(user_attrs)
+                logger.info(f"[SUPABASE_AUTH_SYNC] Successfully registered mobile user {e164_phone} in Supabase auth.users")
+            except Exception as e_create:
+                logger.warning(f"[SUPABASE_AUTH_CREATE_WARN] Failed to create in auth.users: {e_create}")
+        else:
+            # Update user in Supabase auth.users
+            try:
+                admin_sb.auth.admin.update_user_by_id(
+                    str(user.id),
+                    {
+                        "phone": e164_phone,
+                        "phone_confirm": True,
+                        "user_metadata": {
+                            "full_name": user.full_name,
+                            "name": user.full_name,
+                            "phone_number": e164_phone,
+                            "phone": e164_phone,
+                        },
+                    },
+                )
+            except Exception as e_up:
+                logger.warning(f"[SUPABASE_AUTH_UPDATE_WARN] Failed to update auth.users: {e_up}")
+
+        # 2. Upsert into public.profiles table
         admin_sb.from_("profiles").upsert(
             {
                 "id": str(user.id),
+                "email": user.email,
+                "full_name": user.full_name,
                 "phone_number": user.phone_number,
                 "role": "admin" if is_super_admin else (user.subscription_plan or "user"),
                 "plan": user.subscription_plan or "free",

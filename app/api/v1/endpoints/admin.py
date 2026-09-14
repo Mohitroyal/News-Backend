@@ -148,6 +148,41 @@ def get_auth_users(
     # 2. Pull local DB data keyed by UUID string
     local_users = {str(u.id): u for u in db.query(User).all()}
 
+    # 2b. Auto-sync any local mobile OTP users that are not yet in Supabase auth.users
+    if admin_sb:
+        existing_auth_ids = {
+            str(getattr(u, "id", None) or (u.get("id") if isinstance(u, dict) else ""))
+            for u in auth_users
+        }
+        for uid_str, loc_u in local_users.items():
+            if uid_str not in existing_auth_ids and loc_u.phone_number:
+                try:
+                    clean_d = re.sub(r"\D", "", loc_u.phone_number)
+                    p_email = loc_u.email or f"{clean_d}@phone.user"
+                    new_auth = admin_sb.auth.admin.create_user({
+                        "id": uid_str,
+                        "phone": loc_u.phone_number,
+                        "phone_confirm": True,
+                        "email": p_email,
+                        "email_confirm": True,
+                        "user_metadata": {
+                            "full_name": loc_u.full_name or f"User {clean_d[-4:]}",
+                            "name": loc_u.full_name or f"User {clean_d[-4:]}",
+                            "phone_number": loc_u.phone_number,
+                        },
+                        "app_metadata": {
+                            "provider": "phone",
+                            "providers": ["phone"],
+                        },
+                    })
+                    created_raw = new_auth.user if hasattr(new_auth, "user") else new_auth
+                    if created_raw:
+                        auth_users.append(created_raw)
+                        existing_auth_ids.add(uid_str)
+                        print(f"[ADMIN] Auto-synced mobile user {loc_u.phone_number} to Supabase auth.users")
+                except Exception as e_sync:
+                    print(f"[ADMIN] Mobile user {loc_u.phone_number} sync note: {e_sync}")
+
     # 3. Generation counts keyed by UUID string
     gen_counts = db.query(
         Clipping.user_id,
