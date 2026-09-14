@@ -473,6 +473,10 @@ def update_user_me(
 
 
 @router.delete("/me", response_model=dict, status_code=status.HTTP_200_OK)
+@router.delete("/me/", response_model=dict, status_code=status.HTTP_200_OK)
+@router.post("/delete-account", response_model=dict, status_code=status.HTTP_200_OK)
+@router.delete("/delete-account", response_model=dict, status_code=status.HTTP_200_OK)
+@router.post("/me/delete", response_model=dict, status_code=status.HTTP_200_OK)
 def delete_user_me(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
