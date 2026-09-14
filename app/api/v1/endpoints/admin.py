@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from app.db.session import get_db
 from app.models.user import User
 from app.models.clipping import Clipping
+from app.models.otp import OTPVerification
 from app.auth.dependencies import (
     get_current_user,
     get_current_active_user,
@@ -118,27 +119,31 @@ def get_auth_users(
     """
     verify_admin_access(current_user)
 
-    admin_sb = get_supabase_admin_client()
+    admin_sb = None
+    try:
+        admin_sb = get_supabase_admin_client()
+    except Exception as e:
+        print(f"[ADMIN] Supabase admin client unavailable: {e}")
 
     # 1. Fetch ALL users from Supabase auth.users using pagination.
-    # Supabase defaults to 50 users per page — must loop to get all users.
-    try:
-        auth_users = []
-        page = 1
-        per_page = 1000  # max allowed per request
-        while True:
-            response = admin_sb.auth.admin.list_users(page=page, per_page=per_page)
-            batch = response if isinstance(response, list) else list(response)
-            if not batch:
-                break
-            auth_users.extend(batch)
-            if len(batch) < per_page:
-                # Last page — no more users
-                break
-            page += 1
-        print(f"[ADMIN] Fetched {len(auth_users)} users from Supabase Auth (pages={page})")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch Supabase auth users: {e}")
+    auth_users = []
+    if admin_sb:
+        try:
+            page = 1
+            per_page = 1000  # max allowed per request
+            while True:
+                response = admin_sb.auth.admin.list_users(page=page, per_page=per_page)
+                batch = response if isinstance(response, list) else list(response)
+                if not batch:
+                    break
+                auth_users.extend(batch)
+                if len(batch) < per_page:
+                    # Last page — no more users
+                    break
+                page += 1
+            print(f"[ADMIN] Fetched {len(auth_users)} users from Supabase Auth (pages={page})")
+        except Exception as e:
+            print(f"[ADMIN] Warning fetching Supabase auth users: {e}")
 
     # 2. Pull local DB data keyed by UUID string
     local_users = {str(u.id): u for u in db.query(User).all()}
@@ -157,7 +162,23 @@ def get_auth_users(
     ).filter(Clipping.created_at >= today_start).group_by(Clipping.user_id).all()
     today_gen_map = {str(r[0]): r[1] for r in today_counts if r[0]}
 
+    # 4. Latest OTP verification per user for accurate last_sign_in_at on mobile users
+    otp_login_map = {}
+    try:
+        otp_latest = db.query(
+            OTPVerification.user_id,
+            func.max(OTPVerification.verified_at).label("last_otp_at")
+        ).filter(
+            OTPVerification.consumed == True,
+            OTPVerification.verified_at.isnot(None)
+        ).group_by(OTPVerification.user_id).all()
+        otp_login_map = {str(r[0]): r[1] for r in otp_latest if r[0]}
+    except Exception as e:
+        print(f"[ADMIN] Warning querying OTP verifications: {e}")
+
     result = []
+    seen_ids = set()
+
     for au in auth_users:
         # Normalise Supabase user object → plain dict
         if hasattr(au, "model_dump"):
@@ -168,6 +189,9 @@ def get_auth_users(
             au_data = {k: v for k, v in vars(au).items() if not k.startswith("_")}
 
         uid = str(au_data.get("id", ""))
+        if not uid:
+            continue
+        seen_ids.add(uid)
         email = au_data.get("email") or ""
 
         # Provider (email, google, etc.)
@@ -202,7 +226,9 @@ def get_auth_users(
 
         meta_role = (meta.get("role") or app_meta.get("role") or "").lower()
 
-        if email.lower() in [e.lower() for e in ADMIN_EMAILS]:
+        if is_superadmin(local or email):
+            user_role = "admin"
+        elif email.lower() in [e.lower() for e in ADMIN_EMAILS]:
             user_role = "admin"
         elif (local and (local.subscription_plan or "").lower() == "admin"):
             user_role = "admin"
@@ -223,6 +249,12 @@ def get_auth_users(
         # Ban status
         banned_until = au_data.get("banned_until")
 
+        # Determine last_sign_in_at
+        last_sign_in = au_data.get("last_sign_in_at", "")
+        if not last_sign_in and uid in otp_login_map:
+            dt = otp_login_map[uid]
+            last_sign_in = dt.isoformat() if hasattr(dt, "isoformat") else str(dt)
+
         result.append({
             "id": uid,
             "email": email,
@@ -235,15 +267,57 @@ def get_auth_users(
             "is_active": is_active,
             "banned_until": banned_until.isoformat() if banned_until and hasattr(banned_until, "isoformat") else banned_until,
             "created_at": au_data.get("created_at", ""),
-            "last_sign_in_at": au_data.get("last_sign_in_at", ""),
+            "last_sign_in_at": last_sign_in,
             "email_confirmed_at": au_data.get("email_confirmed_at"),
             "in_local_db": local is not None,
             "total_generations": gen_map.get(uid, 0),
             "generations_today": today_gen_map.get(uid, 0),
         })
 
-    # Sort by created_at descending
-    result.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    # 5. Merge all local DB users not in Supabase Auth (e.g. Mobile OTP users)
+    for uid, u in local_users.items():
+        if uid not in seen_ids:
+            seen_ids.add(uid)
+            email = (u.email or "").lower()
+            clean_digits = re.sub(r"\D", "", u.phone_number or "")
+            is_super = is_superadmin(u)
+            user_role = "admin" if is_super or email in [e.lower() for e in ADMIN_EMAILS] or (u.subscription_plan or "").lower() == "admin" else "user"
+            plan = u.subscription_plan or ("admin" if user_role == "admin" else "free")
+
+            full_name = u.full_name or ""
+            if not full_name or full_name.startswith("User "):
+                if is_super:
+                    full_name = "Super Admin"
+                elif u.phone_number:
+                    full_name = f"User ({u.phone_number})"
+                else:
+                    full_name = "Mobile User"
+
+            last_login_dt = otp_login_map.get(uid) or u.updated_at or u.created_at
+            last_sign_in = last_login_dt.isoformat() if (last_login_dt and hasattr(last_login_dt, "isoformat")) else (str(last_login_dt) if last_login_dt else "")
+            created_str = u.created_at.isoformat() if (u.created_at and hasattr(u.created_at, "isoformat")) else (str(u.created_at) if u.created_at else last_sign_in)
+
+            result.append({
+                "id": uid,
+                "email": u.email or (f"{clean_digits}@phone.user" if clean_digits else ""),
+                "phone_number": u.phone_number or "",
+                "full_name": full_name,
+                "role": user_role,
+                "plan": plan,
+                "provider": "phone",
+                "avatar_url": getattr(u, "avatar_url", "") or "",
+                "is_active": u.is_active if (hasattr(u, "is_active") and u.is_active is not None) else True,
+                "banned_until": None if (hasattr(u, "is_active") and u.is_active) else "permanent",
+                "created_at": created_str,
+                "last_sign_in_at": last_sign_in,
+                "email_confirmed_at": created_str if u.phone_number else None,
+                "in_local_db": True,
+                "total_generations": gen_map.get(uid, 0),
+                "generations_today": today_gen_map.get(uid, 0),
+            })
+
+    # Sort by created_at or last_sign_in_at descending
+    result.sort(key=lambda x: x.get("created_at") or x.get("last_sign_in_at") or "", reverse=True)
     return result
 
 
@@ -276,15 +350,14 @@ def ban_user(
         pass
 
     is_unban = req.duration.lower() == "none"
+    action = "unbanned" if is_unban else f"banned for {req.duration}"
     try:
         if is_unban:
             admin_sb.auth.admin.update_user_by_id(user_id, {"ban_duration": "none"})
-            action = "unbanned"
         else:
             admin_sb.auth.admin.update_user_by_id(user_id, {"ban_duration": req.duration})
-            action = f"banned for {req.duration}"
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update ban status in Auth: {e}")
+        print(f"[ADMIN] Ban status update in Supabase Auth skipped/warning: {e}")
 
     # Also sync is_banned to profiles table
     try:
@@ -302,8 +375,8 @@ def ban_user(
         if loc:
             loc.is_active = is_unban
             db.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[ADMIN] Local DB ban update error: {e}")
 
     return {"success": True, "detail": f"User {user_id} {action}"}
 
@@ -357,7 +430,7 @@ def delete_user(
     try:
         admin_sb.auth.admin.delete_user(user_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete user from Supabase Auth: {e}")
+        print(f"[ADMIN] Delete user from Supabase Auth skipped/warning: {e}")
 
     return {"success": True, "detail": f"User {user_id} deleted permanently"}
 
@@ -409,28 +482,29 @@ def get_admin_stats(
 ) -> Any:
     verify_admin_access(current_user)
 
-    # 1. Total users — read from Supabase Auth (Layer 1) for accurate count.
+    # 1. Total users — union of Supabase Auth users and local DB users
     try:
         admin_sb = get_supabase_admin_client()
-        auth_users_page = admin_sb.auth.admin.list_users(page=1, per_page=1)
-        total_users = None
-        if hasattr(auth_users_page, "total"):
-            total_users = auth_users_page.total
-        if total_users is None:
-            all_users = []
-            page = 1
-            per_page = 1000
-            while True:
-                batch = admin_sb.auth.admin.list_users(page=page, per_page=per_page)
-                batch_list = batch if isinstance(batch, list) else list(batch)
-                if not batch_list:
-                    break
-                all_users.extend(batch_list)
-                if len(batch_list) < per_page:
-                    break
-                page += 1
-            total_users = len(all_users)
-    except Exception:
+        all_auth_users = []
+        page = 1
+        per_page = 1000
+        while True:
+            batch = admin_sb.auth.admin.list_users(page=page, per_page=per_page)
+            batch_list = batch if isinstance(batch, list) else list(batch)
+            if not batch_list:
+                break
+            all_auth_users.extend(batch_list)
+            if len(batch_list) < per_page:
+                break
+            page += 1
+        auth_user_ids = {
+            str(getattr(u, "id", "") if hasattr(u, "id") else (u.get("id", "") if isinstance(u, dict) else ""))
+            for u in all_auth_users
+        }
+        local_user_ids = {str(u.id) for u in db.query(User.id).all()}
+        total_users = len(auth_user_ids.union(local_user_ids))
+    except Exception as e:
+        print(f"[ADMIN] Warning calculating total users: {e}")
         total_users = db.query(User).count()
 
     # 2. Start of today (UTC)
@@ -445,10 +519,24 @@ def get_admin_stats(
     # 4. Total generations all time
     gen_all_count = db.query(Clipping).count()
 
-    # 5. Active users today (distinct users who created clippings today)
-    active_today_count = db.query(func.count(func.distinct(Clipping.user_id))).filter(
-        Clipping.created_at >= start_of_today
-    ).scalar() or 0
+    # 5. Active users today (distinct users who created clippings today OR verified OTP today)
+    clipping_active_users = {
+        str(r[0]) for r in db.query(Clipping.user_id).filter(
+            Clipping.created_at >= start_of_today
+        ).distinct().all() if r[0]
+    }
+    otp_active_users = set()
+    try:
+        otp_active_users = {
+            str(r[0]) for r in db.query(OTPVerification.user_id).filter(
+                OTPVerification.consumed == True,
+                OTPVerification.verified_at >= start_of_today
+            ).distinct().all() if r[0]
+        }
+    except Exception as e:
+        print(f"[ADMIN] Warning querying OTP active users: {e}")
+
+    active_today_count = len(clipping_active_users.union(otp_active_users))
 
     # 6. Optional range calculations
     range_gen_count = None
@@ -508,14 +596,29 @@ def get_admin_users(
     ).filter(Clipping.created_at >= today_start).group_by(Clipping.user_id).all()
     today_gen_map = {str(r[0]): r[1] for r in today_counts if r[0]}
 
+    otp_login_map = {}
+    try:
+        otp_latest = db.query(
+            OTPVerification.user_id,
+            func.max(OTPVerification.verified_at).label("last_otp_at")
+        ).filter(
+            OTPVerification.consumed == True,
+            OTPVerification.verified_at.isnot(None)
+        ).group_by(OTPVerification.user_id).all()
+        otp_login_map = {str(r[0]): r[1] for r in otp_latest if r[0]}
+    except Exception as e:
+        print(f"[ADMIN] Warning querying OTP verifications: {e}")
+
     result = []
     for u in users:
         email = (u.email or "").lower()
-        user_role = "admin" if email in [e.lower() for e in ADMIN_EMAILS] else "user"
-        if (u.subscription_plan or "").lower() == "admin":
-            user_role = "admin"
+        is_super = is_superadmin(u)
+        user_role = "admin" if is_super or email in [e.lower() for e in ADMIN_EMAILS] or (u.subscription_plan or "").lower() == "admin" else "user"
 
         user_id_str = str(u.id)
+        last_login_dt = otp_login_map.get(user_id_str) or u.updated_at
+        last_sign_in = last_login_dt.isoformat() if (last_login_dt and hasattr(last_login_dt, "isoformat")) else (str(last_login_dt) if last_login_dt else None)
+
         result.append({
             "id": user_id_str,
             "email": u.email or "",
@@ -524,7 +627,7 @@ def get_admin_users(
             "role": user_role,
             "plan": u.subscription_plan or "free",
             "created_at": u.created_at.isoformat() if u.created_at else "",
-            "last_sign_in_at": None,
+            "last_sign_in_at": last_sign_in,
             "total_generations": gen_map.get(user_id_str, 0),
             "generations_today": today_gen_map.get(user_id_str, 0),
             "avatar_url": getattr(u, "avatar_url", "") or "",
