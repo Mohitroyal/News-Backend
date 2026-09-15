@@ -58,6 +58,16 @@ def is_superadmin(user_or_email_or_phone: Any) -> bool:
         return True
     if email and any(p in email for p in SUPER_ADMIN_PHONES):
         return True
+
+    # Check if user object has superadmin role or plan
+    if not isinstance(user_or_email_or_phone, str):
+        role = (getattr(user_or_email_or_phone, "role", "") or "").strip().lower()
+        if role in ("superadmin", "super_admin"):
+            return True
+        plan = (getattr(user_or_email_or_phone, "subscription_plan", "") or "").strip().lower()
+        if plan in ("superadmin", "super_admin"):
+            return True
+
     return False
 
 
@@ -74,16 +84,18 @@ def verify_admin_access(current_user: User):
         return
     email = (current_user.email or "").lower().strip()
     is_admin_email = email in [e.lower() for e in ADMIN_EMAILS]
-    is_admin_plan = (current_user.subscription_plan or "").lower() == "admin"
+    is_admin_plan = (current_user.subscription_plan or "").lower() in ("admin", "superadmin", "super_admin")
     if is_admin_email or is_admin_plan:
         return
     # Fallback check: Supabase profiles table
     try:
         admin_sb = get_supabase_admin_client()
         prof = admin_sb.from_("profiles").select("role").eq("id", str(current_user.id)).execute()
-        if prof and prof.data and len(prof.data) > 0 and prof.data[0].get("role") == "admin":
-            current_user.subscription_plan = "admin"
-            return
+        if prof and prof.data and len(prof.data) > 0:
+            role_val = (prof.data[0].get("role") or "").lower()
+            if role_val in ("admin", "superadmin", "super_admin"):
+                current_user.subscription_plan = role_val
+                return
     except Exception:
         pass
     raise HTTPException(
@@ -688,6 +700,11 @@ def update_user_role(
     Also synchronizes and updates the phone number if present in DB, request, or Auth metadata.
     """
     verify_admin_access(current_user)
+    if req.role in ("superadmin", "super_admin") and not is_superadmin(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superadmins can grant the superadmin role"
+        )
     admin_sb = get_supabase_admin_client()
 
     # Look up local DB user first (by UUID or fallback by email / phone)
@@ -759,7 +776,7 @@ def update_user_role(
         merged_app_metadata = {
             **existing_app_metadata,
             "role": req.role,
-            "plan": req.role if req.role == "admin" else existing_app_metadata.get("plan", "free"),
+            "plan": req.role if req.role in ("admin", "superadmin", "super_admin") else existing_app_metadata.get("plan", "free"),
         }
         merged_user_metadata = {
             **existing_user_metadata,
@@ -827,11 +844,11 @@ def update_user_role(
                 print(f"[ADMIN] Error syncing user to local DB: {e}")
 
         if local_user:
-            if req.role == "admin":
-                local_user.subscription_plan = "admin"
+            if req.role in ("admin", "superadmin", "super_admin"):
+                local_user.subscription_plan = req.role
             elif req.role in ("reporter", "user"):
-                # Demote: clear the admin plan back to free if it was admin
-                if (local_user.subscription_plan or "").lower() == "admin":
+                # Demote: clear the admin/superadmin plan back to free if it was admin
+                if (local_user.subscription_plan or "").lower() in ("admin", "superadmin", "super_admin"):
                     local_user.subscription_plan = "free"
 
             # Update phone_number if it exists in DB or was provided/detected
