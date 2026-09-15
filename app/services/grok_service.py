@@ -40,7 +40,7 @@ class GrokService:
         
         prompt = f"""
         Analyze the following raw news article and reformat it into a structured newspaper layout object.
-        Language required for output: {full_lang}.
+        CRITICAL: The output language MUST be {full_lang.upper()}. Every single text value in the JSON object must be written in {full_lang.upper()}. Do NOT translate {full_lang} to English.
         
         CRITICAL CONTENT PRESERVATION & FULL KEY TAKEAWAYS RULES:
         1. "sections": Array of body text paragraphs (in {full_lang}). You MUST preserve 100% of the raw article text! Do NOT summarize, shorten, condense, or omit any sentences, names, figures (e.g. 8000 కోట్లు), or facts. Split the COMPLETE raw text into 3 to 5 logical paragraphs without deleting any original words or content.
@@ -60,7 +60,7 @@ class GrokService:
         
         payload = {
             "messages": [
-                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST preserve 100% of the user's raw article text inside 'sections' without summarizing, omitting, or deleting any text, AND generate 4 to 5 complete key takeaways inside 'bullet_points'. Translate and write EVERYTHING strictly in {full_lang}. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
+                {"role": "system", "content": f"You are a professional newspaper layout editor. You MUST preserve 100% of the user's raw article text inside 'sections' without summarizing, omitting, or deleting any text, AND generate 4 to 5 complete key takeaways inside 'bullet_points'. IMPORTANT: ALL GENERATED TEXT VALUES MUST BE STRICTLY IN {full_lang.upper()}. Do NOT output English. You must respond with a JSON object containing keys: headline, subheadline, sections, dateline, byline, image_captions, summary, bullet_points."},
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},
@@ -71,11 +71,10 @@ class GrokService:
         is_groq = bool(self.api_key and self.api_key.startswith("gsk_"))
         if is_groq:
             models_to_try = [
-                "openai/gpt-oss-120b",
-                "openai/gpt-oss-20b",
-                "qwen/qwen3.8-27b",
                 "llama-3.3-70b-versatile",
                 "llama-3.1-8b-instant",
+                "mixtral-8x7b-32768",
+                "gemma2-9b-it"
             ]
         else:
             models_to_try = ["grok-2-latest", "grok-2", "grok-beta"]
