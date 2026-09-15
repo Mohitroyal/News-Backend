@@ -1997,6 +1997,24 @@ class RenderService:
                             await asyncio.sleep(0.5)
 
                         try:
+                            await page.evaluate("""() => {
+                                const imgs = Array.from(document.querySelectorAll('img'));
+                                return Promise.all(imgs.map(img => {
+                                    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                                    return new Promise(resolve => {
+                                        img.addEventListener('load', () => resolve(), { once: true });
+                                        img.addEventListener('error', () => {
+                                            console.warn('[IMG FAILED TO LOAD]', img.src);
+                                            resolve();
+                                        }, { once: true });
+                                        setTimeout(resolve, 8000);
+                                    });
+                                }));
+                            }""")
+                        except Exception as img_eval_err:
+                            print(f"[IMAGE WAIT WARN] {img_eval_err}")
+
+                        try:
                             await page.evaluate("document.fonts ? document.fonts.ready : Promise.resolve()")
                         except Exception:
                             pass

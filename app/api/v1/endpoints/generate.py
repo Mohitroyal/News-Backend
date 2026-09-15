@@ -346,7 +346,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 print(f"TEMP FILES CREATED: {temp_png}, {temp_pdf}"); sys.stdout.flush()
                 try:
                     print("START asset generation"); sys.stdout.flush()
-                    await asyncio.wait_for(render_service.generate_clipping_assets(html, temp_png, temp_pdf), timeout=90.0)
+                    await asyncio.wait_for(render_service.generate_clipping_assets(html, temp_png, temp_pdf), timeout=180.0)
                     print("END asset generation"); sys.stdout.flush()
                     print(f"[COMPLETED] {stage}"); sys.stdout.flush()
                 except Exception as asset_err:

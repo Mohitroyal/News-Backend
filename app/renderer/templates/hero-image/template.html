@@ -293,13 +293,41 @@
     </div>
 
     <script>
-        // Signal layout readiness immediately when DOM and images are ready
-        window.addEventListener('load', () => {
-            window.__LAYOUT_DONE__ = true;
-        });
-        setTimeout(() => {
-            window.__LAYOUT_DONE__ = true;
-        }, 300);
+        // Signal layout readiness ONLY when DOM and all images are fully loaded & decoded
+        function signalWhenReady() {
+            const images = Array.from(document.querySelectorAll('img'));
+            if (images.length === 0) {
+                window.__LAYOUT_DONE__ = true;
+                return;
+            }
+            let loadedCount = 0;
+            const total = images.length;
+            const markReady = () => {
+                window.__LAYOUT_DONE__ = true;
+            };
+            const onImgFinish = () => {
+                loadedCount++;
+                if (loadedCount >= total) {
+                    markReady();
+                }
+            };
+            images.forEach(img => {
+                if (img.complete && img.naturalWidth > 0) {
+                    onImgFinish();
+                } else {
+                    img.addEventListener('load', onImgFinish, { once: true });
+                    img.addEventListener('error', onImgFinish, { once: true });
+                }
+            });
+            // 7s fallback in case an external image times out
+            setTimeout(markReady, 7000);
+        }
+
+        if (document.readyState === 'complete') {
+            signalWhenReady();
+        } else {
+            window.addEventListener('load', signalWhenReady);
+        }
     </script>
 </body>
 </html>

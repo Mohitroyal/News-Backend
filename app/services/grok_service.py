@@ -67,8 +67,16 @@ class GrokService:
             "max_tokens": 2500
         }
 
-        if self.api_key and self.api_key.startswith("gsk_"):
-            models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+        self.api_key = (os.getenv("GROK_API_KEY") or os.getenv("GROQ_API_KEY") or "").strip()
+        is_groq = bool(self.api_key and self.api_key.startswith("gsk_"))
+        if is_groq:
+            models_to_try = [
+                "openai/gpt-oss-120b",
+                "openai/gpt-oss-20b",
+                "qwen/qwen3.8-27b",
+                "llama-3.3-70b-versatile",
+                "llama-3.1-8b-instant",
+            ]
         else:
             models_to_try = ["grok-2-latest", "grok-2", "grok-beta"]
 
@@ -76,10 +84,14 @@ class GrokService:
         import asyncio
         for model in models_to_try:
             payload["model"] = model
-            url = "https://api.groq.com/openai/v1/chat/completions" if "llama" in model else self.base_url
+            url = "https://api.groq.com/openai/v1/chat/completions" if is_groq else self.base_url
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.post(url, headers=self.headers, json=payload)
+                    response = await client.post(url, headers=headers, json=payload)
                     response.raise_for_status()
                     result = response.json()
                     
@@ -92,7 +104,10 @@ class GrokService:
                     normalized = {k.lower().replace(" ", "_"): v for k, v in ai_content.items()}
                     break # Success!
             except Exception as e:
-                print(f"[WARNING] Model {model} failed: {e}")
+                err_msg = str(e)
+                if hasattr(e, 'response') and e.response is not None:
+                    err_msg += f" | {e.response.text[:200]}"
+                print(f"[WARNING] Model {model} failed: {err_msg}")
                 await asyncio.sleep(0.3)
 
         if not normalized:
