@@ -107,6 +107,7 @@ def verify_admin_access(current_user: User):
 class UpdateRoleRequest(BaseModel):
     role: str
     phone_number: Optional[str] = None
+    plan: Optional[str] = None
 
 
 class UpdatePlanRequest(BaseModel):
@@ -272,9 +273,10 @@ def get_auth_users(
             app_meta = {}
 
         meta_role = (meta.get("role") or app_meta.get("role") or "").lower()
+        meta_plan = (meta.get("plan") or app_meta.get("plan") or "").lower()
 
-        if is_superadmin(local or email):
-            user_role = "admin"
+        if is_superadmin(local or email) or meta_role in ("superadmin", "super_admin") or meta_plan in ("superadmin", "super_admin") or (local and (local.subscription_plan or "").lower() in ("superadmin", "super_admin")):
+            user_role = "superadmin"
         elif email.lower() in [e.lower() for e in ADMIN_EMAILS]:
             user_role = "admin"
         elif (local and (local.subscription_plan or "").lower() == "admin"):
@@ -327,9 +329,16 @@ def get_auth_users(
             seen_ids.add(uid)
             email = (u.email or "").lower()
             clean_digits = re.sub(r"\D", "", u.phone_number or "")
-            is_super = is_superadmin(u)
-            user_role = "admin" if is_super or email in [e.lower() for e in ADMIN_EMAILS] or (u.subscription_plan or "").lower() == "admin" else "user"
-            plan = u.subscription_plan or ("admin" if user_role == "admin" else "free")
+            is_super = is_superadmin(u) or (u.subscription_plan or "").lower() in ("superadmin", "super_admin")
+            if is_super:
+                user_role = "superadmin"
+                plan = "superadmin"
+            elif email in [e.lower() for e in ADMIN_EMAILS] or (u.subscription_plan or "").lower() == "admin":
+                user_role = "admin"
+                plan = "admin"
+            else:
+                user_role = "user"
+                plan = u.subscription_plan or "free"
 
             full_name = u.full_name or ""
             if not full_name or full_name.startswith("User "):
@@ -659,8 +668,13 @@ def get_admin_users(
     result = []
     for u in users:
         email = (u.email or "").lower()
-        is_super = is_superadmin(u)
-        user_role = "admin" if is_super or email in [e.lower() for e in ADMIN_EMAILS] or (u.subscription_plan or "").lower() == "admin" else "user"
+        is_super = is_superadmin(u) or (u.subscription_plan or "").lower() in ("superadmin", "super_admin")
+        if is_super:
+            user_role = "superadmin"
+        elif email in [e.lower() for e in ADMIN_EMAILS] or (u.subscription_plan or "").lower() == "admin":
+            user_role = "admin"
+        else:
+            user_role = "user"
 
         user_id_str = str(u.id)
         last_login_dt = otp_login_map.get(user_id_str) or u.updated_at
@@ -771,16 +785,22 @@ def update_user_role(
         or ""
     )
 
+    target_role = req.role.strip().lower()
+    target_plan = (req.plan or ("superadmin" if target_role in ("superadmin", "super_admin") else ("admin" if target_role == "admin" else "free"))).strip().lower()
+    if target_plan in ("superadmin", "super_admin"):
+        target_role = "superadmin"
+
     # 2. Update Supabase Auth user metadata — merge role and phone_number into existing metadata
     try:
         merged_app_metadata = {
             **existing_app_metadata,
-            "role": req.role,
-            "plan": req.role if req.role in ("admin", "superadmin", "super_admin") else existing_app_metadata.get("plan", "free"),
+            "role": target_role,
+            "plan": target_plan,
         }
         merged_user_metadata = {
             **existing_user_metadata,
-            "role": req.role,
+            "role": target_role,
+            "plan": target_plan,
         }
         if target_phone:
             merged_app_metadata["phone_number"] = target_phone
@@ -801,7 +821,7 @@ def update_user_role(
 
     # 3. Update Supabase public.profiles table using service role (bypasses RLS)
     try:
-        profile_data = {"id": user_id, "role": req.role}
+        profile_data = {"id": user_id, "role": target_role, "plan": target_plan}
         if user_email:
             profile_data["email"] = user_email
         if target_phone:
@@ -844,12 +864,9 @@ def update_user_role(
                 print(f"[ADMIN] Error syncing user to local DB: {e}")
 
         if local_user:
-            if req.role in ("admin", "superadmin", "super_admin"):
-                local_user.subscription_plan = req.role
-            elif req.role in ("reporter", "user"):
-                # Demote: clear the admin/superadmin plan back to free if it was admin
-                if (local_user.subscription_plan or "").lower() in ("admin", "superadmin", "super_admin"):
-                    local_user.subscription_plan = "free"
+            local_user.subscription_plan = target_plan
+            if hasattr(local_user, "role"):
+                setattr(local_user, "role", target_role)
 
             # Update phone_number if it exists in DB or was provided/detected
             if target_phone:
