@@ -177,10 +177,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-@app.options("/{full_path:path}")
-async def preflight_handler(full_path: str):
-    return {"ok": True}
-
 
 @app.get("/")
 @app.head("/", include_in_schema=False)
