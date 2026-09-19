@@ -888,7 +888,7 @@ class RenderService:
                             objectFit: 'contain',
                             objectPosition: 'center center'
                         });
-                    } else if (rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
+                    } else if (urls.length === 1 || rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
                         let dynamicH = Math.round(W_canvas / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.60);
                         let h0 = Math.min(dynamicH, maxAllowedH);
