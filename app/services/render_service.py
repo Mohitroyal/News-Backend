@@ -158,11 +158,10 @@ class RenderService:
         if data.get("summary") and len(str(data["summary"])) > 380:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
-        # 3. Image safety fallback
+        # 3. Image safety fallback (Removed to allow no-image layouts)
         if not data.get("image_url") and not data.get("image_urls"):
-            fallback_img = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80"
-            data["image_url"] = fallback_img
-            data["image_urls"] = [fallback_img]
+            data["image_url"] = ""
+            data["image_urls"] = []
         elif data.get("image_urls") and not data.get("image_url"):
             data["image_url"] = data["image_urls"][0]
         elif data.get("image_url") and not data.get("image_urls"):
