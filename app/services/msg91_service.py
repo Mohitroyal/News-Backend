@@ -69,21 +69,12 @@ class MSG91Service:
             "accept": "application/json",
         }
 
-        # Payload formatted for MSG91 Flow API.
-        # We pass multiple common variable names (otp, var1, var2, code) 
-        # in case the MSG91 dashboard template uses a different variable name.
+        # We use the dedicated MSG91 OTP API instead of Flow API.
+        # This prevents issues with mismatched template variable names.
+        otp_url = f"https://control.msg91.com/api/v5/otp?template_id={self.template_id}&mobile={mobile_msg91}&authkey={authkey}"
+        
         payload: Dict[str, Any] = {
-            "template_id": self.template_id,
-            "short_url": "0",
-            "recipients": [
-                {
-                    "mobiles": mobile_msg91,
-                    "otp": str(otp),
-                    "var1": str(otp),
-                    "var2": str(otp),
-                    "code": str(otp)
-                }
-            ]
+            "otp": str(otp)
         }
 
         # Mask mobile for logging (e.g. 9198****3210)
@@ -91,27 +82,24 @@ class MSG91Service:
 
         try:
             async with httpx.AsyncClient(timeout=12.0) as client:
-                response = await client.post(MSG91_FLOW_URL, headers=headers, json=payload)
+                response = await client.post(otp_url, headers={"Content-Type": "application/json"}, json=payload)
 
             response_status = response.status_code
-            logger.info(f"[MSG91] Flow request to {masked_mobile} returned HTTP {response_status}")
+            logger.info(f"[MSG91] OTP request to {masked_mobile} returned HTTP {response_status}")
 
             try:
                 response_data = response.json()
             except Exception:
                 response_data = {"text": response.text[:200] if response.text else ""}
 
-            # MSG91 success is typically HTTP 200 with type 'success' or message containing request_id
             request_id = None
             if isinstance(response_data, dict):
                 request_id = response_data.get("request_id") or response_data.get("message")
                 res_type = str(response_data.get("type", "")).lower()
 
-                # If status is 200 and type is not error
                 if response_status == 200 and res_type != "error":
                     return True, None, str(request_id) if request_id else None
 
-                # Handle specific error message from MSG91 without leaking authkey
                 error_msg = response_data.get("message") or response_data.get("msg") or "Failed to send SMS via provider"
                 logger.warning(f"[MSG91] Provider returned error: {error_msg}")
                 return False, str(error_msg), str(request_id) if request_id else None
