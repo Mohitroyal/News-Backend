@@ -43,11 +43,12 @@ if db_url.startswith("sqlite"):
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
 else:
     # Strict connection pool configuration for Supabase / PostgreSQL:
-    # pool_size=3, max_overflow=3 keeps max connections per worker <= 6 to avoid EMAXCONNSESSION errors.
+    # Increased pool size to accommodate long-running endpoints (like image uploads).
+    # Supabase Transaction pooler (port 6543) can handle higher concurrent connections.
     engine = create_engine(
         db_url,
-        pool_size=3,
-        max_overflow=3,
+        pool_size=15,
+        max_overflow=25,
         pool_recycle=300,
         pool_pre_ping=True
     )

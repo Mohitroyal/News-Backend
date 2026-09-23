@@ -69,19 +69,21 @@ class MSG91Service:
             "accept": "application/json",
         }
 
-        # Payload formatted for MSG91 Flow API with approved template variable 'otp'
+        # Payload formatted for MSG91 Flow API.
+        # We pass multiple common variable names (otp, var1, var2, code) 
+        # in case the MSG91 dashboard template uses a different variable name.
         payload: Dict[str, Any] = {
             "template_id": self.template_id,
-            "sender": self.sender_id,
             "short_url": "0",
-            "mobiles": mobile_msg91,
-            "otp": str(otp),
             "recipients": [
                 {
                     "mobiles": mobile_msg91,
                     "otp": str(otp),
+                    "var1": str(otp),
+                    "var2": str(otp),
+                    "code": str(otp)
                 }
-            ],
+            ]
         }
 
         # Mask mobile for logging (e.g. 9198****3210)

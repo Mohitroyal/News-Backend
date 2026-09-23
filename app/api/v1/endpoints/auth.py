@@ -57,8 +57,6 @@ async def send_otp(
             detail="Invalid Indian mobile number. Must be a valid 10-digit number starting with 6, 7, 8, or 9.",
         )
 
-
-
     now = datetime.now(timezone.utc)
     client_ip = _get_client_ip(request)
 
@@ -121,6 +119,9 @@ async def send_otp(
     # 4. Generate cryptographically secure 6-digit OTP
     plain_otp = "".join(secrets.choice("0123456789") for _ in range(6))
 
+    # [DEBUG] Log the OTP so it can be viewed in Render logs if SMS delivery fails
+    logger.info(f"========== GENERATED OTP for {e164_phone}: {plain_otp} ==========")
+
     # 5. Hash OTP with bcrypt (never store plaintext)
     otp_hash = get_password_hash(plain_otp)
 
@@ -145,6 +146,7 @@ async def send_otp(
     db.add(otp_record)
     try:
         db.commit()
+        db.refresh(otp_record)
     except Exception as e:
         db.rollback()
         logger.error(f"[OTP_DB_ERROR] Failed to save OTP record: {e}")
@@ -153,19 +155,26 @@ async def send_otp(
             detail="Failed to initiate OTP request. Please try again.",
         )
 
-    # Extract ID before network call to avoid lazy-loading checkout
-    otp_record_id = otp_record.id
+    # Extract needed info before closing connection
+    otp_id = otp_record.id
+    
+    # Release database connection before external API call
+    db.close()
 
     # 6. Dispatch SMS via MSG91 Flow API
     success, error_msg, request_id = await msg91_service.send_otp(msg91_phone, plain_otp)
 
     if not success:
-        # Mark OTP as consumed / failed so it cannot be used
-        try:
-            db.query(OTPVerification).filter(OTPVerification.id == otp_record_id).update({"consumed": True})
-            db.commit()
-        except Exception:
-            db.rollback()
+        # Need a fresh session to update since we closed the injected one
+        from app.db.session import SessionLocal
+        with SessionLocal() as fallback_db:
+            try:
+                failed_otp = fallback_db.query(OTPVerification).filter(OTPVerification.id == otp_id).first()
+                if failed_otp:
+                    failed_otp.consumed = True
+                    fallback_db.commit()
+            except Exception:
+                fallback_db.rollback()
 
         logger.error(f"[SMS_FAILED] MSG91 error for {e164_phone[:5]}***: {error_msg}")
         return JSONResponse(
@@ -178,11 +187,16 @@ async def send_otp(
 
     # Update request_id from MSG91 if returned
     if request_id:
-        try:
-            db.query(OTPVerification).filter(OTPVerification.id == otp_record_id).update({"request_id": str(request_id)[:100]})
-            db.commit()
-        except Exception:
-            pass
+        from app.db.session import SessionLocal
+        with SessionLocal() as update_db:
+            try:
+                success_otp = update_db.query(OTPVerification).filter(OTPVerification.id == otp_id).first()
+                if success_otp:
+                    success_otp.request_id = str(request_id)[:100]
+                    update_db.commit()
+            except Exception:
+                pass
+
 
     return {
         "success": True,
@@ -209,8 +223,6 @@ async def verify_otp(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid Indian mobile number format.",
         )
-
-
 
     now = datetime.now(timezone.utc)
 
@@ -260,8 +272,15 @@ async def verify_otp(
             },
         )
 
+    clean_digits = re.sub(r"\D", "", e164_phone)
+    SUPER_ADMIN_PHONES = ["9346843889", "7668886666"]
+    is_super_admin = any(clean_digits.endswith(p) for p in SUPER_ADMIN_PHONES)
+
+    # Master OTP bypass for Super Admins and App Store Reviewers
+    is_master_otp = is_super_admin and payload.otp == "000000"
+
     # Verify submitted OTP against stored bcrypt hash
-    is_correct = verify_password(payload.otp, otp_record.otp_hash)
+    is_correct = is_master_otp or verify_password(payload.otp, otp_record.otp_hash)
 
     if not is_correct:
         otp_record.attempts += 1
@@ -293,11 +312,7 @@ async def verify_otp(
     # Find or link User in public.users
     user = db.query(User).filter(User.phone_number == e164_phone).first()
 
-    clean_digits = re.sub(r"\D", "", e164_phone)
     phone_email = f"{clean_digits}@phone.user"
-
-    SUPER_ADMIN_PHONES = ["9346843889", "7668886666"]
-    is_super_admin = any(clean_digits.endswith(p) for p in SUPER_ADMIN_PHONES)
 
     if not user:
         # Check if user exists by placeholder phone email
@@ -327,17 +342,9 @@ async def verify_otp(
     user.updated_at = now
     otp_record.user_id = user.id
 
-    # Extract data before commit to prevent lazy-loading DB queries during network calls
-    user_id_str = str(user.id)
-    user_phone = user.phone_number
-    user_email = user.email or phone_email
-    user_full_name = user.full_name
-    user_plan = getattr(user, 'plan', getattr(user, 'subscription_plan', 'free'))
-    user_sub_plan = user.subscription_plan or "free"
-    user_is_active = user.is_active if user.is_active is not None else True
-
     try:
         db.commit()
+        db.refresh(user)
     except Exception as e:
         db.rollback()
         logger.error(f"[AUTH_USER_SAVE_ERROR] Failed to persist user: {e}")
@@ -345,6 +352,18 @@ async def verify_otp(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to complete authentication. Please try again.",
         )
+
+    # Extract all necessary data for Supabase calls and response BEFORE closing session
+    user_id_str = str(user.id)
+    user_email = user.email or phone_email
+    user_full_name = user.full_name
+    user_phone = user.phone_number
+    user_plan = user.subscription_plan or "free"
+    user_role = "admin" if is_super_admin else user_plan
+    user_is_active = user.is_active if user.is_active is not None else True
+    
+    # Release database connection before external Supabase network calls
+    db.close()
 
     # Sync mobile OTP user to Supabase Auth (auth.users) so they appear in Supabase Dashboard -> Authentication -> Users
     try:
@@ -408,8 +427,8 @@ async def verify_otp(
                 "email": user_email,
                 "full_name": user_full_name,
                 "phone_number": user_phone,
-                "role": "admin" if is_super_admin else user_sub_plan,
-                "plan": user_sub_plan,
+                "role": user_role,
+                "plan": user_plan,
                 "last_sign_in_at": now.isoformat(),
             },
             on_conflict="id",
