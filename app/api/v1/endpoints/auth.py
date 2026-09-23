@@ -57,12 +57,7 @@ async def send_otp(
             detail="Invalid Indian mobile number. Must be a valid 10-digit number starting with 6, 7, 8, or 9.",
         )
 
-    # Ensure table exists (auto-migration failsafe)
-    try:
-        from app.db.session import engine
-        OTPVerification.__table__.create(bind=engine, checkfirst=True)
-    except Exception as dbe:
-        logger.warning(f"[DB_ENSURE_TABLE] {dbe}")
+
 
     now = datetime.now(timezone.utc)
     client_ip = _get_client_ip(request)
@@ -150,7 +145,6 @@ async def send_otp(
     db.add(otp_record)
     try:
         db.commit()
-        db.refresh(otp_record)
     except Exception as e:
         db.rollback()
         logger.error(f"[OTP_DB_ERROR] Failed to save OTP record: {e}")
@@ -159,13 +153,16 @@ async def send_otp(
             detail="Failed to initiate OTP request. Please try again.",
         )
 
+    # Extract ID before network call to avoid lazy-loading checkout
+    otp_record_id = otp_record.id
+
     # 6. Dispatch SMS via MSG91 Flow API
     success, error_msg, request_id = await msg91_service.send_otp(msg91_phone, plain_otp)
 
     if not success:
         # Mark OTP as consumed / failed so it cannot be used
         try:
-            otp_record.consumed = True
+            db.query(OTPVerification).filter(OTPVerification.id == otp_record_id).update({"consumed": True})
             db.commit()
         except Exception:
             db.rollback()
@@ -182,7 +179,7 @@ async def send_otp(
     # Update request_id from MSG91 if returned
     if request_id:
         try:
-            otp_record.request_id = str(request_id)[:100]
+            db.query(OTPVerification).filter(OTPVerification.id == otp_record_id).update({"request_id": str(request_id)[:100]})
             db.commit()
         except Exception:
             pass
@@ -213,12 +210,7 @@ async def verify_otp(
             detail="Invalid Indian mobile number format.",
         )
 
-    # Ensure table exists (auto-migration failsafe)
-    try:
-        from app.db.session import engine
-        OTPVerification.__table__.create(bind=engine, checkfirst=True)
-    except Exception as dbe:
-        logger.warning(f"[DB_ENSURE_TABLE] {dbe}")
+
 
     now = datetime.now(timezone.utc)
 
@@ -335,9 +327,17 @@ async def verify_otp(
     user.updated_at = now
     otp_record.user_id = user.id
 
+    # Extract data before commit to prevent lazy-loading DB queries during network calls
+    user_id_str = str(user.id)
+    user_phone = user.phone_number
+    user_email = user.email or phone_email
+    user_full_name = user.full_name
+    user_plan = getattr(user, 'plan', getattr(user, 'subscription_plan', 'free'))
+    user_sub_plan = user.subscription_plan or "free"
+    user_is_active = user.is_active if user.is_active is not None else True
+
     try:
         db.commit()
-        db.refresh(user)
     except Exception as e:
         db.rollback()
         logger.error(f"[AUTH_USER_SAVE_ERROR] Failed to persist user: {e}")
@@ -353,7 +353,7 @@ async def verify_otp(
         # 1. Check if user already exists in Supabase Auth by ID
         existing_auth_user = None
         try:
-            get_res = admin_sb.auth.admin.get_user_by_id(str(user.id))
+            get_res = admin_sb.auth.admin.get_user_by_id(user_id_str)
             existing_auth_user = get_res.user if hasattr(get_res, "user") else get_res
         except Exception:
             existing_auth_user = None
@@ -361,14 +361,14 @@ async def verify_otp(
         if not existing_auth_user:
             # Register user directly in Supabase auth.users
             user_attrs = {
-                "id": str(user.id),
+                "id": user_id_str,
                 "phone": e164_phone,
                 "phone_confirm": True,
-                "email": user.email or phone_email,
+                "email": user_email,
                 "email_confirm": True,
                 "user_metadata": {
-                    "full_name": user.full_name,
-                    "name": user.full_name,
+                    "full_name": user_full_name,
+                    "name": user_full_name,
                     "phone_number": e164_phone,
                     "phone": e164_phone,
                 },
@@ -386,13 +386,13 @@ async def verify_otp(
             # Update user in Supabase auth.users
             try:
                 admin_sb.auth.admin.update_user_by_id(
-                    str(user.id),
+                    user_id_str,
                     {
                         "phone": e164_phone,
                         "phone_confirm": True,
                         "user_metadata": {
-                            "full_name": user.full_name,
-                            "name": user.full_name,
+                            "full_name": user_full_name,
+                            "name": user_full_name,
                             "phone_number": e164_phone,
                             "phone": e164_phone,
                         },
@@ -404,12 +404,12 @@ async def verify_otp(
         # 2. Upsert into public.profiles table
         admin_sb.from_("profiles").upsert(
             {
-                "id": str(user.id),
-                "email": user.email,
-                "full_name": user.full_name,
-                "phone_number": user.phone_number,
-                "role": "admin" if is_super_admin else (user.subscription_plan or "user"),
-                "plan": user.subscription_plan or "free",
+                "id": user_id_str,
+                "email": user_email,
+                "full_name": user_full_name,
+                "phone_number": user_phone,
+                "role": "admin" if is_super_admin else user_sub_plan,
+                "plan": user_sub_plan,
                 "last_sign_in_at": now.isoformat(),
             },
             on_conflict="id",
@@ -418,15 +418,15 @@ async def verify_otp(
         logger.warning(f"[SUPABASE_PROFILE_SYNC_WARNING] {ep}")
 
     # Generate JWT authentication token
-    token = create_access_token(subject=str(user.id))
+    token = create_access_token(subject=user_id_str)
 
     user_data = UserResponseData(
-        id=str(user.id),
-        phone_number=user.phone_number,
-        email=user.email,
-        full_name=user.full_name,
-        plan=user.plan,
-        is_active=user.is_active if user.is_active is not None else True,
+        id=user_id_str,
+        phone_number=user_phone,
+        email=user_email,
+        full_name=user_full_name,
+        plan=user_plan,
+        is_active=user_is_active,
     )
 
     return {

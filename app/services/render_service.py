@@ -8,7 +8,7 @@ import psutil
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ def _log_memory(stage: str):
         sys.stdout.flush()
 
 
-def _get_chromium_executable() -> str | None:
+def _get_chromium_executable() -> Optional[str]:
     """
     Locate the Chromium executable installed by Playwright.
 
@@ -1894,7 +1894,7 @@ class RenderService:
             print(f"[CROP ERROR] {e}")
             return 0
 
-    async def generate_clipping_assets(self, html_content: str, png_path: str | None = None, pdf_path: str | None = None):
+    async def generate_clipping_assets(self, html_content: str, png_path: Optional[str] = None, pdf_path: Optional[str] = None):
         """Uses Playwright to render HTML and take both a PNG screenshot and/or a PDF print."""
         async with self.semaphore:
             _log_memory("generate_clipping_assets: Enter")
