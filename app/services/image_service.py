@@ -27,7 +27,7 @@ class ImageService:
         try:
             logger.info(f"[ImageService] Downloading image safely: {image_url}")
             from app.core.ssrf import safe_fetch_image_bytes
-            img_data, _ = safe_fetch_image_bytes(image_url, max_bytes=10 * 1024 * 1024, timeout=15)
+            img_data, _ = safe_fetch_image_bytes(image_url, max_bytes=int(os.getenv("MAX_FILE_SIZE_MB", 50)) * 1024 * 1024, timeout=15)
 
             img = Image.open(io.BytesIO(img_data))
             del img_data

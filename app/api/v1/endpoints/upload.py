@@ -14,9 +14,9 @@ from app.auth.dependencies import get_current_active_user
 router = APIRouter()
 
 # ── Safe Upload Constraints (SEC-011, SEC-012) ──────────────────────────────
-MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB limit
-MAX_DIMENSION = 4096                # Max width/height in pixels
-MAX_PIXELS = 16_000_000             # Max total pixels to prevent decompression bombs
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", 50)) * 1024 * 1024  # 50 MB limit
+MAX_DIMENSION = int(os.getenv("MAX_IMAGE_WIDTH", 8192))                # Max width/height in pixels
+MAX_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", 50_000_000))            # Max total pixels to prevent decompression bombs
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 

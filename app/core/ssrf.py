@@ -3,6 +3,7 @@ import socket
 import urllib.parse
 import urllib.request
 import io
+import os
 from typing import Tuple, Optional
 
 # Known cloud metadata hostnames
@@ -116,7 +117,7 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 def safe_fetch_image_bytes(
     url: str,
-    max_bytes: int = 10 * 1024 * 1024,
+    max_bytes: int = int(os.getenv("MAX_FILE_SIZE_MB", 50)) * 1024 * 1024,
     timeout: int = 10
 ) -> Tuple[bytes, str]:
     """
