@@ -83,7 +83,6 @@ class MSG91Service:
             print(f"flow_id: {template_id}", flush=True)
             print(f"sender: {self.sender_id}", flush=True)
             print(f"mobile number: {masked_mobile}", flush=True)
-            print(f"recipient variable names: {list(payload['recipients'][0].keys())}", flush=True)
             print(f"short_url: {payload.get('short_url')}", flush=True)
 
             async with httpx.AsyncClient(timeout=12.0) as client:
