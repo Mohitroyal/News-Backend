@@ -65,7 +65,7 @@ class MSG91Service:
             "Content-Type": "application/json",
             "accept": "application/json",
         }
-        flow_url = "https://api.msg91.com/api/v5/flow/"
+        flow_url = "https://control.msg91.com/api/v5/flow/"
         
         payload: Dict[str, Any] = {
             "template_id": template_id,
