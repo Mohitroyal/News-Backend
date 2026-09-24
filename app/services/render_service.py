@@ -8,7 +8,7 @@ import psutil
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ def _log_memory(stage: str):
         sys.stdout.flush()
 
 
-def _get_chromium_executable() -> str | None:
+def _get_chromium_executable() -> Optional[str]:
     """
     Locate the Chromium executable installed by Playwright.
 
