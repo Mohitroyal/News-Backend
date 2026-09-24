@@ -57,9 +57,8 @@ class MSG91Service:
             return False, "SMS service authentication is not configured.", None
 
         template_id = self._get_template_id()
-        if not template_id or template_id == "6aa6743fd25ea4d3f50e4a63":
-            # The user explicitly indicated to use FOUZIA_OTP in the documentation
-            template_id = "FOUZIA_OTP"
+        if not template_id:
+            return False, "SMS template is not configured.", None
 
         headers = {
             "authkey": authkey,
@@ -70,8 +69,7 @@ class MSG91Service:
         
         payload: Dict[str, Any] = {
             "template_id": template_id,
-            "sender": self.sender_id,
-            "short_url": "0",
+            "short_url": 0,
             "recipients": [
                 {
                     "mobiles": mobile_msg91,
