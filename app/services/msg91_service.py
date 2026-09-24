@@ -39,12 +39,15 @@ def validate_and_normalize_indian_phone(phone: str) -> Tuple[bool, Optional[str]
 class MSG91Service:
     def __init__(self):
         self.authkey = settings.MSG91_AUTHKEY
-        self.template_id = settings.MSG91_TEMPLATE_ID or "6aa6743fd25ea4d3f50e4a63"
+        self.template_id = settings.MSG91_TEMPLATE_ID
         self.sender_id = settings.MSG91_SENDER_ID or "FOUZIA"
 
     def _get_authkey(self) -> Optional[str]:
         # Always fetch latest from settings or environment
         return settings.MSG91_AUTHKEY or getattr(self, "authkey", None)
+
+    def _get_template_id(self) -> Optional[str]:
+        return settings.MSG91_TEMPLATE_ID or getattr(self, "template_id", None)
 
     async def send_otp(self, mobile_msg91: str, otp: str) -> Tuple[bool, Optional[str], Optional[str]]:
         """
@@ -62,6 +65,11 @@ class MSG91Service:
             logger.error("[MSG91] MSG91_AUTHKEY is not configured in environment variables.")
             return False, "SMS service authentication is not configured. Please contact support.", None
 
+        template_id = self._get_template_id()
+        if not template_id:
+            logger.error("[MSG91] MSG91_TEMPLATE_ID is not configured in environment variables.")
+            return False, "SMS template is not configured. Please contact support.", None
+
         # Headers required by MSG91 Flow API
         headers = {
             "authkey": authkey,
@@ -69,12 +77,18 @@ class MSG91Service:
             "accept": "application/json",
         }
 
-        # We use the dedicated MSG91 OTP API instead of Flow API.
-        # This prevents issues with mismatched template variable names.
-        otp_url = f"https://control.msg91.com/api/v5/otp?template_id={self.template_id}&mobile={mobile_msg91}&authkey={authkey}"
+        # The template exists in MSG91 -> SMS -> Templates, so we MUST use the Flow API.
+        flow_url = "https://control.msg91.com/api/v5/flow/"
         
         payload: Dict[str, Any] = {
-            "otp": str(otp)
+            "template_id": template_id,
+            "short_url": "0",
+            "recipients": [
+                {
+                    "mobiles": mobile_msg91,
+                    "otp": str(otp)
+                }
+            ]
         }
 
         # Mask mobile for logging (e.g. 9198****3210)
@@ -82,7 +96,7 @@ class MSG91Service:
 
         try:
             async with httpx.AsyncClient(timeout=12.0) as client:
-                response = await client.post(otp_url, headers={"Content-Type": "application/json"}, json=payload)
+                response = await client.post(flow_url, headers=headers, json=payload)
 
             response_status = response.status_code
             logger.info(f"[MSG91] OTP request to {masked_mobile} returned HTTP {response_status}")

@@ -78,7 +78,7 @@ class Settings(BaseSettings):
 
     # MSG91 OTP Authentication (SMS Flow in India)
     MSG91_AUTHKEY: Optional[str] = None
-    MSG91_TEMPLATE_ID: str = "6aa6743fd25ea4d3f50e4a63"
+    MSG91_TEMPLATE_ID: Optional[str] = None
     MSG91_SENDER_ID: str = "FOUZIA"
 
     # OTP Security & Rate Limiting Policies
@@ -109,7 +109,8 @@ except Exception as e:
     print("\nChecking environment variables status:", file=sys.stderr)
     required_vars = [
         "SECRET_KEY", "DATABASE_URL", "SUPABASE_URL", 
-        "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "GROK_API_KEY"
+        "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "GROK_API_KEY",
+        "MSG91_TEMPLATE_ID", "MSG91_AUTHKEY"
     ]
     for var in required_vars:
         val = os.environ.get(var)
