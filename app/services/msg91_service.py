@@ -82,6 +82,7 @@ class MSG91Service:
         
         payload: Dict[str, Any] = {
             "flow_id": template_id,
+            "sender": self.sender_id,
             "short_url": "0",
             "recipients": [
                 {
@@ -95,17 +96,24 @@ class MSG91Service:
         # Mask mobile for logging (e.g. 9198****3210)
         masked_mobile = f"{mobile_msg91[:4]}****{mobile_msg91[-4:]}" if len(mobile_msg91) >= 8 else "***"
 
+        logger.info(f"[MSG91_DIAGNOSTIC] Endpoint: {flow_url}")
+        logger.info(f"[MSG91_DIAGNOSTIC] flow_id: {template_id}")
+        logger.info(f"[MSG91_DIAGNOSTIC] sender: {self.sender_id}")
+        logger.info(f"[MSG91_DIAGNOSTIC] Recipient: {masked_mobile}")
+
         try:
             async with httpx.AsyncClient(timeout=12.0) as client:
                 response = await client.post(flow_url, headers=headers, json=payload)
 
             response_status = response.status_code
-            logger.info(f"[MSG91] OTP request to {masked_mobile} returned HTTP {response_status}")
+            logger.info(f"[MSG91_DIAGNOSTIC] HTTP Status Code: {response_status}")
 
             try:
                 response_data = response.json()
             except Exception:
                 response_data = {"text": response.text[:200] if response.text else ""}
+                
+            logger.info(f"[MSG91_DIAGNOSTIC] Response Body: {json.dumps(response_data)}")
 
             request_id = None
             if isinstance(response_data, dict):
