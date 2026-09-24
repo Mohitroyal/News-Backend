@@ -42,7 +42,7 @@ async def send_otp(
     request: Request,
     db: Session = Depends(get_db),
 ) -> Any:
-    logger.info("[OTP_FLOW] send-otp endpoint entered")
+    print("[OTP_DIAG_1] send_otp endpoint ENTERED", flush=True)
     
     is_valid, e164_phone, msg91_phone = validate_and_normalize_indian_phone(payload.phone)
     if not is_valid or not e164_phone or not msg91_phone:
@@ -98,7 +98,6 @@ async def send_otp(
         db.rollback()
 
     plain_otp = "".join(secrets.choice("0123456789") for _ in range(6))
-    logger.info("[OTP_FLOW] OTP generated")
 
     otp_hash = get_password_hash(plain_otp)
     existing_user = db.query(User).filter(User.phone_number == e164_phone).first()
@@ -129,9 +128,9 @@ async def send_otp(
     otp_id = otp_record.id
     db.close()
 
-    logger.info("[OTP_FLOW] calling MSG91Service")
+    print("[OTP_DIAG_2] CALLING MSG91 SERVICE", flush=True)
     success, error_msg, request_id = await msg91_service.send_otp(msg91_phone, plain_otp)
-    logger.info("[OTP_FLOW] MSG91Service returned")
+    print("[OTP_DIAG_3] MSG91 SERVICE RETURNED", flush=True)
 
     if not success:
         from app.db.session import SessionLocal
@@ -163,7 +162,7 @@ async def send_otp(
             except Exception:
                 pass
 
-    logger.info("[OTP_FLOW] endpoint returning response")
+    print("[OTP_DIAG_4] ENDPOINT RETURNING", flush=True)
     return {
         "success": True,
         "message": "OTP sent successfully",

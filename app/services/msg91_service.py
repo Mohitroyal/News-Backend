@@ -50,7 +50,7 @@ class MSG91Service:
         return settings.MSG91_TEMPLATE_ID or getattr(self, "template_id", None)
 
     async def send_otp(self, mobile_msg91: str, otp: str) -> Tuple[bool, Optional[str], Optional[str]]:
-        logger.info("[MSG91_FLOW] service entered")
+        print("[MSG91_DIAG_1] MSG91 SERVICE ENTERED", flush=True)
         
         authkey = self._get_authkey()
         if not authkey:
@@ -81,10 +81,10 @@ class MSG91Service:
         }
 
         try:
-            logger.info("[MSG91_FLOW] about to call MSG91")
+            print("[MSG91_DIAG_2] ABOUT TO SEND HTTP REQUEST", flush=True)
             async with httpx.AsyncClient(timeout=12.0) as client:
                 response = await client.post(flow_url, headers=headers, json=payload)
-            logger.info("[MSG91_FLOW] MSG91 returned")
+            print("[MSG91_DIAG_3] MSG91 HTTP RESPONSE RECEIVED", flush=True)
 
             response_status = response.status_code
             
@@ -99,18 +99,14 @@ class MSG91Service:
                 res_type = str(response_data.get("type", "")).lower()
 
                 if response_status == 200 and res_type != "error":
-                    logger.info(f"[MSG91_FLOW] Request ID: {request_id}, status: {response_status}, type: {res_type}")
                     return True, None, str(request_id) if request_id else None
 
                 error_msg = response_data.get("message") or response_data.get("msg") or "Failed"
-                logger.info(f"[MSG91_FLOW] Error response: status: {response_status}, body: {json.dumps(response_data)}")
                 return False, str(error_msg), str(request_id) if request_id else None
 
             if response_status == 200:
-                logger.info(f"[MSG91_FLOW] Request ID: {request_id}, status: {response_status}")
                 return True, None, None
 
-            logger.info(f"[MSG91_FLOW] Error response: status: {response_status}, body: {json.dumps(response_data)}")
             return False, f"SMS service returned HTTP {response_status}", None
 
         except httpx.TimeoutException:
