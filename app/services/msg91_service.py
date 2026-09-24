@@ -71,8 +71,12 @@ class MSG91Service:
             "template_id": template_id,
             "sender": self.sender_id,
             "short_url": "0",
-            "mobiles": mobile_msg91,
-            "otp": str(otp)
+            "recipients": [
+                {
+                    "mobiles": mobile_msg91,
+                    "otp": str(otp)
+                }
+            ]
         }
 
         try:
