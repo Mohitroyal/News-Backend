@@ -93,6 +93,16 @@ class MSG91Service:
             except Exception:
                 response_data = {"text": response.text[:200] if response.text else ""}
 
+            if isinstance(response_data, dict):
+                res_type = str(response_data.get("type", ""))
+                res_msg = str(response_data.get("message") or response_data.get("msg") or "")
+                req_id = str(response_data.get("request_id") or response_data.get("message") or "")
+                
+                print(f"[MSG91_RESULT] HTTP_STATUS: {response_status}", flush=True)
+                print(f"[MSG91_RESULT] RESPONSE_TYPE: {res_type}", flush=True)
+                print(f"[MSG91_RESULT] RESPONSE_MESSAGE: {res_msg}", flush=True)
+                print(f"[MSG91_RESULT] REQUEST_ID: {req_id}", flush=True)
+                
             request_id = None
             if isinstance(response_data, dict):
                 request_id = response_data.get("request_id") or response_data.get("message")
