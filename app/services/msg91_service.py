@@ -78,15 +78,16 @@ class MSG91Service:
         }
 
         # The template exists in MSG91 -> SMS -> Templates, so we MUST use the Flow API.
-        flow_url = "https://control.msg91.com/api/v5/flow/"
+        flow_url = "https://api.msg91.com/api/v5/flow/"
         
         payload: Dict[str, Any] = {
-            "template_id": template_id,
+            "flow_id": template_id,
             "short_url": "0",
             "recipients": [
                 {
                     "mobiles": mobile_msg91,
-                    "otp": str(otp)
+                    "otp": str(otp),
+                    "OTP": str(otp)
                 }
             ]
         }
