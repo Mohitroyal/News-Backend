@@ -68,7 +68,7 @@ class MSG91Service:
         flow_url = "https://api.msg91.com/api/v5/flow/"
         
         payload: Dict[str, Any] = {
-            "flow_id": template_id,
+            "template_id": template_id,
             "sender": self.sender_id,
             "short_url": "0",
             "recipients": [
