@@ -74,7 +74,12 @@ class MSG91Service:
             "recipients": [
                 {
                     "mobiles": mobile_msg91,
-                    "otp": str(otp)
+                    "otp": str(otp),
+                    "OTP": str(otp),
+                    "var1": str(otp),
+                    "VAR1": str(otp),
+                    "code": str(otp),
+                    "CODE": str(otp)
                 }
             ]
         }
