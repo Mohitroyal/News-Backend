@@ -153,3 +153,62 @@ async def upload_image(
         "data": {"url": local_url},
         "message": "Image uploaded securely",
     })
+
+@router.post("/uploads/image/direct")
+@router.post("/image/direct")
+async def get_direct_upload_url(
+    filename: str,
+    content_type: str,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Generate a signed URL for direct-to-Supabase uploads.
+    This skips the backend completely, increasing upload speed drastically.
+    """
+    ext = filename.split(".")[-1].lower()
+    if ext not in ["jpg", "jpeg", "png", "webp"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported content type. Allowed: jpeg, png, webp"
+        )
+        
+    safe_filename = f"upload_{uuid.uuid4().hex}.{ext}"
+    user_id_str = str(current_user.id)
+    destination_path = f"uploads/{user_id_str}/{safe_filename}"
+    
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Supabase not configured"
+        )
+        
+    try:
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+        res = supabase.storage.from_(settings.SUPABASE_STORAGE_BUCKET).create_signed_upload_url(destination_path)
+        
+        # Depending on the supabase-py version, res is either a dict or an object
+        if hasattr(res, "get"):
+            token = res.get("token")
+        else:
+            token = getattr(res, "token", None)
+            
+        base_url = settings.SUPABASE_URL.rstrip("/")
+        bucket = settings.SUPABASE_STORAGE_BUCKET
+        upload_url = f"{base_url}/storage/v1/object/upload/sign/{bucket}/{destination_path}?token={token}"
+        public_url = _supabase_public_url(destination_path)
+        
+        return jsonable_encoder({
+            "success": True,
+            "data": {
+                "upload_url": upload_url,
+                "public_url": public_url,
+                "path": destination_path,
+                "token": token
+            },
+            "message": "Signed upload URL generated",
+        })
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate signed URL: {e}"
+        )
