@@ -69,12 +69,10 @@ class MSG91Service:
         
         payload: Dict[str, Any] = {
             "template_id": template_id,
-            "recipients": [
-                {
-                    "mobiles": mobile_msg91,
-                    "otp": str(otp)
-                }
-            ]
+            "sender": self.sender_id,
+            "short_url": "0",
+            "mobiles": mobile_msg91,
+            "otp": str(otp)
         }
 
         try:
