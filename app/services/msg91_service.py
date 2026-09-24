@@ -81,9 +81,20 @@ class MSG91Service:
 
         try:
             print("[MSG91_DIAG_2] ABOUT TO SEND HTTP REQUEST", flush=True)
+            masked_mobile = f"{mobile_msg91[:4]}XXXX{mobile_msg91[-4:]}" if len(mobile_msg91) >= 8 else "****"
+            print("Diagnostics before POST:", flush=True)
+            print(f"flow_url: {flow_url}", flush=True)
+            print(f"flow_id: {template_id}", flush=True)
+            print(f"sender: {self.sender_id}", flush=True)
+            print(f"mobile number: {masked_mobile}", flush=True)
+            print(f"recipient variable names: {list(payload['recipients'][0].keys())}", flush=True)
+            print(f"short_url: {payload.get('short_url')}", flush=True)
+
             async with httpx.AsyncClient(timeout=12.0) as client:
                 response = await client.post(flow_url, headers=headers, json=payload)
             print("[MSG91_DIAG_3] MSG91 HTTP RESPONSE RECEIVED", flush=True)
+            print(f"Response status: {response.status_code}", flush=True)
+            print(f"Response body: {response.text}", flush=True)
 
             response_status = response.status_code
             
