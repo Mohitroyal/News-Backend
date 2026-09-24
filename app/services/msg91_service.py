@@ -50,34 +50,21 @@ class MSG91Service:
         return settings.MSG91_TEMPLATE_ID or getattr(self, "template_id", None)
 
     async def send_otp(self, mobile_msg91: str, otp: str) -> Tuple[bool, Optional[str], Optional[str]]:
-        """
-        Sends OTP via MSG91 Flow API.
+        logger.info("[MSG91_FLOW] service entered")
         
-        Args:
-            mobile_msg91: 91XXXXXXXXXX formatted phone number.
-            otp: 6-digit plain OTP string.
-            
-        Returns:
-            Tuple[success (bool), error_message (Optional[str]), request_id (Optional[str])]
-        """
         authkey = self._get_authkey()
         if not authkey:
-            logger.error("[MSG91] MSG91_AUTHKEY is not configured in environment variables.")
-            return False, "SMS service authentication is not configured. Please contact support.", None
+            return False, "SMS service authentication is not configured.", None
 
         template_id = self._get_template_id()
         if not template_id:
-            logger.error("[MSG91] MSG91_TEMPLATE_ID is not configured in environment variables.")
-            return False, "SMS template is not configured. Please contact support.", None
+            return False, "SMS template is not configured.", None
 
-        # Headers required by MSG91 Flow API
         headers = {
             "authkey": authkey,
             "Content-Type": "application/json",
             "accept": "application/json",
         }
-
-        # The template exists in MSG91 -> SMS -> Templates, so we MUST use the Flow API.
         flow_url = "https://api.msg91.com/api/v5/flow/"
         
         payload: Dict[str, Any] = {
@@ -93,27 +80,18 @@ class MSG91Service:
             ]
         }
 
-        # Mask mobile for logging (e.g. 9198****3210)
-        masked_mobile = f"{mobile_msg91[:4]}****{mobile_msg91[-4:]}" if len(mobile_msg91) >= 8 else "***"
-
-        logger.info(f"[MSG91_DIAGNOSTIC] Endpoint: {flow_url}")
-        logger.info(f"[MSG91_DIAGNOSTIC] flow_id: {template_id}")
-        logger.info(f"[MSG91_DIAGNOSTIC] sender: {self.sender_id}")
-        logger.info(f"[MSG91_DIAGNOSTIC] Recipient: {masked_mobile}")
-
         try:
+            logger.info("[MSG91_FLOW] about to call MSG91")
             async with httpx.AsyncClient(timeout=12.0) as client:
                 response = await client.post(flow_url, headers=headers, json=payload)
+            logger.info("[MSG91_FLOW] MSG91 returned")
 
             response_status = response.status_code
-            logger.info(f"[MSG91_DIAGNOSTIC] HTTP Status Code: {response_status}")
-
+            
             try:
                 response_data = response.json()
             except Exception:
                 response_data = {"text": response.text[:200] if response.text else ""}
-                
-            logger.info(f"[MSG91_DIAGNOSTIC] Response Body: {json.dumps(response_data)}")
 
             request_id = None
             if isinstance(response_data, dict):
@@ -121,25 +99,23 @@ class MSG91Service:
                 res_type = str(response_data.get("type", "")).lower()
 
                 if response_status == 200 and res_type != "error":
+                    logger.info(f"[MSG91_FLOW] Request ID: {request_id}, status: {response_status}, type: {res_type}")
                     return True, None, str(request_id) if request_id else None
 
-                error_msg = response_data.get("message") or response_data.get("msg") or "Failed to send SMS via provider"
-                logger.warning(f"[MSG91] Provider returned error: {error_msg}")
+                error_msg = response_data.get("message") or response_data.get("msg") or "Failed"
+                logger.info(f"[MSG91_FLOW] Error response: status: {response_status}, body: {json.dumps(response_data)}")
                 return False, str(error_msg), str(request_id) if request_id else None
 
             if response_status == 200:
+                logger.info(f"[MSG91_FLOW] Request ID: {request_id}, status: {response_status}")
                 return True, None, None
 
+            logger.info(f"[MSG91_FLOW] Error response: status: {response_status}, body: {json.dumps(response_data)}")
             return False, f"SMS service returned HTTP {response_status}", None
 
         except httpx.TimeoutException:
-            logger.error(f"[MSG91] Request timeout while sending OTP to {masked_mobile}")
             return False, "SMS gateway timed out. Please try again.", None
-        except httpx.RequestError as req_err:
-            logger.error(f"[MSG91] Network error during SMS dispatch: {type(req_err).__name__}")
-            return False, "SMS gateway connection failed. Please try again.", None
         except Exception as e:
-            logger.error(f"[MSG91] Unexpected error during SMS dispatch: {type(e).__name__}")
             return False, "Unable to deliver SMS at this time. Please try again later.", None
 
 

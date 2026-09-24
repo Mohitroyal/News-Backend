@@ -42,14 +42,8 @@ async def send_otp(
     request: Request,
     db: Session = Depends(get_db),
 ) -> Any:
-    """
-    Send a 6-digit OTP to an Indian mobile number via MSG91 Flow API.
-    - Validates Indian phone number format.
-    - Rate limits: Max 3 sends per 15 minutes, 60-second cooldown between requests.
-    - Generates cryptographically secure 6-digit OTP.
-    - Hashes OTP with bcrypt before storing.
-    - Dispatches SMS using approved template FOUZIA_OTP (Sender ID: FOUZIA).
-    """
+    logger.info("[OTP_FLOW] send-otp endpoint entered")
+    
     is_valid, e164_phone, msg91_phone = validate_and_normalize_indian_phone(payload.phone)
     if not is_valid or not e164_phone or not msg91_phone:
         raise HTTPException(
@@ -60,7 +54,7 @@ async def send_otp(
     now = datetime.now(timezone.utc)
     client_ip = _get_client_ip(request)
 
-    # 1. Rate Limiting: Max OTP_SEND_LIMIT requests within OTP_SEND_WINDOW_MINUTES
+    # Rate Limiting
     window_start = now - timedelta(minutes=settings.OTP_SEND_WINDOW_MINUTES)
     recent_count = (
         db.query(func.count(OTPVerification.id))
@@ -73,38 +67,26 @@ async def send_otp(
     )
 
     if recent_count >= settings.OTP_SEND_LIMIT:
-        logger.warning(f"[RATE_LIMIT] Phone {e164_phone[:5]}*** exceeded send limit ({recent_count}/{settings.OTP_SEND_LIMIT})")
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            content={
-                "success": False,
-                "message": f"Too many OTP requests. Maximum {settings.OTP_SEND_LIMIT} requests allowed per {settings.OTP_SEND_WINDOW_MINUTES} minutes. Please try again later.",
-            },
+            content={"success": False, "message": "Too many OTP requests."},
         )
 
-    # 2. Cooldown Enforcement: Wait OTP_COOLDOWN_SECONDS between resends
     latest_otp = (
         db.query(OTPVerification)
         .filter(OTPVerification.phone_number == e164_phone)
         .order_by(OTPVerification.created_at.desc())
         .first()
     )
-
     if latest_otp and latest_otp.created_at:
-        # Normalize latest_otp.created_at to UTC
         created_at_utc = latest_otp.created_at if latest_otp.created_at.tzinfo else latest_otp.created_at.replace(tzinfo=timezone.utc)
         elapsed_seconds = (now - created_at_utc).total_seconds()
         if elapsed_seconds < settings.OTP_COOLDOWN_SECONDS:
-            remaining = int(settings.OTP_COOLDOWN_SECONDS - elapsed_seconds)
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={
-                    "success": False,
-                    "message": f"Please wait {remaining} second(s) before requesting a new OTP.",
-                },
+                content={"success": False, "message": "Cooldown active."},
             )
 
-    # 3. Invalidate previous active unconsumed OTPs for this phone and purpose
     try:
         db.query(OTPVerification).filter(
             OTPVerification.phone_number == e164_phone,
@@ -114,18 +96,11 @@ async def send_otp(
         db.commit()
     except Exception as e:
         db.rollback()
-        logger.error(f"[OTP_DB_ERROR] Failed to invalidate old OTPs: {e}")
 
-    # 4. Generate cryptographically secure 6-digit OTP
     plain_otp = "".join(secrets.choice("0123456789") for _ in range(6))
+    logger.info("[OTP_FLOW] OTP generated")
 
-    # [DEBUG] Log the OTP so it can be viewed in Render logs if SMS delivery fails
-    logger.info(f"========== GENERATED OTP for {e164_phone}: {plain_otp} ==========")
-
-    # 5. Hash OTP with bcrypt (never store plaintext)
     otp_hash = get_password_hash(plain_otp)
-
-    # Check if user already exists
     existing_user = db.query(User).filter(User.phone_number == e164_phone).first()
 
     expires_at = now + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
@@ -149,23 +124,16 @@ async def send_otp(
         db.refresh(otp_record)
     except Exception as e:
         db.rollback()
-        logger.error(f"[OTP_DB_ERROR] Failed to save OTP record: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to initiate OTP request. Please try again.",
-        )
+        raise HTTPException(status_code=500, detail="Failed to initiate OTP request.")
 
-    # Extract needed info before closing connection
     otp_id = otp_record.id
-    
-    # Release database connection before external API call
     db.close()
 
-    # 6. Dispatch SMS via MSG91 Flow API
+    logger.info("[OTP_FLOW] calling MSG91Service")
     success, error_msg, request_id = await msg91_service.send_otp(msg91_phone, plain_otp)
+    logger.info("[OTP_FLOW] MSG91Service returned")
 
     if not success:
-        # Need a fresh session to update since we closed the injected one
         from app.db.session import SessionLocal
         with SessionLocal() as fallback_db:
             try:
@@ -176,16 +144,14 @@ async def send_otp(
             except Exception:
                 fallback_db.rollback()
 
-        logger.error(f"[SMS_FAILED] MSG91 error for {e164_phone[:5]}***: {error_msg}")
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={
                 "success": False,
-                "message": error_msg or "Failed to deliver OTP SMS. Please verify your phone number and try again.",
+                "message": error_msg or "Failed to deliver OTP SMS.",
             },
         )
 
-    # Update request_id from MSG91 if returned
     if request_id:
         from app.db.session import SessionLocal
         with SessionLocal() as update_db:
@@ -197,7 +163,7 @@ async def send_otp(
             except Exception:
                 pass
 
-
+    logger.info("[OTP_FLOW] endpoint returning response")
     return {
         "success": True,
         "message": "OTP sent successfully",
