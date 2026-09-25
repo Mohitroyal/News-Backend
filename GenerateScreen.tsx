@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGenerationStore } from '@/store';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ArrowRight, Globe, Type, Image as ImageIcon, X, Newspaper, CheckCircle2 } from 'lucide-react';
-import { generationService, compressImage } from '@/services/generation.service';
+import { generationService } from '@/services/generation.service';
 import { TEMPLATES_LIST } from '@/lib/constants';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import type { Language } from '@/types';
@@ -14,6 +14,53 @@ const GEN_STAGES = [
   { label: 'Rendering Clipping...',         pct: 75 },
   { label: 'Finalizing...',                 pct: 92 },
 ];
+
+const compressImageLocal = (file: File, maxWidth = 1600, quality = 0.82): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(img.src);
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressedFile);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Failed to load image for compression'));
+    };
+  });
+};
 
 export const GenerateScreen = () => {
   const currentConfig   = useGenerationStore((state) => state.currentConfig);
@@ -62,7 +109,7 @@ export const GenerateScreen = () => {
       const extension = image.format || 'jpeg';
       const rawFile   = new File([new Blob([byteArray], { type: mimeType })], `upload.${extension}`, { type: mimeType });
 
-      const compressedFile = await compressImage(rawFile, 1600, 0.82);
+      const compressedFile = await compressImageLocal(rawFile, 1600, 0.82);
       console.log(`[GEN] Uploading image (${(compressedFile.size / 1024).toFixed(0)} KB)...`);
 
       const uploadRes = await generationService.uploadImage(compressedFile);
