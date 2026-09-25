@@ -13,7 +13,9 @@ if is_testing:
 else:
     # Normalize postgres schema for SQLAlchemy compatibility
     if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+psycopg2://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
     # Supabase Connection Pooler optimization:
     # Auto-switch pooler.supabase.com port 5432 (Session Mode, max 15 clients) to 6543 (Transaction Mode)
