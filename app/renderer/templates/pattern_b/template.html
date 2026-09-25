@@ -34,15 +34,17 @@
         .hero-image-wrapper {
             position: relative;
             width: 100%;
-            height: 480px;
             background: #1A1A1A;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .hero-img {
             width: 100%;
-            height: 100%;
+            height: auto;
+            max-height: 600px;
             object-fit: contain;
-            object-position: top center;
             display: block;
         }
         .image-overlay {
