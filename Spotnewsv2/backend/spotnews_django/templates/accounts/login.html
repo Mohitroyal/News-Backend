@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 style="text-align: center; color: #333; margin-top: 0;">Welcome Back</h2>
+<p style="text-align: center; color: #666; font-size: 14px;">Login securely using OTP</p>
+<div id="error-msg" class="error"></div>
+<div class="form-group">
+    <input type="text" id="mobile" placeholder="Mobile Number (e.g. 9876543210)" maxlength="10">
+</div>
+<button id="send-btn" onclick="sendOTP()">SEND OTP</button>
+
+<script>
+async function sendOTP() {
+    const mobile = document.getElementById('mobile').value;
+    const btn = document.getElementById('send-btn');
+    const err = document.getElementById('error-msg');
+    
+    if(mobile.length !== 10) {
+        err.innerText = "Please enter 10 digit mobile number";
+        err.style.display = 'block';
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerText = "Sending...";
+    err.style.display = 'none';
+    
+    try {
+        const res = await fetch('/api/auth/send-otp', {
+            method: 'POST',
+            body: JSON.stringify({mobile: mobile})
+        });
+        const data = await res.json();
+        
+        if(data.success) {
+            window.location.href = '/auth/verify-otp/?mobile=' + encodeURIComponent(mobile);
+        } else {
+            err.innerText = data.message || "Failed to send OTP";
+            err.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = "SEND OTP";
+        }
+    } catch (e) {
+        err.innerText = "Network error";
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.innerText = "SEND OTP";
+    }
+}
+</script>
+{% endblock %}
