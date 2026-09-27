@@ -40,7 +40,7 @@ def check_jwt(request):
         
         payload_b64 = parts[1]
         payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
-        payload_json = base64.b64decode(payload_b64).decode('utf-8')
+        payload_json = base64.urlsafe_b64decode(payload_b64).decode('utf-8')
         payload = json.loads(payload_json)
         
         if payload.get("exp") and payload["exp"] < time.time():
@@ -48,6 +48,7 @@ def check_jwt(request):
             
         return True, None
     except Exception as e:
+        print(f"JWT Decode Error: {e}")
         return False, JsonResponse({"detail": "Invalid token"}, status=401)
 
 @csrf_exempt
