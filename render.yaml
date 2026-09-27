@@ -5,69 +5,17 @@ services:
     region: singapore        # Change to: oregon, frankfurt, ohio, virginia as needed
     plan: free               # Change to 'starter' ($7/mo) for always-on + more RAM
 
-    buildCommand: |
-      pip install --upgrade pip
-      mkdir -p /opt/render/project/.playwright
-      PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright pip install -r requirements.txt
-      PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright python -m playwright install chromium
-      PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright python -m playwright install-deps chromium
-      python download_fonts.py
+    buildCommand: ./render-build.sh
+    startCommand: cd Spotnewsv2/backend/spotnews_django && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
 
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-
-    healthCheckPath: /health
+    healthCheckPath: /api/v1/admin/auth-users
 
     envVars:
-      # ── Runtime ──────────────────────────────────────────────────────────
       - key: ENVIRONMENT
         value: production
       - key: PYTHON_VERSION
         value: 3.11.9
-      - key: PLAYWRIGHT_BROWSERS_PATH
-        value: /opt/render/project/.playwright
-
-      # ── Security (generate a strong random key before deploying) ─────────
       - key: SECRET_KEY
-        generateValue: true   # Render auto-generates a secret — or set manually
-
-      # ── Database ──────────────────────────────────────────────────────────
-      # Paste your Supabase PostgreSQL connection string (Session mode port 5432)
+        generateValue: true
       - key: DATABASE_URL
-        sync: false           # Mark as secret — set manually in Render dashboard
-
-      # ── Supabase ─────────────────────────────────────────────────────────
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: SUPABASE_STORAGE_BUCKET
-        value: newscraft-clippings
-
-      # ── AI Engine ────────────────────────────────────────────────────────
-      - key: GROK_API_KEY
-        sync: false           # Your Groq (gsk_...) or xAI API key
-
-      # ── CORS / Frontend URL ───────────────────────────────────────────────
-      # Set this to your Vercel/Netlify frontend URL after deploying frontend
-      - key: FRONTEND_URL
-        sync: false           # e.g. https://newsflow.vercel.app
-
-      # ── Stripe (optional) ────────────────────────────────────────────────
-      - key: STRIPE_API_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-
-      # ── Email (optional SMTP) ─────────────────────────────────────────────
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_PORT
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
-      - key: EMAILS_FROM_EMAIL
         sync: false
