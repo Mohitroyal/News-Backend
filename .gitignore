@@ -21,4 +21,9 @@ node_modules
 spot-news-website
 *.apk
 *.aab
-
+backend/*.png
+backend/*.html
+backend/*.txt
+backend/test_*.png
+backend/test_*.html
+backend/debug_*
