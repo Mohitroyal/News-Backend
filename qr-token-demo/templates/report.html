@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% block content %}
+<article class="report">
+<div class="report-heading"><div><p class="eyebrow">CARBONTRACER TOKEN REPORT</p><h1>{{ report.token_number }}</h1><p class="report-project">{{ project }}</p><p class="muted">{{ facility }}</p></div><span class="report-status">{{ verification }}</span></div>
+<div class="report-note">Illustrative sample report. Measurement and evidence values come from the supplied workbook; no carbon credits or real verification are issued.</div>
+<div class="stats report-stats"><div class="card"><span>Biochar output</span><strong>{{ biochar }} kg</strong><small>Sample measurement</small></div><div class="card"><span>Net removal</span><strong>{{ removal|floatformat:2 }} kg CO₂e</strong><small>Illustrative calculation</small></div><div class="card"><span>Report sections</span><strong>{{ report.sheets|length }}</strong><small>Latest saved workbook data</small></div></div>
+<nav class="report-contents" aria-label="Report sections">{% for sheet in report.sheets %}<a href="#section-{{ forloop.counter }}">{{ sheet.name }}</a>{% endfor %}</nav>
+<p class="report-refresh">Showing the latest saved Excel information. <a href="{{ request_path }}">Refresh report</a></p>
+{% for sheet in report.sheets %}
+<section class="card report-section" id="section-{{ forloop.counter }}" aria-labelledby="heading-{{ forloop.counter }}">
+<div class="section-heading"><span class="step">{{ forloop.counter|stringformat:'02d' }}</span><h2 id="heading-{{ forloop.counter }}">{{ sheet.name }}</h2></div>
+<p class="muted">{{ sheet.title }}</p>
+<div class="report-table" tabindex="0" role="region" aria-label="{{ sheet.name }} data"><table><thead><tr>{% for heading in sheet.headers %}<th scope="col">{{ heading|default_if_none:'' }}</th>{% endfor %}</tr></thead><tbody>{% for row in sheet.rows %}<tr>{% for value in row %}{% if forloop.first %}<th scope="row">{{ value|default_if_none:'—' }}</th>{% else %}<td>{{ value|default_if_none:'—' }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>
+</section>
+{% endfor %}
+</article>
+{% endblock %}

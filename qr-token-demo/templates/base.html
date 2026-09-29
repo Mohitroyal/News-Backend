@@ -1,0 +1,6 @@
+{% load static %}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CarbonTracer · Token studio</title><link rel="stylesheet" href="{% static 'app.css' %}"></head>
+<body><header><a class="brand" href="/"><span class="mark">C</span> CarbonTracer <span class="muted">/ Token studio</span></a><span class="pill">LOCAL DEMO</span></header>
+<main>{% block content %}{% endblock %}</main>
+<footer>Sample data from your ten-sheet workbook. No real verification or carbon credits are issued. Local demo has no sign-in.</footer>
+<script src="{% static 'app.js' %}"></script>{% block scripts %}{% endblock %}</body></html>

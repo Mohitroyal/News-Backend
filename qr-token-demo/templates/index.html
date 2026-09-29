@@ -1,0 +1,15 @@
+{% extends 'base.html' %}{% block content %}
+<div class="intro"><p class="eyebrow">FROM RECORD TO QR</p><h1>One token.<br>Every detail connected.</h1><p>Create a token using your CarbonTracer workbook format.<br>Django saves the Excel file and generates its QR automatically.</p></div>
+<div class="columns"><section class="card"><div class="section-heading"><span class="step">01</span><h2>Create a sample token</h2></div>
+<form id="create-form">{% csrf_token %}
+<label for="token_number">Token number</label><input id="token_number" name="token_number" required maxlength="80" pattern="[A-Za-z0-9_-]+">
+<label for="project">Project</label><input id="project" name="project" required maxlength="160" value="Konaseema Distributed Biochar CDR">
+<label for="facility">Facility</label><input id="facility" name="facility" required maxlength="160" value="Kesavadasupalem Biochar Facility (KDP-BF)">
+<div class="note"><strong>Your original format, preserved</strong><p>Each token gets its own copy of all 10 sheets. Measurement, laboratory, emissions and evidence values remain the supplied illustrative sample.</p></div>
+<button id="create-button" class="primary" type="submit">Create token & generate QR <span>→</span></button><p id="create-message" class="message" role="status" aria-live="polite"></p>
+</form></section>
+<section class="card qr-card"><div class="section-heading"><span class="step">02</span><h2>Your generated QR</h2></div><div id="empty-qr" class="empty"><div class="qr-placeholder">▦</div><h3>Ready when you create</h3><p>Your backend-generated QR and Excel<br>download will appear here.</p></div><div id="created" hidden><img id="qr-image" alt="QR code linking to the new token" width="240" height="240"><h3 id="created-number"></h3><p class="muted">Permanent link. Latest workbook data.</p><div class="actions"><a id="open-token" class="primary">View report</a><a id="download-excel" class="secondary">Download Excel</a><a id="download-qr" class="secondary" download>Save QR</a></div><p id="qr-target" class="small break"></p><p class="small">A phone can open the QR only if it can reach this server. See the setup guide for Wi-Fi testing.</p></div></section></div>
+<section class="card recent"><div class="section-heading"><h2>Created tokens</h2><button class="secondary" id="refresh-list">Refresh</button></div><div id="token-list" class="token-list"></div></section>
+<section class="lookup"><label for="lookup">Already have a QR link or token UUID?</label><div class="lookup-row"><input id="lookup" placeholder="Paste a token link or UUID"><button id="lookup-button" class="secondary">Open record →</button></div><p id="lookup-message" role="status"></p></section>
+{% endblock %}{% block scripts %}<script>initHome();</script>{% endblock %}
+
