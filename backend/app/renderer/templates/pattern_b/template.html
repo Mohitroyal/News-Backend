@@ -48,14 +48,16 @@
             display: block;
         }
         .image-overlay {
-            position: relative;
-            width: 100%;
-            min-height: 60px;
-            background: #111111;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            min-height: 70px;
+            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.60) 65%, rgba(0,0,0,0) 100%);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px 16px;
+            padding: 12px 16px;
             box-sizing: border-box;
             z-index: 2;
         }
