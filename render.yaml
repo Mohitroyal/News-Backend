@@ -1,31 +1,21 @@
 services:
   - type: web
-    name: carbontracer-token-demo
+    name: newsflow-backend
     runtime: python
-    plan: starter
-    rootDir: qr-token-demo
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 120
-    healthCheckPath: /
-    autoDeployTrigger: commit
-    disk:
-      name: carbontracer-token-data
-      mountPath: /opt/render/project/src/qr-token-demo/data
-      sizeGB: 1
+    region: singapore        # Change to: oregon, frankfurt, ohio, virginia as needed
+    plan: free               # Change to 'starter' ($7/mo) for always-on + more RAM
+
+    buildCommand: ./render-build.sh
+    startCommand: cd Spotnewsv2/backend/spotnews_django && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+
+    healthCheckPath: /api/v1/admin/auth-users
+
     envVars:
-      - key: DJANGO_SECRET_KEY
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
         generateValue: true
-      - key: DEBUG
-        value: "False"
-      - key: ALLOWED_HOSTS
-        fromService:
-          type: web
-          name: carbontracer-token-demo
-          property: host
-      - key: PUBLIC_BASE_URL
-        fromService:
-          type: web
-          name: carbontracer-token-demo
-          property: url
-      - key: TOKEN_DATA_ROOT
-        value: /opt/render/project/src/qr-token-demo/data
+      - key: DATABASE_URL
+        sync: false
