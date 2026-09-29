@@ -1,0 +1,108 @@
+import io
+import urllib.request
+import os
+import uuid
+import gc
+from PIL import Image, ImageOps
+import logging
+import psutil
+
+logger = logging.getLogger(__name__)
+
+class ImageService:
+    @staticmethod
+    def _log_memory(stage: str):
+        """Log current memory usage for debugging."""
+        process = psutil.Process(os.getpid())
+        mem_mb = process.memory_info().rss / (1024 * 1024)
+        logger.info(f"[MEMORY] {stage}: {mem_mb:.2f} MB")
+
+    @staticmethod
+    def process_and_resize(image_url: str, max_width: int = 3600, max_height: int = 3600) -> str:
+        """Returns the raw image URL provided by the user directly without re-cropping or re-scaling."""
+        if not image_url:
+            return ""
+        return image_url
+
+        try:
+            logger.info(f"[ImageService] Downloading image safely: {image_url}")
+            from app.core.ssrf import safe_fetch_image_bytes
+            img_data, _ = safe_fetch_image_bytes(image_url, max_bytes=int(os.getenv("MAX_FILE_SIZE_MB", 50)) * 1024 * 1024, timeout=15)
+
+            img = Image.open(io.BytesIO(img_data))
+            del img_data
+            orig_format = img.format.upper() if img.format else "JPEG"
+            orig_width, orig_height = img.size
+            logger.info(f"[ImageService] Original size: {orig_width}x{orig_height}, format: {orig_format}")
+
+            # Auto‑orient via EXIF
+            try:
+                oriented_img = ImageOps.exif_transpose(img)
+                if oriented_img is not img:
+                    img.close()
+                    img = oriented_img
+            except Exception as exif_err:
+                logger.warning(f"[ImageService] EXIF transpose failed: {exif_err}")
+
+            # Determine scaling factor
+            scale_factor = min(max_width / img.width, max_height / img.height)
+            if scale_factor > 1.0:
+                scale_factor = 1.0
+            if scale_factor < 1.0:
+                new_w = int(round(img.width * scale_factor))
+                new_h = int(round(img.height * scale_factor))
+                resized_img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                img.close()
+                img = resized_img
+                logger.info(f"[ImageService] Resized to: {new_w}x{new_h}")
+            else:
+                logger.info("[ImageService] Image within size limits, no resize performed")
+
+            # Preserve format
+            final_format = orig_format
+
+            # Ensure RGB mode for JPEG
+            if final_format in ("JPEG", "JPG") and img.mode in ("RGBA", "LA", "P"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode in ("RGBA", "LA"):
+                    background.paste(img, mask=img.split()[-1])
+                else:
+                    rgba_converted = img.convert("RGBA")
+                    background.paste(rgba_converted, mask=rgba_converted.split()[-1])
+                    rgba_converted.close()
+                img.close()
+                img = background
+            elif img.mode not in ("RGB", "RGBA"):
+                converted_img = img.convert("RGB")
+                img.close()
+                img = converted_img
+
+            ext = final_format.lower()
+            if ext == "jpeg":
+                ext = "jpg"
+            temp_filename = f"temp_resized_{uuid.uuid4().hex}.{ext}"
+            img.save(temp_filename, format=final_format, quality=100)
+            img.close()
+            gc.collect()
+            logger.info(f"[ImageService] Saved temporary file: {temp_filename}")
+
+            # Upload to Supabase (or storage service)
+            from app.services.storage_service import storage_service
+            new_url = storage_service.upload_file(temp_filename, f"clippings/resized_{uuid.uuid4().hex}.{ext}")
+
+            # Cleanup
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+                logger.info(f"[ImageService] Deleted temporary file: {temp_filename}")
+
+            # Log memory after processing
+            ImageService._log_memory("Image Processing Completed")
+            return new_url
+
+        except Exception as e:
+            logger.exception(f"[ImageService] Failed to process image: {e}")
+            raise
+
+# Export a singleton instance for import convenience
+image_service = ImageService()
+

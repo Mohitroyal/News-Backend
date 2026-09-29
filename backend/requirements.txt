@@ -1,0 +1,56 @@
+# Production-safe requirements for Render deployment
+# Generated from backend/requirements.txt with dev-only packages removed
+
+# ── Web Framework ─────────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+
+# ── Data Validation ───────────────────────────────────────────────────────────
+pydantic
+pydantic-settings
+
+# ── Database ──────────────────────────────────────────────────────────────────
+sqlalchemy
+psycopg2-binary
+alembic
+
+# ── Authentication ────────────────────────────────────────────────────────────
+python-jose[cryptography]
+passlib[bcrypt]
+
+# ── File Uploads ──────────────────────────────────────────────────────────────
+python-multipart
+
+# ── Payments ──────────────────────────────────────────────────────────────────
+stripe
+
+# ── Supabase ──────────────────────────────────────────────────────────────────
+supabase
+
+# ── HTTP Client ───────────────────────────────────────────────────────────────
+httpx
+
+# ── HTML Rendering & PDF ──────────────────────────────────────────────────────
+jinja2
+playwright              # install-deps + install chromium in build command
+
+# ── Templating Utilities ──────────────────────────────────────────────────────
+pillow                  # Image processing for PNG generation
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv
+structlog               # Structured logging
+langdetect              # Language detection
+
+# ── WSGI / Process manager ───────────────────────────────────────────────────
+gunicorn
+
+# ── REMOVED (dev/local-only) ──────────────────────────────────────────────────
+# celery                        Not needed — using FastAPI BackgroundTasks
+# redis                         Not needed — no Celery on Render free tier
+# weasyprint                    Replaced by Playwright for PDF generation
+# pytest                        Dev only
+# pytest-asyncio                Dev only
+email-validator
+playwright
+psutil
