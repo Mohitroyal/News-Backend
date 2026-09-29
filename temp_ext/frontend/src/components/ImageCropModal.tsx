@@ -13,6 +13,7 @@ interface ImageCropModalProps {
 export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCropComplete, onCancel }) => {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [hasUserDragged, setHasUserDragged] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const [isCropping, setIsCropping] = useState(false);
 
@@ -31,7 +32,12 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
     });
   }
 
-  const handleConfirm = async () => {
+  const handleCropChange = (c: Crop, percentCrop: Crop) => {
+    setCrop(percentCrop);
+    setHasUserDragged(true);
+  };
+
+  const handleConfirm = async (forceFullImage: boolean = false) => {
     if (!imgRef.current) return;
     
     setIsCropping(true);
@@ -44,12 +50,17 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
       let cropWidth = image.naturalWidth;
       let cropHeight = image.naturalHeight;
 
-      if (completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
-        if (completedCrop.unit === '%') {
-          cropX = Math.round((completedCrop.x / 100) * image.naturalWidth);
-          cropY = Math.round((completedCrop.y / 100) * image.naturalHeight);
-          cropWidth = Math.round((completedCrop.width / 100) * image.naturalWidth);
-          cropHeight = Math.round((completedCrop.height / 100) * image.naturalHeight);
+      if (!forceFullImage && hasUserDragged && completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
+        if ((completedCrop as any).unit === '%' || (crop && crop.unit === '%')) {
+          const cX = completedCrop.x ?? crop?.x ?? 0;
+          const cY = completedCrop.y ?? crop?.y ?? 0;
+          const cW = completedCrop.width ?? crop?.width ?? 100;
+          const cH = completedCrop.height ?? crop?.height ?? 100;
+
+          cropX = Math.round((cX / 100) * image.naturalWidth);
+          cropY = Math.round((cY / 100) * image.naturalHeight);
+          cropWidth = Math.round((cW / 100) * image.naturalWidth);
+          cropHeight = Math.round((cH / 100) * image.naturalHeight);
         } else {
           const rect = image.getBoundingClientRect();
           const dispW = rect.width || image.width || image.naturalWidth;
@@ -64,12 +75,16 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
         }
       }
 
-      // Safeguard: If crop covers >= 90% of natural width OR height (or x <= 5% and width >= 90%), 
-      // treat as uncropped full image to prevent accidental side clipping
+      // Safeguard: If user didn't drag or if selection spans near full width/height (or left near 0 & right near 100%),
+      // enforce 100% full uncropped image bounds
+      const rightEdge = cropX + cropWidth;
+      const bottomEdge = cropY + cropHeight;
       if (
-        (cropWidth >= image.naturalWidth * 0.90 && cropHeight >= image.naturalHeight * 0.90) ||
-        (cropX <= image.naturalWidth * 0.05 && cropWidth >= image.naturalWidth * 0.90) ||
-        (!crop || crop.width === 100)
+        forceFullImage ||
+        !hasUserDragged ||
+        (cropWidth >= image.naturalWidth * 0.80 && cropHeight >= image.naturalHeight * 0.80) ||
+        (cropX <= image.naturalWidth * 0.15 && rightEdge >= image.naturalWidth * 0.85) ||
+        (cropY <= image.naturalHeight * 0.15 && bottomEdge >= image.naturalHeight * 0.85)
       ) {
         cropX = 0;
         cropY = 0;
@@ -128,7 +143,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
       <div style={{
         background: '#0D1B2A', 
         width: '100%', 
-        maxWidth: '500px',
+        maxWidth: '520px',
         borderRadius: '16px',
         overflow: 'hidden',
         display: 'flex',
@@ -137,7 +152,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
       }}>
         {/* Header */}
         <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>Crop Image</h2>
+          <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>Crop / Full Image</h2>
           <button onClick={onCancel} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
             <X size={24} />
           </button>
@@ -147,7 +162,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
         <div style={{ padding: '0 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', overflow: 'auto' }}>
           <ReactCrop
             crop={crop}
-            onChange={(_, percentCrop) => setCrop(percentCrop)}
+            onChange={handleCropChange}
             onComplete={(c) => setCompletedCrop(c)}
             style={{ maxWidth: '100%', maxHeight: '60vh' }}
           >
@@ -162,41 +177,43 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '20px', display: 'flex', gap: '12px' }}>
+        <div style={{ padding: '20px', display: 'flex', gap: '10px' }}>
           <button
-            onClick={onCancel}
+            onClick={() => handleConfirm(true)}
             disabled={isCropping}
             style={{ 
               flex: 1, 
-              background: 'transparent', 
-              color: '#94A3B8', 
-              border: '1px solid #334155', 
-              padding: '14px 16px', 
+              background: '#1E293B', 
+              color: '#38BDF8', 
+              border: '1px solid #38BDF8', 
+              padding: '12px 10px', 
               borderRadius: '12px', 
               fontWeight: 'bold',
-              fontSize: '15px',
-              cursor: 'pointer'
+              fontSize: '14px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
-            Cancel
+            Full Image (No Crop)
           </button>
           <button
-            onClick={handleConfirm}
+            onClick={() => handleConfirm(false)}
             disabled={isCropping}
             style={{ 
               flex: 1, 
               background: '#CC1E1E', 
               color: '#fff', 
               border: 'none', 
-              padding: '14px 16px', 
+              padding: '12px 10px', 
               borderRadius: '12px', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               fontWeight: 'bold',
-              fontSize: '15px',
+              fontSize: '14px',
               cursor: 'pointer',
-              opacity: isCropping ? 0.7 : 1
+              opacity: isCropping ? 0.7 : 1,
+              whiteSpace: 'nowrap'
             }}
           >
             {isCropping ? 'Processing...' : 'Confirm Crop'}
