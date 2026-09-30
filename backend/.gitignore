@@ -1,0 +1,56 @@
+# Binary/generated files
+*.png
+*.pdf
+*.pt
+*.db
+*.apk
+*.jpg
+*.jpeg
+
+# HTML - exclude test/debug HTML but not templates
+debug_*.html
+test_*.html
+newspaper_*.html
+temp_*.html
+user_*.html
+final_dom.html
+test_syntax.html
+
+# Large JS files (test/debug)
+debug_script.js
+old.js
+old_script.js
+old_script_fixed.js
+final_test.js
+temp_*.js
+temp_binary.js
+temp_full_script.js
+temp_fresh_script.js
+test*.js
+wrapped.js
+
+# Uploaded user files (runtime data, not source)
+app/static/uploads/
+
+# Node
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Temp/debug/scratch files
+scratch/
+temp_ext/
+automation/
+Model/
+security_documentation/
+
+# Secrets
+.env
+.env.local
