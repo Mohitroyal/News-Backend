@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newspaper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Inter:wght@300;400;700;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Telugu:wght@400;700&family=Noto+Serif+Telugu:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Telugu ────────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Telugu';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansTelugu-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Telugu';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansTelugu-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Telugu';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifTelugu-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Telugu';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifTelugu-Bold.ttf') format('truetype');
+        }
+        /* ── Hindi / Devanagari (covers Marathi too) ───────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansDevanagari-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansDevanagari-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Devanagari';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifDevanagari-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Devanagari';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifDevanagari-Bold.ttf') format('truetype');
+        }
+        /* ── Kannada ───────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Kannada';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansKannada-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Kannada';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansKannada-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Kannada';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifKannada-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Kannada';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifKannada-Bold.ttf') format('truetype');
+        }
+        /* ── Malayalam ─────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Malayalam';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansMalayalam-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Malayalam';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansMalayalam-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Malayalam';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifMalayalam-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Malayalam';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifMalayalam-Bold.ttf') format('truetype');
+        }
+        /* ── Tamil ─────────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Tamil';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansTamil-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Tamil';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansTamil-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Tamil';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifTamil-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Tamil';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifTamil-Bold.ttf') format('truetype');
+        }
+        /* ── Bengali ───────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Bengali';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansBengali-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Bengali';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansBengali-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Bengali';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifBengali-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Bengali';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifBengali-Bold.ttf') format('truetype');
+        }
+        /* ── Gujarati ──────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Gujarati';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansGujarati-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Gujarati';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansGujarati-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gujarati';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGujarati-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gujarati';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGujarati-Bold.ttf') format('truetype');
+        }
+        /* ── Punjabi / Gurmukhi ────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Gurmukhi';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansGurmukhi-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Gurmukhi';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansGurmukhi-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gurmukhi';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGurmukhi-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Gurmukhi';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifGurmukhi-Bold.ttf') format('truetype');
+        }
+        /* ── Odia ──────────────────────────────────────────────────────── */
+        @font-face {
+            font-family: 'Noto Sans Oriya';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSansOriya-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Oriya';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSansOriya-Bold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Oriya';
+            font-style: normal; font-weight: 400;
+            src: url('{{ service_url }}/static/fonts/NotoSerifOriya-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Serif Oriya';
+            font-style: normal; font-weight: 700;
+            src: url('{{ service_url }}/static/fonts/NotoSerifOriya-Bold.ttf') format('truetype');
+        }
+
+        :root {
+            --primary-color: {{ primary_color | default('#000000') }};
+            --accent-color: {{ accent_color | default('#333333') }};
+            --bg-color: #FFFFFF;
+            --paper-color: #FFFFFF;
+            --text-color: #000000;
+            --border-color: #333333;
+            
+            {% if font_family == 'playfair' %}
+                --font-family-chosen: 'Playfair Display', serif;
+            {% elif font_family == 'merriweather' %}
+                --font-family-chosen: 'Merriweather', serif;
+            {% elif font_family == 'inter' %}
+                --font-family-chosen: 'Inter', sans-serif;
+            {% elif font_family == 'courier' %}
+                --font-family-chosen: 'Courier Prime', monospace;
+            {% else %}
+                --font-family-chosen: 'Merriweather', serif;
+            {% endif %}
+        }
+
+        /* ── Complete Unicode Indic script fallback stack ─────────────────
+           The font-family chosen by the user (Playfair, Merriweather, etc.)
+           is used for Latin characters. For each Indic script the matching
+           Noto font is prepended via a per-language body class below so that
+           Chromium always has the correct glyph table and never shows bars. */
+        --noto-indic-fallbacks:
+            'Noto Serif Telugu',  'Noto Sans Telugu',
+            'Noto Serif Devanagari', 'Noto Sans Devanagari',
+            'Noto Serif Kannada',  'Noto Sans Kannada',
+            'Noto Serif Malayalam','Noto Sans Malayalam',
+            'Noto Serif Tamil',   'Noto Sans Tamil',
+            'Noto Serif Bengali', 'Noto Sans Bengali',
+            'Noto Serif Gujarati','Noto Sans Gujarati',
+            'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+            'Noto Serif Oriya',   'Noto Sans Oriya';
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            /* Latin chosen font + ALL Indic Noto fallbacks so every script renders */
+            font-family: var(--font-family-chosen),
+                         'Noto Serif Telugu',  'Noto Sans Telugu',
+                         'Noto Serif Devanagari', 'Noto Sans Devanagari',
+                         'Noto Serif Kannada',  'Noto Sans Kannada',
+                         'Noto Serif Malayalam','Noto Sans Malayalam',
+                         'Noto Serif Tamil',   'Noto Sans Tamil',
+                         'Noto Serif Bengali', 'Noto Sans Bengali',
+                         'Noto Serif Gujarati','Noto Sans Gujarati',
+                         'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+                         'Noto Serif Oriya',   'Noto Sans Oriya',
+                         serif;
+            margin: 0;
+            padding: 40px;
+            width: 1120px; /* Broadsheet width */
+            box-sizing: border-box;
+        }
+
+        /* ── Per-language body font injection ────────────────────────────
+           Each language class puts the primary script font FIRST in the
+           family list so Chromium uses it for all glyphs in that script
+           instead of falling back to a tofu/bar glyph. */
+        body[lang="te"] { font-family: 'Noto Serif Telugu', 'Noto Sans Telugu', var(--font-family-chosen), serif; }
+        body[lang="hi"] { font-family: 'Noto Serif Devanagari', 'Noto Sans Devanagari', var(--font-family-chosen), serif; }
+        body[lang="mr"] { font-family: 'Noto Serif Devanagari', 'Noto Sans Devanagari', var(--font-family-chosen), serif; }
+        body[lang="kn"] { font-family: 'Noto Serif Kannada',   'Noto Sans Kannada',   var(--font-family-chosen), serif; }
+        body[lang="ml"] { font-family: 'Noto Serif Malayalam', 'Noto Sans Malayalam', var(--font-family-chosen), serif; }
+        body[lang="ta"] { font-family: 'Noto Serif Tamil',     'Noto Sans Tamil',     var(--font-family-chosen), serif; }
+        body[lang="bn"] { font-family: 'Noto Serif Bengali',   'Noto Sans Bengali',   var(--font-family-chosen), serif; }
+        body[lang="gu"] { font-family: 'Noto Serif Gujarati',  'Noto Sans Gujarati',  var(--font-family-chosen), serif; }
+        body[lang="pa"] { font-family: 'Noto Serif Gurmukhi',  'Noto Sans Gurmukhi',  var(--font-family-chosen), serif; }
+        body[lang="or"] { font-family: 'Noto Serif Oriya',     'Noto Sans Oriya',     var(--font-family-chosen), serif; }
+
+        .newspaper-container {
+            border: 1px solid var(--border-color);
+            padding: 2px;
+            background-color: var(--bg-color);
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            height: auto;
+            min-height: 600px;
+        }
+
+        .inner-border {
+            border: 2px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        /* Masthead Section */
+        .masthead {
+            text-align: center;
+            border-bottom: 4px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 5px;
+        }
+
+        .logo-img {
+            max-width: 800px;
+            max-height: 120px;
+            object-fit: contain;
+        }
+
+        .fallback-masthead {
+            font-family: 'Playfair Display', serif;
+            font-size: 80px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+            line-height: 1;
+            color: var(--primary-color);
+        }
+
+        /* Metadata Bar */
+        .metadata-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+            padding: 5px 0;
+            margin-bottom: 30px;
+            font-family: 'Playfair Display', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* Main Content */
+        .headline {
+            /* Headline: Latin display font + every Indic script Noto as fallback */
+            font-family: 'Playfair Display',
+                         'Noto Serif Telugu',  'Noto Sans Telugu',
+                         'Noto Serif Devanagari', 'Noto Sans Devanagari',
+                         'Noto Serif Kannada',  'Noto Sans Kannada',
+                         'Noto Serif Malayalam','Noto Sans Malayalam',
+                         'Noto Serif Tamil',   'Noto Sans Tamil',
+                         'Noto Serif Bengali', 'Noto Sans Bengali',
+                         'Noto Serif Gujarati','Noto Sans Gujarati',
+                         'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+                         'Noto Serif Oriya',   'Noto Sans Oriya',
+                         serif;
+            font-size: 56px;
+            font-weight: 900;
+            line-height: 1.1;
+            text-align: center;
+            margin: 0 0 15px 0;
+            color: var(--primary-color, #111111);
+        }
+
+        .subtitle {
+            /* Subtitle: same complete fallback stack */
+            font-family: 'Merriweather',
+                         'Noto Serif Telugu',  'Noto Sans Telugu',
+                         'Noto Serif Devanagari', 'Noto Sans Devanagari',
+                         'Noto Serif Kannada',  'Noto Sans Kannada',
+                         'Noto Serif Malayalam','Noto Sans Malayalam',
+                         'Noto Serif Tamil',   'Noto Sans Tamil',
+                         'Noto Serif Bengali', 'Noto Sans Bengali',
+                         'Noto Serif Gujarati','Noto Sans Gujarati',
+                         'Noto Serif Gurmukhi','Noto Sans Gurmukhi',
+                         'Noto Serif Oriya',   'Noto Sans Oriya',
+                         serif;
+            font-size: 24px;
+            font-style: italic;
+            text-align: center;
+            margin: 0 0 30px 0;
+            color: #444;
+        }
+
+        .article-meta {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .article-meta span {
+            color: var(--primary-color);
+        }
+
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+
+        .featured-image-container {
+            grid-column: 1 / -1; /* Span all columns */
+            margin-bottom: 12px;
+            display: grid;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .featured-image-container.images-1 {
+            grid-template-columns: 1fr;
+        }
+
+        .featured-image-container.images-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .featured-image-container.images-3 {
+            grid-template-columns: 1.5fr 1fr;
+        }
+
+        .featured-image-container.images-3-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-gap: 15px;
+        }
+        
+        .images-3-side {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .images-3-side .featured-image {
+            width: 100%;
+            height: calc(50% - 7.5px);
+            object-fit: contain;
+            object-position: center top;
+        }
+
+        .featured-image {
+            display: block;
+            max-width: 100%;
+            max-height: none;
+            height: auto;
+            width: 100%;
+            margin: 0 auto;
+            object-fit: contain;
+            object-position: center top;
+            border: 1px solid var(--border-color);
+            filter: none !important;
+            image-rendering: auto !important;
+            image-rendering: smooth !important;
+        }
+
+        .featured-image-container.images-1 .featured-image {
+            max-height: none;
+            height: auto;
+            width: 100%;
+            object-fit: contain;
+        }
+
+        /* Column Content */
+        .article-body {
+            grid-column: 1 / -1;
+            columns: {{ layout_columns | default(3) }};
+            column-gap: 20px;
+            column-rule: 1px solid #ccc;
+        }
+
+        .article-body p {
+            font-size: 16px;
+            line-height: 1.45;
+            margin-top: 0;
+            margin-bottom: 8px;
+            text-align: justify;
+        }
+
+        .article-body p:first-of-type::first-letter {
+            font-family: 'Playfair Display', serif;
+            font-size: 60px;
+            float: left;
+            line-height: 0.8;
+            padding-right: 8px;
+            color: var(--primary-color);
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 2px solid var(--border-color);
+            margin-top: auto;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Playfair Display', sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        /* ─── Extra News Specific Styles ──────────────────────────────── */
+        body.extra_news .masthead {
+            background-color: transparent;
+            border-bottom: none;
+            padding: 0;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        body.extra_news .logo-img {
+            max-width: 100%;
+            max-height: 160px;
+            display: inline-block;
+        }
+
+        body.extra_news .metadata-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-top: none;
+            border-bottom: 1px solid var(--border-color);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: normal;
+            color: #000;
+            padding: 10px 0;
+            margin-bottom: 15px;
+        }
+
+        body.extra_news .headline {
+            background-color: transparent;
+            color: var(--primary-color, #000000);
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            text-align: center;
+            padding: 5px 0;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 38px;
+            line-height: 1.2;
+        }
+
+        body.extra_news .subtitle {
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        /* Extra News Layout */
+        .extra-news-layout {
+            display: block;
+            width: 100%;
+        }
+
+        .extra-image-wrapper {
+            float: left;
+            width: 45%;
+            margin-right: 25px;
+            margin-bottom: 15px;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .extra-img {
+            display: inline-block;
+            max-width: 100%;
+            max-height: 350px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border: 1px solid #ccc;
+            padding: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        .extra-image-wrapper.multi-img {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .extra-image-wrapper.multi-img .extra-img {
+            margin-bottom: 0;
+            max-height: 160px;
+        }
+
+        .extra-image-wrapper.multi-img .extra-img.featured-top {
+            grid-column: span 2;
+            max-height: 200px;
+        }
+
+        .extra-paragraph {
+            text-align: justify;
+            margin-bottom: 8px;
+            line-height: 1.45;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body class="{{ template_id }}">
+    <div class="newspaper-container">
+        <!-- Reporter Info Badge (Top Left Corner) -->
+        {% if reporter_name or reporter_image %}
+        <div class="reporter-badge" style="position: absolute; top: 12px; left: 16px; z-index: 15; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none;">
+            {% if reporter_image %}
+                <img src="{{ reporter_image }}" alt="Reporter" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-color, #111111); display: block; margin: 0 auto 3px auto; box-shadow: 0 2px 6px rgba(0,0,0,0.15);" />
+            {% endif %}
+            {% if reporter_name %}
+                <span class="reporter-name" style="font-size: 11px; font-weight: 700; color: var(--text-color, #111111); font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.15; max-width: 90px; text-align: center; word-break: break-word;">{{ reporter_name }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="inner-border" style="border: 2px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; flex: 1; box-sizing: border-box;">
+            
+            <!-- Fixed Header Section: 140px -->
+            <div class="header-block" style="height: 140px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
+                <div class="masthead" style="margin: 0; padding-bottom: 5px; border-bottom: none; text-align: center;">
+                    {% if logo_url %}
+                        <img src="{{ logo_url }}" class="logo-img" alt="{{ publication_name }}" onerror="this.style.display='none'; document.getElementById('fallback-masthead').style.display='block';" style="max-height: 90px; margin: 0 auto; display: block;">
+                        <h1 id="fallback-masthead" class="fallback-masthead" style="display: none; font-size: 60px; margin: 0;">{{ publication_name }}</h1>
+                    {% else %}
+                        <h1 class="fallback-masthead" style="font-size: 60px; margin: 0;">{{ publication_name }}</h1>
+                    {% endif %}
+                </div>
+                <div class="metadata-bar" style="margin: 0; padding: 3px 0; border-top: 1px solid var(--border-color); border-bottom: 2px solid var(--border-color); height: 35px; box-sizing: border-box; display: flex; justify-content: space-between; font-size: 13px;">
+                    <div>Vol. {{ volume | default("CXIV") }} No. {{ edition | default("27") }}</div>
+                    <div>{{ publication_date }}</div>
+                    <div>{{ location | default("Global Edition") }}</div>
+                    <div>Printed in {{ language_name | default("English") }}</div>
+                </div>
+            </div>
+
+            <!-- Fixed Headline Section: 120px -->
+            <div class="headline-block" style="height: 120px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box; text-align: center;">
+                <h2 class="headline" style="font-size: 40px; margin: 0 0 5px 0; line-height: 1.1;">{{ headline }}</h2>
+                <h3 class="subtitle" style="font-size: 18px; margin: 0 0 5px 0; font-style: italic;">{{ subheadline }}</h3>
+                <div class="article-meta" style="margin: 0; font-size: 13px;">
+                    {% if byline %}By <span>{{ byline }}</span> | {% endif %}{{ dateline }}
+                </div>
+            </div>
+
+            <div id="compositor-canvas"></div>
+
+            <!-- Footer -->
+            <div class="footer" style="white-space: normal; word-wrap: break-word; text-align: center; border-top: 2px solid var(--border-color); margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between; font-family: 'Playfair Display', sans-serif; font-size: 12px; font-weight: bold; color: #666;">
+                <div>Page 1</div>
+                <div>{{ publication_name }}</div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>
