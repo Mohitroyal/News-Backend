@@ -7,3 +7,4 @@ django-cors-headers
 playwright
 dj-database-url
 gunicorn
+whitenoise
