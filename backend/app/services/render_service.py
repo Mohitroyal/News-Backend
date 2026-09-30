@@ -889,15 +889,13 @@ class RenderService:
                             objectPosition: 'center center'
                         });
                     } else if (urls.length === 1 || rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
-                        let dynamicH = Math.round(W_canvas / aspect0);
+                        // Force a premium standard 4:3 box for the main featured image
+                        let w0 = W_canvas;
+                        let h0 = Math.round(W_canvas * 0.70); 
                         let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.60);
-                        let h0 = Math.min(dynamicH, maxAllowedH);
-                        let w0 = Math.round(h0 * aspect0);
-                        if (w0 > W_canvas) {
-                            w0 = W_canvas;
-                            h0 = Math.round(w0 / aspect0);
-                        }
-                        let imgX = Math.round((W_canvas - w0) / 2);
+                        if (h0 > maxAllowedH) h0 = maxAllowedH;
+                        
+                        let imgX = 0;
                         let imgY = 0;
                         let isPatternB_centered = true;
                         
@@ -1111,7 +1109,7 @@ class RenderService:
                         }
                         const imgH = obs.imgH || (obs.h - (captionHeight ? captionHeight + 8 : 0));
                         
-                        let captionHtml = capStr ? `<div class="image-caption nc-image-caption" style="font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${capStr}</div>` : '';
+                        let captionHtml = capStr ? `<div class="image-caption nc-image-caption" style="position: relative; z-index: 2; font-size: 11px; font-style: italic; color: #444; margin-top: 4px; line-height: 1.3; width: 100%; text-align: center; word-wrap: break-word;">${capStr}</div>` : '';
                         if (obs.isCentered) {
                             const isFullBleed = (obs.visW >= obs.w);
                             imgEl.style.display = 'flex';
@@ -1122,12 +1120,15 @@ class RenderService:
                             imgEl.style.padding = '0';
                             
                             const innerStyle = isFullBleed 
-                                ? `width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
-                                : `width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #FFFFFF); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
+                                ? `position: relative; overflow: hidden; width: ${obs.visW}px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`
+                                : `position: relative; overflow: hidden; width: ${obs.visW}px; border: none; padding: 0; background: var(--bg-color, #FFFFFF); display: flex; flex-direction: column; align-items: center; box-sizing: border-box;`;
 
-                            imgEl.innerHTML = '<div style="' + innerStyle + '"><img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
+                            const blurBg = `<div style="position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background-image: url('${obs.url}'); background-size: cover; background-position: center; filter: blur(25px); opacity: 0.6; z-index: 1;"></div>`;
+
+                            imgEl.innerHTML = '<div style="' + innerStyle + '">' + blurBg + '<img src="' + obs.url + '" style="position: relative; z-index: 2; width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
                         } else {
-                            imgEl.innerHTML = '<img src="' + obs.url + '" style="width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml;
+                            const blurBg = `<div style="position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; background-image: url('${obs.url}'); background-size: cover; background-position: center; filter: blur(25px); opacity: 0.6; z-index: 1;"></div>`;
+                            imgEl.innerHTML = '<div style="position: relative; overflow: hidden; width: 100%; height: 100%;">' + blurBg + '<img src="' + obs.url + '" style="position: relative; z-index: 2; width: 100%; height: ' + imgH + 'px; max-height: none !important; object-fit: ' + (obs.objectFit || 'contain') + '; object-position: ' + (obs.objectPosition || 'center center') + '; display: block;" />' + captionHtml + '</div>';
                         }
                         canvas.appendChild(imgEl);
                     });
