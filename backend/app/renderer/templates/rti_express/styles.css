@@ -167,8 +167,7 @@ html[lang="ml"] .headline {
     display: block;
     margin: 0 auto;
     width: 100%;
-    height: auto;
-    max-height: none;
+    max-height: 450px;
     object-fit: contain;
     filter: none !important;
 }

@@ -816,11 +816,11 @@ class RenderService:
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(visW0 / 6.5))) * 15 + 8 : 0;
                         
-                        obstacles.push({ url: urls[0], caption: captions[0] || '', x: x0, y: 0, w: Math.round(visW0), h: Math.round(h0 + capAllowance0), imgH: Math.round(h0), isCentered: true, visW: Math.round(visW0), objectFit: 'contain', objectPosition: 'center center' });
+                        obstacles.push({ url: urls[0], caption: captions[0] || '', x: x0, y: 0, w: Math.round(visW0), h: Math.round(h0 + capAllowance0), imgH: Math.round(h0), isCentered: true, visW: Math.round(visW0), objectFit: 'cover', objectPosition: 'center center' });
                         
                         let yBottom = Math.round(h0 + capAllowance0 + gap);
-                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: yBottom, w: Math.round(w1), h: Math.round(sharedH), imgH: Math.round(sharedH), isCentered: false, visW: Math.round(w1), objectFit: 'contain', objectPosition: 'center center' });
-                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: yBottom, w: Math.round(w2), h: Math.round(sharedH), imgH: Math.round(sharedH), isCentered: false, visW: Math.round(w2), objectFit: 'contain', objectPosition: 'center center' });
+                        obstacles.push({ url: urls[1], caption: captions[1] || '', x: 0, y: yBottom, w: Math.round(w1), h: Math.round(sharedH), imgH: Math.round(sharedH), isCentered: false, visW: Math.round(w1), objectFit: 'cover', objectPosition: 'center center' });
+                        obstacles.push({ url: urls[2], caption: captions[2] || '', x: Math.round(w1 + gap), y: yBottom, w: Math.round(w2), h: Math.round(sharedH), imgH: Math.round(sharedH), isCentered: false, visW: Math.round(w2), objectFit: 'cover', objectPosition: 'center center' });
                     } else if (isDoublePatternB) {
                         let a0 = aspect0 || 1.0;
                         let a1 = (aspectRatios && aspectRatios.length > 1 && aspectRatios[1]) ? aspectRatios[1] : 1.0;

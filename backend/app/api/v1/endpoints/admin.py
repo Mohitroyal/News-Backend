@@ -372,28 +372,8 @@ def get_auth_users(
                 "generations_today": today_gen_map.get(uid, 0),
             })
 
-    # Auth and local records can serialize timestamps differently (datetime,
-    # ISO strings, or null). Normalize before sorting so one malformed/mixed
-    # record cannot turn the whole directory request into HTTP 500.
-    def sort_timestamp(user):
-        value = user.get("created_at") or user.get("last_sign_in_at")
-        if not value:
-            return 0.0
-        if hasattr(value, "timestamp"):
-            try:
-                return value.timestamp()
-            except (TypeError, ValueError, OSError):
-                return 0.0
-        try:
-            from datetime import timezone
-            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-            if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=timezone.utc)
-            return parsed.timestamp()
-        except (TypeError, ValueError, OverflowError, OSError):
-            return 0.0
-
-    result.sort(key=sort_timestamp, reverse=True)
+    # Sort by created_at or last_sign_in_at descending
+    result.sort(key=lambda x: x.get("created_at") or x.get("last_sign_in_at") or "", reverse=True)
     return result
 
 
@@ -1239,3 +1219,4 @@ def delete_logo(
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete publication logo: {e}")
+
