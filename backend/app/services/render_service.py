@@ -159,13 +159,28 @@ class RenderService:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
         # 4. Logo/template safety fallback & brand resolution
-        template_key = template_name.replace(".html", "").lower().strip()
-        if template_key in ["bharath_reporter", "national_news", "extra_news", "rti_express"]:
-            data["logo_id"] = template_key
-        elif not data.get("logo_id"):
-            data["logo_id"] = template_key or "classic"
+        raw_t_name = str(template_name).replace(".html", "").lower().strip()
+        if "/" in raw_t_name:
+            raw_t_name = raw_t_name.split("/")[0]
+        
+        data_tid = str(data.get("template_id") or "").lower().strip()
+        if "/" in data_tid:
+            data_tid = data_tid.split("/")[0]
 
-        brand_key = data.get("logo_id") or template_key
+        pub_template_keys = ["bharath_reporter", "national_news", "extra_news", "rti_express"]
+        if raw_t_name in pub_template_keys:
+            template_key = raw_t_name
+        elif data_tid in pub_template_keys:
+            template_key = data_tid
+        else:
+            template_key = raw_t_name or data_tid or "classic"
+
+        if template_key in pub_template_keys:
+            data["logo_id"] = template_key
+            brand_key = template_key
+        else:
+            brand_key = str(data.get("logo_id") or template_key).lower().strip()
+
         data["template_id"] = template_key
 
         # Inject service_url absolutely for loading local assets (like local fonts via @font-face)
@@ -200,7 +215,7 @@ class RenderService:
             "custom": {
                 "primary_color": "#1d70b8",
                 "accent_color": "#1d70b8",
-                "publication_name": "RTI Express",
+                "publication_name": "News Edition",
                 "logo_url": f"{self._logo_base}/rti_express.svg",
             },
         }
@@ -210,10 +225,10 @@ class RenderService:
                 if k == "publication_name":
                     if not data.get("publication_name") or (brand_key != "rti_express" and data.get("publication_name") == "RTI Express"):
                         data["publication_name"] = v
-                elif not data.get(k):
+                elif not data.get(k) or (k == "logo_url" and brand_key != "rti_express" and "rti_express" in str(data.get("logo_url"))):
                     data[k] = v
 
-        # 3. Default image fallback resolution (brand-specific)
+        # 3. Default image fallback resolution (brand-specific dynamic SVG placeholder)
         image_urls_raw = data.get("image_urls") or []
         image_url_raw = data.get("image_url") or ""
         valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
@@ -222,27 +237,19 @@ class RenderService:
         if not valid_imgs:
             import os
             import base64
-            templates_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "renderer", "templates"))
-            static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "static"))
 
-            brand_logo_svg = os.path.join(templates_dir, brand_key, "logo.svg")
-            brand_logo_static_svg = os.path.join(static_dir, "logos", f"{brand_key}.svg")
-            default_path = os.path.join(static_dir, "default.png")
-
-            if os.path.exists(brand_logo_svg):
-                with open(brand_logo_svg, "rb") as f:
-                    encoded_img = base64.b64encode(f.read()).decode('utf-8')
-                    default_img = f"data:image/svg+xml;base64,{encoded_img}"
-            elif os.path.exists(brand_logo_static_svg):
-                with open(brand_logo_static_svg, "rb") as f:
-                    encoded_img = base64.b64encode(f.read()).decode('utf-8')
-                    default_img = f"data:image/svg+xml;base64,{encoded_img}"
-            elif os.path.exists(default_path):
-                with open(default_path, "rb") as img_file:
-                    encoded_img = base64.b64encode(img_file.read()).decode('utf-8')
-                    default_img = f"data:image/png;base64,{encoded_img}"
-            else:
-                default_img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            pub_title = data.get("publication_name") or brand_key.replace("_", " ").title()
+            p_color = data.get("primary_color") or "#15a850"
+            clean_svg_placeholder = (
+                f'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">'
+                f'<rect width="800" height="400" fill="#f8fafc"/>'
+                f'<rect x="20" y="20" width="760" height="360" fill="none" stroke="{p_color}" stroke-width="4" stroke-dasharray="8,8"/>'
+                f'<text x="400" y="190" font-family="sans-serif" font-size="28" font-weight="bold" fill="{p_color}" text-anchor="middle">{pub_title}</text>'
+                f'<text x="400" y="230" font-family="sans-serif" font-size="18" fill="#64748b" text-anchor="middle">SPECIAL REPORT</text>'
+                f'</svg>'
+            )
+            encoded_placeholder = base64.b64encode(clean_svg_placeholder.encode('utf-8')).decode('utf-8')
+            default_img = f"data:image/svg+xml;base64,{encoded_placeholder}"
 
             data["image_url"] = default_img
             data["image_urls"] = [default_img]
@@ -1790,7 +1797,7 @@ class RenderService:
                         footerEl.style.boxSizing = 'border-box';
                         footerEl.style.zIndex = '100';
                         
-                        const pubNameText = data.publication_name || 'RTI EXPRESS';
+                        const pubNameText = data.publication_name || 'News Edition';
                         let logoHtml = '';
                         if (data.logo_url) {
                             logoHtml = `<img src="${data.logo_url}" style="height: 40px; object-fit: contain;">`;
@@ -1801,7 +1808,7 @@ class RenderService:
                         footerEl.innerHTML = `
                             <div>${logoHtml}</div>
                             <div style="color: #111; font-size: 14px; font-family: sans-serif; text-align: right; font-weight: bold;">
-                                https://www.rtiexpress.com/clip/${data.id || ''}<br>
+                                ${pubNameText}<br>
                                 ${data.location || 'Local Edition'} (${data.publication_date || ''})
                             </div>
                         `;

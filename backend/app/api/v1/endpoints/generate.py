@@ -307,19 +307,22 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
 
                 # Ensure logo_id and publication_name align with template_id when a specific publication template is chosen
                 effective_logo_id = clipping.logo_id
-                if template_id in ["bharath_reporter", "national_news", "extra_news", "rti_express"]:
-                    effective_logo_id = template_id
-
                 effective_pub_name = clipping.publication_name
-                if not effective_pub_name or (template_id != "rti_express" and effective_pub_name == "RTI Express"):
-                    if template_id == "bharath_reporter":
-                        effective_pub_name = "Bharath Reporter"
-                    elif template_id == "national_news":
-                        effective_pub_name = "National News Reporter"
-                    elif template_id == "extra_news":
-                        effective_pub_name = "The Extra News"
-                    elif template_id == "rti_express":
-                        effective_pub_name = "RTI Express"
+
+                if template_id == "bharath_reporter":
+                    effective_logo_id = "bharath_reporter"
+                    effective_pub_name = "Bharath Reporter"
+                elif template_id == "national_news":
+                    effective_logo_id = "national_news"
+                    effective_pub_name = "National News Reporter"
+                elif template_id == "extra_news":
+                    effective_logo_id = "extra_news"
+                    effective_pub_name = "The Extra News"
+                elif template_id == "rti_express":
+                    effective_logo_id = "rti_express"
+                    effective_pub_name = "RTI Express"
+                elif not effective_pub_name:
+                    effective_pub_name = "News Edition"
 
                 render_data = {
                     **formatted,
