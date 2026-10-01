@@ -167,7 +167,7 @@ class RenderService:
         if "/" in data_tid:
             data_tid = data_tid.split("/")[0]
 
-        pub_template_keys = ["bharath_reporter", "national_news", "extra_news", "rti_express"]
+        pub_template_keys = ["bharath_reporter", "national_news", "extra_news", "rti_express", "spot_news_24x7"]
         if raw_t_name in pub_template_keys:
             template_key = raw_t_name
         elif data_tid in pub_template_keys:
@@ -175,12 +175,28 @@ class RenderService:
         else:
             template_key = raw_t_name or data_tid or "classic"
 
-        if template_key in pub_template_keys:
-            data["logo_id"] = template_key
+        # Give explicit logo_id precedence over template_key for branding
+        raw_logo_id = str(data.get("logo_id") or "").lower().strip()
+        if raw_logo_id.startswith("pub_"):
+            raw_logo_id = raw_logo_id[4:]
+
+        if raw_logo_id in pub_template_keys or "rti" in raw_logo_id or "bharath" in raw_logo_id or "national" in raw_logo_id or "extra" in raw_logo_id:
+            if "rti" in raw_logo_id:
+                brand_key = "rti_express"
+            elif "bharath" in raw_logo_id:
+                brand_key = "bharath_reporter"
+            elif "national" in raw_logo_id:
+                brand_key = "national_news"
+            elif "extra" in raw_logo_id:
+                brand_key = "extra_news"
+            else:
+                brand_key = raw_logo_id
+        elif template_key in pub_template_keys:
             brand_key = template_key
         else:
-            brand_key = str(data.get("logo_id") or template_key).lower().strip()
+            brand_key = raw_logo_id or template_key or "rti_express"
 
+        data["logo_id"] = brand_key
         data["template_id"] = template_key
 
         # Inject service_url absolutely for loading local assets (like local fonts via @font-face)
@@ -221,12 +237,14 @@ class RenderService:
         }
 
         if brand_key in branding:
-            for k, v in branding[brand_key].items():
-                if k == "publication_name":
-                    if not data.get("publication_name") or (brand_key != "rti_express" and data.get("publication_name") == "RTI Express"):
-                        data["publication_name"] = v
-                elif not data.get(k) or (k == "logo_url" and brand_key != "rti_express" and "rti_express" in str(data.get("logo_url"))):
-                    data[k] = v
+            b_info = branding[brand_key]
+            data["logo_url"] = b_info["logo_url"]
+            if not data.get("publication_name") or data.get("publication_name") in ["News Edition", "Bharath Reporter", "RTI Express"] or brand_key == "rti_express":
+                data["publication_name"] = b_info["publication_name"]
+            if not data.get("primary_color"):
+                data["primary_color"] = b_info["primary_color"]
+            if not data.get("accent_color"):
+                data["accent_color"] = b_info["accent_color"]
 
         # 3. Default image fallback resolution (brand-specific dynamic SVG placeholder)
         image_urls_raw = data.get("image_urls") or []
@@ -327,7 +345,7 @@ class RenderService:
         
         _img_urls = data.get("image_urls") or ([data.get("image_url")] if data.get("image_url") else [])
         is_single_img = len(_img_urls) <= 1
-        is_explicit_other_template = any(t in template_key or t in data_tid for t in ["bharath_reporter", "national_news", "custom"]) and raw_image_layout not in ["patternb", "heroimage", "singleimagepatternb"]
+        is_explicit_other_template = any(t in template_key or t in data_tid for t in ["bharath_reporter", "national_news", "rti_express", "extra_news", "spot_news_24x7", "custom"]) and raw_image_layout not in ["patternb", "heroimage", "singleimagepatternb"]
         
         is_pattern_b = (
             raw_image_layout in ["patternb", "heroimage", "singleimagepatternb"] or

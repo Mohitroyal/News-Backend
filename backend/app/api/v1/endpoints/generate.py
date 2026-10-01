@@ -201,14 +201,41 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 normalized_id = original_template_id.lower().replace(" ", "").replace("_", "").replace("-", "")
 
                 # Map missing frontend templates or layout-name mixups back to the correct template
-                valid_templates = ["classic", "rti_express", "bharath_reporter", "national_news", "hero-image", "hero_image", "modern", "custom", "pattern_b"]
-                
-                # If it's NOT a valid template folder, the frontend definitely sent a layout name or ID by mistake
-                if original_template_id not in valid_templates and normalized_id not in valid_templates:
+                valid_templates = [
+                    "classic", "rti_express", "pub_rti_express", "rti",
+                    "bharath_reporter", "pub_bharath_reporter",
+                    "national_news", "pub_national_news",
+                    "extra_news", "pub_extra_news",
+                    "spot_news_24x7", "hero-image", "hero_image", "modern", "custom",
+                    "pattern_a", "pattern_b", "pattern_c", "pattern_d", "pattern_e", "pattern_f", "pattern_g"
+                ]
+
+                # Standard brand template folder mapping
+                if "rti" in normalized_id:
+                    template_id = "rti_express"
+                    clipping.template_id = "rti_express"
+                elif "bharath" in normalized_id:
+                    template_id = "bharath_reporter"
+                    clipping.template_id = "bharath_reporter"
+                elif "national" in normalized_id:
+                    template_id = "national_news"
+                    clipping.template_id = "national_news"
+                elif "extra" in normalized_id:
+                    template_id = "extra_news"
+                    clipping.template_id = "extra_news"
+                elif original_template_id not in valid_templates and normalized_id not in valid_templates:
                     intended_template = "rti_express"
                     if clipping.logo_id:
                         norm_lid = str(clipping.logo_id).lower().replace(" ", "").replace("_", "").replace("-", "")
-                        if clipping.logo_id in valid_templates or norm_lid in valid_templates:
+                        if "rti" in norm_lid:
+                            intended_template = "rti_express"
+                        elif "bharath" in norm_lid:
+                            intended_template = "bharath_reporter"
+                        elif "national" in norm_lid:
+                            intended_template = "national_news"
+                        elif "extra" in norm_lid:
+                            intended_template = "extra_news"
+                        elif clipping.logo_id in valid_templates or norm_lid in valid_templates:
                             intended_template = clipping.logo_id
                     clipping.template_id = intended_template
                     template_id = intended_template
@@ -236,22 +263,23 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                         elif "single" in normalized_id or "hero" in normalized_id:
                             clipping.custom_layout["image_layout"] = "single_image"
                         else:
-                            clipping.custom_layout["image_layout"] = "pattern_b" # default fallback for weird layout strings
+                            clipping.custom_layout["image_layout"] = "pattern_b"
                 
-                # Ensure requested template or logo is active in publication_logos
+                # Safety check for active codes in publication_logos
                 try:
                     admin_sb = get_supabase_admin_client()
                     logos_check = admin_sb.table("publication_logos").select("publication_code, is_active").execute()
                     if logos_check.data:
                         disabled_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is False]
                         active_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is not False]
-                        if (template_id in disabled_codes or clipping.logo_id in disabled_codes) and active_codes:
+                        # ONLY fallback if explicitly disabled in database
+                        if template_id in disabled_codes and active_codes:
                             fallback_logo = active_codes[0]
-                            print(f"[LOGO DISABLED] {template_id} or {clipping.logo_id} was disabled by admin. Falling back to {fallback_logo}")
+                            print(f"[LOGO DISABLED] {template_id} was disabled by admin. Falling back to {fallback_logo}")
                             template_id = fallback_logo
                             clipping.template_id = fallback_logo
-                            if clipping.logo_id in disabled_codes:
-                                clipping.logo_id = fallback_logo
+                        if clipping.logo_id in disabled_codes and active_codes:
+                            clipping.logo_id = active_codes[0]
                 except Exception as logo_err:
                     print(f"[LOGO CHECK WARNING] {logo_err}")
 
@@ -305,24 +333,36 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     elif "patternb" in normalized_id:
                         resolved_image_layout = "pattern_b"
 
-                # Ensure logo_id and publication_name align with template_id when a specific publication template is chosen
-                effective_logo_id = clipping.logo_id
-                effective_pub_name = clipping.publication_name
+                # Resolve effective_logo_id and effective_pub_name preserving user choice
+                norm_logo_id = str(clipping.logo_id or template_id or "").lower().replace(" ", "_").replace("-", "_")
 
-                if template_id == "bharath_reporter":
+                if "rti" in norm_logo_id:
+                    effective_logo_id = "rti_express"
+                    effective_pub_name = clipping.publication_name if (clipping.publication_name and clipping.publication_name != "Bharath Reporter") else "RTI Express"
+                elif "bharath" in norm_logo_id:
                     effective_logo_id = "bharath_reporter"
-                    effective_pub_name = "Bharath Reporter"
+                    effective_pub_name = clipping.publication_name or "Bharath Reporter"
+                elif "national" in norm_logo_id:
+                    effective_logo_id = "national_news"
+                    effective_pub_name = clipping.publication_name or "National News Reporter"
+                elif "extra" in norm_logo_id:
+                    effective_logo_id = "extra_news"
+                    effective_pub_name = clipping.publication_name or "The Extra News"
+                elif template_id == "bharath_reporter":
+                    effective_logo_id = "bharath_reporter"
+                    effective_pub_name = clipping.publication_name or "Bharath Reporter"
                 elif template_id == "national_news":
                     effective_logo_id = "national_news"
-                    effective_pub_name = "National News Reporter"
+                    effective_pub_name = clipping.publication_name or "National News Reporter"
                 elif template_id == "extra_news":
                     effective_logo_id = "extra_news"
-                    effective_pub_name = "The Extra News"
+                    effective_pub_name = clipping.publication_name or "The Extra News"
                 elif template_id == "rti_express":
                     effective_logo_id = "rti_express"
-                    effective_pub_name = "RTI Express"
-                elif not effective_pub_name:
-                    effective_pub_name = "News Edition"
+                    effective_pub_name = clipping.publication_name or "RTI Express"
+                else:
+                    effective_logo_id = clipping.logo_id or template_id
+                    effective_pub_name = clipping.publication_name or "News Edition"
 
                 render_data = {
                     **formatted,
