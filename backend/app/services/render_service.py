@@ -271,7 +271,7 @@ class RenderService:
             if not data.get("accent_color"):
                 data["accent_color"] = b_info["accent_color"]
 
-        # 3. Default image fallback resolution (brand-specific dynamic SVG placeholder)
+        # 3. Default image fallback resolution (RTI Express Logo PNG)
         image_urls_raw = data.get("image_urls") or []
         image_url_raw = data.get("image_url") or ""
         valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
@@ -279,19 +279,36 @@ class RenderService:
             valid_imgs = [str(image_url_raw).strip()]
         if not valid_imgs:
             import base64
-
-            pub_title = data.get("publication_name") or brand_key.replace("_", " ").title()
-            p_color = data.get("primary_color") or "#15a850"
-            clean_svg_placeholder = (
-                f'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">'
-                f'<rect width="800" height="400" fill="#f8fafc"/>'
-                f'<rect x="20" y="20" width="760" height="360" fill="none" stroke="{p_color}" stroke-width="4" stroke-dasharray="8,8"/>'
-                f'<text x="400" y="190" font-family="sans-serif" font-size="28" font-weight="bold" fill="{p_color}" text-anchor="middle">{pub_title}</text>'
-                f'<text x="400" y="230" font-family="sans-serif" font-size="18" fill="#64748b" text-anchor="middle">SPECIAL REPORT</text>'
-                f'</svg>'
-            )
-            encoded_placeholder = base64.b64encode(clean_svg_placeholder.encode('utf-8')).decode('utf-8')
-            default_img = f"data:image/svg+xml;base64,{encoded_placeholder}"
+            logo_png_paths = [
+                os.path.join(os.path.dirname(__file__), "..", "static", "logos", "rti_express_logo.png"),
+                os.path.join(os.path.dirname(__file__), "..", "static", "default.png"),
+                r"C:\Users\MOHIT\Desktop\newscraft-mobile\SPOT NEWS NEW (2)\newscraft-mobile (1)\newscraft-mobile\src\assets\rti_express_logo.png",
+            ]
+            default_img = None
+            for p_cand in logo_png_paths:
+                if os.path.exists(p_cand):
+                    try:
+                        with open(p_cand, "rb") as f_img:
+                            b64_data = base64.b64encode(f_img.read()).decode("utf-8")
+                            default_img = f"data:image/png;base64,{b64_data}"
+                            print(f"[DEFAULT IMAGE] Loaded RTI Express logo PNG from {p_cand}")
+                            break
+                    except Exception as img_err:
+                        print(f"[DEFAULT LOGO PNG ERR] {img_err}")
+            
+            if not default_img:
+                pub_title = data.get("publication_name") or brand_key.replace("_", " ").title()
+                p_color = data.get("primary_color") or "#15a850"
+                clean_svg_placeholder = (
+                    f'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">'
+                    f'<rect width="800" height="400" fill="#f8fafc"/>'
+                    f'<rect x="20" y="20" width="760" height="360" fill="none" stroke="{p_color}" stroke-width="4" stroke-dasharray="8,8"/>'
+                    f'<text x="400" y="190" font-family="sans-serif" font-size="28" font-weight="bold" fill="{p_color}" text-anchor="middle">{pub_title}</text>'
+                    f'<text x="400" y="230" font-family="sans-serif" font-size="18" fill="#64748b" text-anchor="middle">SPECIAL REPORT</text>'
+                    f'</svg>'
+                )
+                encoded_placeholder = base64.b64encode(clean_svg_placeholder.encode('utf-8')).decode('utf-8')
+                default_img = f"data:image/svg+xml;base64,{encoded_placeholder}"
 
             data["image_url"] = default_img
             data["image_urls"] = [default_img]
