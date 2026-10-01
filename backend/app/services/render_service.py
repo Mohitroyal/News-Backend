@@ -158,34 +158,15 @@ class RenderService:
         if data.get("summary") and len(str(data["summary"])) > 380:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
-        image_urls_raw = data.get("image_urls") or []
-        image_url_raw = data.get("image_url") or ""
-        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
-        if not valid_imgs and image_url_raw and str(image_url_raw).strip():
-            valid_imgs = [str(image_url_raw).strip()]
-        if not valid_imgs:
-            import os
-            import base64
-            static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "static"))
-            default_path = os.path.join(static_dir, "default.png")
-            if os.path.exists(default_path):
-                with open(default_path, "rb") as img_file:
-                    encoded_img = base64.b64encode(img_file.read()).decode('utf-8')
-                    default_img = f"data:image/png;base64,{encoded_img}"
-            else:
-                default_img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-            data["image_url"] = default_img
-            data["image_urls"] = [default_img]
-        else:
-            data["image_url"] = valid_imgs[0]
-            data["image_urls"] = valid_imgs
-
-        # 4. Logo/template safety fallback
+        # 4. Logo/template safety fallback & brand resolution
         template_key = template_name.replace(".html", "").lower().strip()
         if template_key in ["bharath_reporter", "national_news", "extra_news", "rti_express"]:
             data["logo_id"] = template_key
         elif not data.get("logo_id"):
             data["logo_id"] = template_key or "classic"
+
+        brand_key = data.get("logo_id") or template_key
+        data["template_id"] = template_key
 
         # Inject service_url absolutely for loading local assets (like local fonts via @font-face)
         service_url = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000").rstrip("/")
@@ -224,8 +205,6 @@ class RenderService:
             },
         }
 
-        brand_key = data.get("logo_id") or template_key
-        data["template_id"] = template_key
         if brand_key in branding:
             for k, v in branding[brand_key].items():
                 if k == "publication_name":
@@ -233,6 +212,43 @@ class RenderService:
                         data["publication_name"] = v
                 elif not data.get(k):
                     data[k] = v
+
+        # 3. Default image fallback resolution (brand-specific)
+        image_urls_raw = data.get("image_urls") or []
+        image_url_raw = data.get("image_url") or ""
+        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
+        if not valid_imgs and image_url_raw and str(image_url_raw).strip():
+            valid_imgs = [str(image_url_raw).strip()]
+        if not valid_imgs:
+            import os
+            import base64
+            templates_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "renderer", "templates"))
+            static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "static"))
+
+            brand_logo_svg = os.path.join(templates_dir, brand_key, "logo.svg")
+            brand_logo_static_svg = os.path.join(static_dir, "logos", f"{brand_key}.svg")
+            default_path = os.path.join(static_dir, "default.png")
+
+            if os.path.exists(brand_logo_svg):
+                with open(brand_logo_svg, "rb") as f:
+                    encoded_img = base64.b64encode(f.read()).decode('utf-8')
+                    default_img = f"data:image/svg+xml;base64,{encoded_img}"
+            elif os.path.exists(brand_logo_static_svg):
+                with open(brand_logo_static_svg, "rb") as f:
+                    encoded_img = base64.b64encode(f.read()).decode('utf-8')
+                    default_img = f"data:image/svg+xml;base64,{encoded_img}"
+            elif os.path.exists(default_path):
+                with open(default_path, "rb") as img_file:
+                    encoded_img = base64.b64encode(img_file.read()).decode('utf-8')
+                    default_img = f"data:image/png;base64,{encoded_img}"
+            else:
+                default_img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+
+            data["image_url"] = default_img
+            data["image_urls"] = [default_img]
+        else:
+            data["image_url"] = valid_imgs[0]
+            data["image_urls"] = valid_imgs
         lang_map = {
             "en": "English",  "te": "Telugu",   "hi": "Hindi",
             "kn": "Kannada",  "ta": "Tamil",    "ml": "Malayalam",
