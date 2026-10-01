@@ -235,7 +235,6 @@ class RenderService:
         if not valid_imgs and image_url_raw and str(image_url_raw).strip():
             valid_imgs = [str(image_url_raw).strip()]
         if not valid_imgs:
-            import os
             import base64
 
             pub_title = data.get("publication_name") or brand_key.replace("_", " ").title()
