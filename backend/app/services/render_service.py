@@ -158,7 +158,12 @@ class RenderService:
         if data.get("summary") and len(str(data["summary"])) > 380:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
-        if not data.get("image_urls") and not data.get("image_url"):
+        image_urls_raw = data.get("image_urls") or []
+        image_url_raw = data.get("image_url") or ""
+        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
+        if not valid_imgs and image_url_raw and str(image_url_raw).strip():
+            valid_imgs = [str(image_url_raw).strip()]
+        if not valid_imgs:
             import os
             import base64
             static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "static"))
@@ -171,10 +176,9 @@ class RenderService:
                 default_img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
             data["image_url"] = default_img
             data["image_urls"] = [default_img]
-        elif data.get("image_urls") and not data.get("image_url"):
-            data["image_url"] = data["image_urls"][0]
-        elif data.get("image_url") and not data.get("image_urls"):
-            data["image_urls"] = [data["image_url"]]
+        else:
+            data["image_url"] = valid_imgs[0]
+            data["image_urls"] = valid_imgs
 
         # 4. Logo/template safety fallback
         template_key = template_name.replace(".html", "")
@@ -304,28 +308,21 @@ class RenderService:
             (is_single_img and not is_explicit_other_template)
         )
 
-        if is_pattern_b:
+        template = None
+        for candidate in [f"{template_key}/template.html", f"{template_key}.html", "master_layout.html"]:
             try:
-                template = self.env.get_template("pattern_b/template.html")
+                tmpl = self.env.get_template(candidate)
+                test_str = tmpl.render(**data)
+                if test_str and test_str.strip():
+                    template = tmpl
+                    html = test_str
+                    break
             except Exception:
-                try:
-                    template = self.env.get_template("hero-image/template.html")
-                except Exception:
-                    template = self.env.get_template("master_layout.html")
-        else:
-            try:
-                template = self.env.get_template(f"{template_key}/template.html")
-            except Exception:
-                try:
-                    template = self.env.get_template(f"{template_key}.html")
-                except Exception:
-                    try:
-                        template = self.env.get_template("rti_express/template.html")
-                    except Exception:
-                        template = self.env.get_template("master_layout.html")
+                continue
 
-
-        html = template.render(**data)
+        if not template:
+            template = self.env.get_template("master_layout.html")
+            html = template.render(**data)
 
         # ── MULTILINGUAL FONT ENFORCER ──────────────────────────────────────────
         # Prevent Latin fonts (like Merriweather) from falsely claiming Devanagari 
@@ -471,14 +468,7 @@ class RenderService:
         else:
             html = f"{html}\n{dynamic_css}"
 
-        if is_pattern_b:
-            try:
-                debug_path = os.path.join(os.path.dirname(__file__), "debug_last_render.html")
-                with open(debug_path, "w", encoding="utf-8") as f:
-                    f.write(html)
-            except Exception:
-                pass
-            return html
+
 
         # Single-Page Dynamic Compression Engine Injection
         import json

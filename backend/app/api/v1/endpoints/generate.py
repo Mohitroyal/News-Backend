@@ -288,14 +288,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 resolved_image_layout = custom.get("image_layout") or getattr(clipping, "image_layout", "default")
                 total_imgs = len(safe_image_urls) if safe_image_urls else (1 if safe_image_url else 0)
                 
-                # Single-image default model: Route to hero-image for all standard templates
-                if total_imgs <= 1 and original_tid not in ["custom"]:
-                    template_id = "hero-image"
-                    clipping.template_id = "hero-image"
-                    resolved_image_layout = "pattern_g"
-                elif total_imgs <= 1 and template_id not in ["bharath_reporter", "national_news", "custom"]:
-                    resolved_image_layout = "pattern_b"
-                elif not resolved_image_layout or resolved_image_layout in ["default", "auto"]:
+                # Keep user requested template_id and determine image_layout
+                if not resolved_image_layout or resolved_image_layout in ["default", "auto"]:
                     if "patternc" in normalized_id:
                         resolved_image_layout = "pattern_c"
                     elif "patternd" in normalized_id:
