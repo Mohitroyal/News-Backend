@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Settings</h2>
+<ul>
+    <li>Account Settings</li>
+    <li>Security</li>
+    <li><a href="#" onclick="fetch('/api/auth/logout',{method:'POST'}).then(()=>window.location.href='/auth/login/')">Logout</a></li>
+    <li><a href="#" style="color:red;">Delete Account (Placeholder)</a></li>
+</ul>
+<a href="/dashboard/">Back to Dashboard</a>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 style="margin-top: 0;">Welcome, {{ user.name|default:user.username }}</h2>
+<p>Mobile: +91 {{ user.mobile|slice:"2:" }}</p>
+<p>Role: {{ user.get_role_display|default:"USER" }}</p>
+<hr>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+    <button style="background: #28a745;">Create News Clipping</button>
+    <button style="background: #17a2b8;">My Clippings</button>
+    <a href="/dashboard/profile/" style="text-decoration: none;"><button style="background: #6c757d;">Profile</button></a>
+    <a href="/dashboard/settings/" style="text-decoration: none;"><button style="background: #6c757d;">Settings</button></a>
+    <button style="background: #dc3545;" onclick="logout()">Logout</button>
+</div>
+<script>
+async function logout() {
+    await fetch('/api/auth/logout', {method:'POST'});
+    window.location.href = '/auth/login/';
+}
+</script>
+{% endblock %}
