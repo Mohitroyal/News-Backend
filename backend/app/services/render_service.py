@@ -159,7 +159,7 @@ class RenderService:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
         if not data.get("image_urls") and not data.get("image_url"):
-            default_img = "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&auto=format&fit=crop&q=80"
+            default_img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAINCAYAAACgUw1nAAAQAElEQVR4AeydBUAcOxBA
             data["image_url"] = default_img
             data["image_urls"] = [default_img]
         elif data.get("image_urls") and not data.get("image_url"):
