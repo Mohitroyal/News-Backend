@@ -181,8 +181,10 @@ class RenderService:
             data["image_urls"] = valid_imgs
 
         # 4. Logo/template safety fallback
-        template_key = template_name.replace(".html", "")
-        if not data.get("logo_id"):
+        template_key = template_name.replace(".html", "").lower().strip()
+        if template_key in ["bharath_reporter", "national_news", "extra_news", "rti_express"]:
+            data["logo_id"] = template_key
+        elif not data.get("logo_id"):
             data["logo_id"] = template_key or "classic"
 
         # Inject service_url absolutely for loading local assets (like local fonts via @font-face)
@@ -226,7 +228,10 @@ class RenderService:
         data["template_id"] = template_key
         if brand_key in branding:
             for k, v in branding[brand_key].items():
-                if not data.get(k):
+                if k == "publication_name":
+                    if not data.get("publication_name") or (brand_key != "rti_express" and data.get("publication_name") == "RTI Express"):
+                        data["publication_name"] = v
+                elif not data.get(k):
                     data[k] = v
         lang_map = {
             "en": "English",  "te": "Telugu",   "hi": "Hindi",
@@ -1769,12 +1774,12 @@ class RenderService:
                         footerEl.style.boxSizing = 'border-box';
                         footerEl.style.zIndex = '100';
                         
-                        // We use the logo_url if provided, else plain text logo
+                        const pubNameText = data.publication_name || 'RTI EXPRESS';
                         let logoHtml = '';
                         if (data.logo_url) {
                             logoHtml = `<img src="${data.logo_url}" style="height: 40px; object-fit: contain;">`;
                         } else {
-                            logoHtml = `<h2 style="margin:0; color:#111; font-family:'Playfair Display',serif; font-size: 30px; font-weight:900;">RTI EXPRESS</h2>`;
+                            logoHtml = `<h2 style="margin:0; color:#111; font-family:'Playfair Display',serif; font-size: 30px; font-weight:900;">${pubNameText}</h2>`;
                         }
                         
                         footerEl.innerHTML = `

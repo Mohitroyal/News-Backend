@@ -305,6 +305,22 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     elif "patternb" in normalized_id:
                         resolved_image_layout = "pattern_b"
 
+                # Ensure logo_id and publication_name align with template_id when a specific publication template is chosen
+                effective_logo_id = clipping.logo_id
+                if template_id in ["bharath_reporter", "national_news", "extra_news", "rti_express"]:
+                    effective_logo_id = template_id
+
+                effective_pub_name = clipping.publication_name
+                if not effective_pub_name or (template_id != "rti_express" and effective_pub_name == "RTI Express"):
+                    if template_id == "bharath_reporter":
+                        effective_pub_name = "Bharath Reporter"
+                    elif template_id == "national_news":
+                        effective_pub_name = "National News Reporter"
+                    elif template_id == "extra_news":
+                        effective_pub_name = "The Extra News"
+                    elif template_id == "rti_express":
+                        effective_pub_name = "RTI Express"
+
                 render_data = {
                     **formatted,
                     "id": str(clipping_id),
@@ -314,14 +330,14 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "raw_content": clipping.article_content,
                     "article_content": clipping.article_content,
                     "headline": clipping.headline if clipping.headline else formatted.get("headline"),
-                    "publication_name": clipping.publication_name,
+                    "publication_name": effective_pub_name,
                     "publication_date": clipping.publication_date,
                     "image_url": safe_image_url,
                     "image_urls": safe_image_urls,
                     "language": clipping.language,
                     "layout_columns": custom.get("layout_columns") or custom.get("layoutColumns") or (clipping.layout_columns if clipping.layout_columns is not None else "auto"),
                     "font_family": clipping.font_family or "playfair",
-                    "logo_id": clipping.logo_id or clipping.template_id,
+                    "logo_id": effective_logo_id or template_id,
                     "is_premium": is_premium,
                     "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
                     "show_inner_borders": getattr(clipping, "show_inner_borders", True),
