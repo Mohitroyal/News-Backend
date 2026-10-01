@@ -158,6 +158,10 @@ class RenderService:
         if data.get("summary") and len(str(data["summary"])) > 380:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
+        if not data.get("image_urls") and not data.get("image_url"):
+            default_img = "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&auto=format&fit=crop&q=80"
+            data["image_url"] = default_img
+            data["image_urls"] = [default_img]
         elif data.get("image_urls") and not data.get("image_url"):
             data["image_url"] = data["image_urls"][0]
         elif data.get("image_url") and not data.get("image_urls"):
