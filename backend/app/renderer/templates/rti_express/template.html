@@ -1,1 +1,261 @@
-{% include "master_layout.html" %}
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ headline }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600;700;800&family=Noto+Serif+Telugu:wght@400;600;700;800&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: optimizeLegibility !important;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #F0F2F5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .newspaper-container {
+            width: 540px;
+            background: #FFFFFF;
+            margin: 0 auto;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            font-family: 'Gautami', 'Noto Sans Telugu', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            position: relative;
+        }
+        .hero-image-wrapper {
+            position: relative;
+            width: 100%;
+            height: auto;
+            background: #FFFFFF;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-img {
+            width: 100%;
+            height: auto;
+            max-height: none;
+            object-fit: contain;
+            display: block;
+        }
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            min-height: 50px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.85));
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 8px 12px;
+            box-sizing: border-box;
+            z-index: 2;
+        }
+        .reporter-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+        .reporter-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1.5px solid #FFFFFF;
+            object-fit: cover;
+            display: block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            background: #333333;
+            flex-shrink: 0;
+        }
+        .reporter-avatar-fallback {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1.5px solid #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1d70b8, #0f3d68);
+            color: #FFFFFF;
+            font-size: 16px;
+            font-weight: 700;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+        .reporter-meta {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+        .reporter-name {
+            color: #FFFFFF;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .reporter-date {
+            color: #D1D5DB;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .watermark-badge {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+        .watermark-badge img {
+            max-height: 34px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+        }
+        .article-content {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .article-headline {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.35;
+        }
+        .article-body {
+            font-size: 15px;
+            line-height: 1.65;
+            color: #374151;
+            text-align: justify;
+        }
+        .article-body p {
+            margin: 0 0 10px 0;
+        }
+        .article-body p:last-child {
+            margin-bottom: 0;
+        }
+        .footer-banner {
+            background: #111827;
+            color: #FFFFFF;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            margin-top: auto;
+        }
+        .footer-banner-text {
+            color: #F9FAFB;
+        }
+        .footer-reporters-text {
+            color: #E5E7EB;
+        }
+    </style>
+    {% if font_family_css %}
+        <style>{{ font_family_css }}</style>
+    {% endif %}
+</head>
+<body>
+    <div class="newspaper-container">
+        <!-- Top Hero Image Section -->
+        <div class="hero-image-wrapper">
+            <img class="hero-img" src="{{ image_url }}" alt="News Photo" />
+            <div class="image-overlay">
+                <!-- Reporter Badge -->
+                <div class="reporter-badge">
+                    {% if reporter_image %}
+                        <img class="reporter-avatar" src="{{ reporter_image }}" alt="Reporter" />
+                    {% else %}
+                        <div class="reporter-avatar-fallback">{{ (reporter_name or "R")[0].upper() }}</div>
+                    {% endif %}
+                    <div class="reporter-meta">
+                        <span class="reporter-name">{{ reporter_name or "Mohithroyal Pokkala" }}</span>
+                        <span class="reporter-date">{{ publication_date_time or publication_date }}</span>
+                    </div>
+                </div>
+                <!-- Watermark Badge -->
+                <div class="watermark-badge">
+                    {% if logo_url %}
+                        <img src="{{ logo_url }}" alt="RTI Express Watermark" />
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Article Content Area -->
+        <div class="article-content">
+            <h1 class="article-headline">{{ headline }}</h1>
+            <div class="article-body">
+                {% if sections and sections|length > 0 %}
+                    {% for sec in sections %}
+                        <p>{{ sec }}</p>
+                    {% endfor %}
+                {% else %}
+                    <p>{{ article_content or article_text or raw_content }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bottom Footer Banner -->
+        <div class="footer-banner">
+            <span class="footer-banner-text">RTI EXPRESS – India’s First Breaking News App.</span>
+            <span class="footer-reporters-text">WANTED REPORTERS: 7668886666</span>
+        </div>
+    </div>
+
+    <script>
+        function signalWhenReady() {
+            const images = Array.from(document.querySelectorAll('img'));
+            if (images.length === 0) {
+                window.__LAYOUT_DONE__ = true;
+                return;
+            }
+            let loadedCount = 0;
+            const total = images.length;
+            const markReady = () => { window.__LAYOUT_DONE__ = true; };
+            const onImgFinish = () => {
+                loadedCount++;
+                if (loadedCount >= total) markReady();
+            };
+            images.forEach(img => {
+                if (img.complete && img.naturalWidth > 0) {
+                    onImgFinish();
+                } else {
+                    img.addEventListener('load', onImgFinish, { once: true });
+                    img.addEventListener('error', onImgFinish, { once: true });
+                }
+            });
+            setTimeout(markReady, 7000);
+        }
+        if (document.readyState === 'complete') { signalWhenReady(); }
+        else { window.addEventListener('load', signalWhenReady); }
+    </script>
+</body>
+</html>
