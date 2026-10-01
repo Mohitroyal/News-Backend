@@ -208,37 +208,62 @@ class RenderService:
                 "primary_color": "#15a850",
                 "accent_color": "#f28e1c",
                 "publication_name": "Bharath Reporter",
+                "file_name": "bharath_reporter.svg",
                 "logo_url": f"{self._logo_base}/bharath_reporter.svg",
             },
             "rti_express": {
                 "primary_color": "#1d70b8",
                 "accent_color": "#1d70b8",
                 "publication_name": "RTI Express",
+                "file_name": "rti_express.svg",
                 "logo_url": f"{self._logo_base}/rti_express.svg",
             },
             "national_news": {
                 "primary_color": "#761c9e",
                 "accent_color": "#cc2424",
                 "publication_name": "National News Reporter",
+                "file_name": "national_news.svg",
                 "logo_url": f"{self._logo_base}/national_news.svg",
             },
             "extra_news": {
                 "primary_color": "#3b82f6",
                 "accent_color": "#1e40af",
                 "publication_name": "The Extra News",
+                "file_name": "extra_news.svg",
                 "logo_url": f"{self._logo_base}/extra_news.svg",
             },
             "custom": {
                 "primary_color": "#1d70b8",
                 "accent_color": "#1d70b8",
                 "publication_name": "News Edition",
+                "file_name": "rti_express.svg",
                 "logo_url": f"{self._logo_base}/rti_express.svg",
             },
         }
 
         if brand_key in branding:
             b_info = branding[brand_key]
-            data["logo_url"] = b_info["logo_url"]
+            # Convert SVG to base64 Data URI so it renders 100% reliably in Playwright without network/404 issues
+            import base64
+            svg_file = b_info.get("file_name", f"{brand_key}.svg")
+            logo_set = False
+            for b_dir in [
+                os.path.join(os.path.dirname(__file__), "..", "static", "logos"),
+                os.path.join(os.path.dirname(__file__), "..", "..", "static", "logos"),
+            ]:
+                cand = os.path.join(b_dir, svg_file)
+                if os.path.exists(cand):
+                    try:
+                        with open(cand, "rb") as f_obj:
+                            b64 = base64.b64encode(f_obj.read()).decode("utf-8")
+                            data["logo_url"] = f"data:image/svg+xml;base64,{b64}"
+                            logo_set = True
+                            break
+                    except Exception as err:
+                        print(f"[LOGO B64 WARN] {err}")
+            if not logo_set:
+                data["logo_url"] = b_info["logo_url"]
+
             if not data.get("publication_name") or data.get("publication_name") in ["News Edition", "Bharath Reporter", "RTI Express"] or brand_key == "rti_express":
                 data["publication_name"] = b_info["publication_name"]
             if not data.get("primary_color"):

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 35" width="100%" height="100%">
+  <rect x="2" y="2" width="96" height="31" fill="none" stroke="#15a850" stroke-width="0.8" />
+  <rect x="3.5" y="3.5" width="93" height="28" fill="none" stroke="#f28e1c" stroke-width="0.3" />
+  <text x="6" y="7" font-size="2" fill="#cc3333" font-weight="bold" font-family="sans-serif">LICENCE No: HDP/010</text>
+  <text x="6" y="22" font-size="16" font-weight="bold" fill="#15a850" stroke="#000" stroke-width="0.3" font-family="serif">భారత్</text>
+  <g transform="translate(6, 25)">
+    <rect x="0" y="0" width="45" height="5" fill="#f28e1c" />
+    <text x="2" y="3.5" font-size="2.8" font-weight="bold" fill="#ffffff" font-family="sans-serif">BHARATH REPORTER</text>
+    
+    <rect x="46" y="0" width="40" height="5" fill="#15a850" />
+    <text x="66" y="3.5" font-size="2.8" font-weight="bold" fill="#ffffff" text-anchor="middle" font-family="sans-serif">రిపోర్టర్</text>
+  </g>
+</svg>
