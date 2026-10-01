@@ -160,11 +160,13 @@ class RenderService:
 
         if not data.get("image_urls") and not data.get("image_url"):
             import os
-            import urllib.parse
+            import base64
             static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "static"))
             default_path = os.path.join(static_dir, "default.png")
             if os.path.exists(default_path):
-                default_img = f"file:///{default_path.replace(os.sep, '/')}"
+                with open(default_path, "rb") as img_file:
+                    encoded_img = base64.b64encode(img_file.read()).decode('utf-8')
+                    default_img = f"data:image/png;base64,{encoded_img}"
             else:
                 default_img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
             data["image_url"] = default_img
