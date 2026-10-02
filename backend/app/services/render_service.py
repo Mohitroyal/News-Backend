@@ -159,6 +159,12 @@ class RenderService:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
         # 4. Logo/template safety fallback & brand resolution
+        image_urls_raw = data.get("image_urls") or []
+        image_url_raw = data.get("image_url") or ""
+        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
+        if not valid_imgs and image_url_raw and str(image_url_raw).strip():
+            valid_imgs = [str(image_url_raw).strip()]
+
         raw_t_name = str(template_name).replace(".html", "").lower().strip()
         if "/" in raw_t_name:
             raw_t_name = raw_t_name.split("/")[0]
@@ -168,36 +174,42 @@ class RenderService:
             data_tid = data_tid.split("/")[0]
 
         pub_template_keys = ["bharath_reporter", "national_news", "extra_news", "rti_express", "spot_news_24x7"]
-        if raw_t_name in pub_template_keys:
+
+        if not valid_imgs:
+            template_key = "rti_express"
+            brand_key = "rti_express"
+        elif raw_t_name in pub_template_keys:
             template_key = raw_t_name
+            brand_key = raw_t_name
         elif data_tid in pub_template_keys:
             template_key = data_tid
+            brand_key = data_tid
         else:
             template_key = "rti_express"
+            brand_key = "rti_express"
 
-        # Give explicit logo_id precedence over template_key for branding
-        raw_logo_id = str(data.get("logo_id") or "").lower().strip()
-        if raw_logo_id.startswith("pub_"):
-            raw_logo_id = raw_logo_id[4:]
+        # Give explicit logo_id precedence over template_key for branding if images exist
+        if valid_imgs:
+            raw_logo_id = str(data.get("logo_id") or "").lower().strip()
+            if raw_logo_id.startswith("pub_"):
+                raw_logo_id = raw_logo_id[4:]
 
-        if raw_logo_id in pub_template_keys or "rti" in raw_logo_id or "bharath" in raw_logo_id or "national" in raw_logo_id or "extra" in raw_logo_id:
-            if "rti" in raw_logo_id:
-                brand_key = "rti_express"
-            elif "bharath" in raw_logo_id:
-                brand_key = "bharath_reporter"
-            elif "national" in raw_logo_id:
-                brand_key = "national_news"
-            elif "extra" in raw_logo_id:
-                brand_key = "extra_news"
-            else:
-                brand_key = raw_logo_id
-        elif template_key in pub_template_keys:
-            brand_key = template_key
-        else:
-            brand_key = raw_logo_id or template_key or "rti_express"
+            if raw_logo_id in pub_template_keys or "rti" in raw_logo_id or "bharath" in raw_logo_id or "national" in raw_logo_id or "extra" in raw_logo_id:
+                if "rti" in raw_logo_id:
+                    brand_key = "rti_express"
+                elif "bharath" in raw_logo_id:
+                    brand_key = "bharath_reporter"
+                elif "national" in raw_logo_id:
+                    brand_key = "national_news"
+                elif "extra" in raw_logo_id:
+                    brand_key = "extra_news"
+                else:
+                    brand_key = raw_logo_id
 
         data["logo_id"] = brand_key
         data["template_id"] = template_key
+        if not valid_imgs or brand_key == "rti_express":
+            data["publication_name"] = "RTI Express"
 
         # Inject service_url absolutely for loading local assets (like local fonts via @font-face)
         service_url = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000").rstrip("/")

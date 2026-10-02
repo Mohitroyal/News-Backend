@@ -1066,8 +1066,8 @@ class UpdateLogoRequest(BaseModel):
 
 
 DEFAULT_SEEDED_LOGOS = [
-    {"name": "Spot News 24x7", "publication_code": "spot_news_24x7", "logo_url": "", "is_active": True},
     {"name": "RTI Express", "publication_code": "rti_express", "logo_url": "", "is_active": True},
+    {"name": "Spot News 24x7", "publication_code": "spot_news_24x7", "logo_url": "", "is_active": True},
     {"name": "Bharath Reporter", "publication_code": "bharath_reporter", "logo_url": "", "is_active": True},
     {"name": "National News 24x7", "publication_code": "national_news", "logo_url": "", "is_active": True},
 ]

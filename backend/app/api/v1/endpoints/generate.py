@@ -218,6 +218,10 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     clipping.template_id = "rti_express"
                     clipping.logo_id = "rti_express"
                     clipping.publication_name = "RTI Express"
+                    try:
+                        db.commit()
+                    except Exception:
+                        pass
                 elif "rti" in normalized_id or not normalized_id or normalized_id in ["default", "classic", "pattern_a", "pattern_b", "pattern_c", "pattern_d", "pattern_e", "pattern_f", "pattern_g"]:
                     template_id = "rti_express"
                     clipping.template_id = "rti_express"
@@ -344,7 +348,11 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 # Resolve effective_logo_id and effective_pub_name preserving user choice
                 norm_logo_id = str(clipping.logo_id or template_id or "").lower().replace(" ", "_").replace("-", "_")
 
-                if "rti" in norm_logo_id:
+                if not has_user_images:
+                    effective_logo_id = "rti_express"
+                    effective_pub_name = "RTI Express"
+                    template_id = "rti_express"
+                elif "rti" in norm_logo_id:
                     effective_logo_id = "rti_express"
                     effective_pub_name = clipping.publication_name if (clipping.publication_name and clipping.publication_name != "Bharath Reporter") else "RTI Express"
                 elif "bharath" in norm_logo_id:
@@ -676,8 +684,18 @@ async def create_clipping(
         )
 
     req_tpl = str(clipping_in.template_id or "").strip()
-    if not req_tpl or req_tpl.lower() in ["default", "classic"] or "rti" in req_tpl.lower():
+    has_user_images = bool(clipping_in.image_urls or clipping_in.image_url)
+
+    if not has_user_images or not req_tpl or req_tpl.lower() in ["default", "classic", "bharath_reporter", "pub_bharath_reporter"]:
         req_tpl = "rti_express"
+
+    req_logo = str(clipping_in.logo_id or "").strip()
+    if not has_user_images or not req_logo or req_logo.lower() in ["default", "classic", "bharath_reporter", "pub_bharath_reporter"]:
+        req_logo = "rti_express"
+
+    req_pub = clipping_in.publication_name
+    if not has_user_images or not req_pub or req_pub == "Bharath Reporter":
+        req_pub = "RTI Express"
 
     clipping = Clipping(
         user_id=current_user.id,
@@ -686,10 +704,10 @@ async def create_clipping(
         language=clipping_in.language,
         tone=clipping_in.tone,
         template_id=req_tpl,
-        logo_id=clipping_in.logo_id or req_tpl,
+        logo_id=req_logo,
         image_url=clipping_in.image_url if clipping_in.image_url else "",
         image_urls=clipping_in.image_urls or [],
-        publication_name=clipping_in.publication_name or "RTI Express",
+        publication_name=req_pub,
         publication_date=clipping_in.publication_date,
         layout_columns=0 if str(clipping_in.layout_columns).lower() in ["auto", "0", "none"] else (int(clipping_in.layout_columns) if str(clipping_in.layout_columns).isdigit() else 0),
         font_family=clipping_in.font_family or "playfair",
