@@ -173,7 +173,7 @@ class RenderService:
         elif data_tid in pub_template_keys:
             template_key = data_tid
         else:
-            template_key = raw_t_name or data_tid or "classic"
+            template_key = "rti_express"
 
         # Give explicit logo_id precedence over template_key for branding
         raw_logo_id = str(data.get("logo_id") or "").lower().strip()
@@ -385,6 +385,9 @@ class RenderService:
         template_key = template_name.replace(".html", "").lower().strip()
         data_tid = str(data.get("template_id") or "").lower().strip()
         
+        if not template_key or template_key in ["classic", "default", "pattern_a", "pattern_b", "pattern_c", "pattern_d", "pattern_e", "pattern_f", "pattern_g"]:
+            template_key = "rti_express"
+        
         _img_urls = data.get("image_urls") or ([data.get("image_url")] if data.get("image_url") else [])
         is_single_img = len(_img_urls) <= 1
         is_explicit_other_template = any(t in template_key or t in data_tid for t in ["bharath_reporter", "national_news", "rti_express", "extra_news", "spot_news_24x7", "custom"]) and raw_image_layout not in ["patternb", "heroimage", "singleimagepatternb"]
@@ -396,7 +399,7 @@ class RenderService:
         )
 
         template = None
-        for candidate in [f"{template_key}/template.html", f"{template_key}.html", "master_layout.html"]:
+        for candidate in [f"{template_key}/template.html", f"{template_key}.html", "rti_express/template.html", "master_layout.html"]:
             try:
                 tmpl = self.env.get_template(candidate)
                 test_str = tmpl.render(**data)

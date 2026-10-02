@@ -211,9 +211,17 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 ]
 
                 # Standard brand template folder mapping
-                if "rti" in normalized_id:
+                has_user_images = bool(safe_image_urls or safe_image_url)
+                if not has_user_images:
+                    # Content without image: ALWAYS use RTI Express template structure & default logo graphic
                     template_id = "rti_express"
                     clipping.template_id = "rti_express"
+                    clipping.logo_id = "rti_express"
+                    clipping.publication_name = "RTI Express"
+                elif "rti" in normalized_id or not normalized_id or normalized_id in ["default", "classic", "pattern_a", "pattern_b", "pattern_c", "pattern_d", "pattern_e", "pattern_f", "pattern_g"]:
+                    template_id = "rti_express"
+                    clipping.template_id = "rti_express"
+                    clipping.logo_id = "rti_express"
                 elif "bharath" in normalized_id:
                     template_id = "bharath_reporter"
                     clipping.template_id = "bharath_reporter"
@@ -272,13 +280,13 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     if logos_check.data:
                         disabled_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is False]
                         active_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is not False]
-                        # ONLY fallback if explicitly disabled in database
-                        if template_id in disabled_codes and active_codes:
+                        # ONLY fallback if explicitly disabled in database and NOT rti_express
+                        if template_id in disabled_codes and active_codes and "rti" not in template_id:
                             fallback_logo = active_codes[0]
                             print(f"[LOGO DISABLED] {template_id} was disabled by admin. Falling back to {fallback_logo}")
                             template_id = fallback_logo
                             clipping.template_id = fallback_logo
-                        if clipping.logo_id in disabled_codes and active_codes:
+                        if clipping.logo_id in disabled_codes and active_codes and "rti" not in str(clipping.logo_id):
                             clipping.logo_id = active_codes[0]
                 except Exception as logo_err:
                     print(f"[LOGO CHECK WARNING] {logo_err}")
@@ -667,17 +675,21 @@ async def create_clipping(
             detail=f"Monthly clipping generation limit reached ({generations_count}/{limit}). You have used all 4000 clippings allowed per account."
         )
 
+    req_tpl = str(clipping_in.template_id or "").strip()
+    if not req_tpl or req_tpl.lower() in ["default", "classic"] or "rti" in req_tpl.lower():
+        req_tpl = "rti_express"
+
     clipping = Clipping(
         user_id=current_user.id,
         headline=clipping_in.headline,
         article_content=clipping_in.article_content,
         language=clipping_in.language,
         tone=clipping_in.tone,
-        template_id=clipping_in.template_id,
-        logo_id=clipping_in.logo_id or clipping_in.template_id,
-        image_url=clipping_in.image_url,
+        template_id=req_tpl,
+        logo_id=clipping_in.logo_id or req_tpl,
+        image_url=clipping_in.image_url if clipping_in.image_url else "",
         image_urls=clipping_in.image_urls or [],
-        publication_name=clipping_in.publication_name,
+        publication_name=clipping_in.publication_name or "RTI Express",
         publication_date=clipping_in.publication_date,
         layout_columns=0 if str(clipping_in.layout_columns).lower() in ["auto", "0", "none"] else (int(clipping_in.layout_columns) if str(clipping_in.layout_columns).isdigit() else 0),
         font_family=clipping_in.font_family or "playfair",
