@@ -358,11 +358,10 @@ export const GenerateScreen = () => {
       const reporterImage = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || '';
 
       const validImageUrls = imageUrls.filter(u => u && typeof u === 'string' && u.trim());
-      const hasNoImages = validImageUrls.length === 0;
 
-      const effectiveTemplateId = hasNoImages ? 'rti_express' : (selectedTemplateId || 'rti_express');
-      const effectivePubName = hasNoImages ? 'RTI Express' : (selectedTemplateDetails?.name || 'RTI Express');
-      const effectiveLogoId = hasNoImages ? 'rti_express' : (logoMode ? selectedTemplateId : 'rti_express');
+      const effectiveTemplateId = selectedTemplateId || 'rti_express';
+      const effectivePubName = selectedTemplateDetails?.name || 'RTI Express';
+      const effectiveLogoId = selectedTemplateId || 'rti_express';
 
       const configToSave = {
         ...currentConfig, headline, articleContent: content, language, fontFamily,
