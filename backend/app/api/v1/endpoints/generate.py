@@ -212,8 +212,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
 
                 # Standard brand template folder mapping
                 has_user_images = bool(safe_image_urls or safe_image_url)
-                if not has_user_images:
-                    # Whenever publishing without a user photo, ALWAYS force RTI Express template & branding
+                if not normalized_id or normalized_id in ["default", "classic"]:
                     template_id = "rti_express"
                     clipping.template_id = "rti_express"
                     clipping.logo_id = "rti_express"
@@ -222,7 +221,7 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                         db.commit()
                     except Exception:
                         pass
-                elif "rti" in normalized_id or not normalized_id or normalized_id in ["default", "classic", "pattern_a", "pattern_b", "pattern_c", "pattern_d", "pattern_e", "pattern_f", "pattern_g"]:
+                elif "rti" in normalized_id:
                     template_id = "rti_express"
                     clipping.template_id = "rti_express"
                     clipping.logo_id = "rti_express"
