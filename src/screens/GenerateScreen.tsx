@@ -141,7 +141,7 @@ export const GenerateScreen = () => {
   const [logosLoading, setLogosLoading] = useState(true);
 
   const selectedPattern = currentConfig.layoutPattern || 'A';
-  const selectedBorderColour = currentConfig.borderColour || '#15a850';
+  const selectedBorderColour = currentConfig.borderColour || '#1d70b8';
   const selectedHeadingBgColour = currentConfig.headingBgColour || '#ffffff';
   const selectedTemplateId = currentConfig.templateId || 'rti_express';
 
