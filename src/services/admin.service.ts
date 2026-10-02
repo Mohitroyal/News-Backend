@@ -10,7 +10,7 @@ export interface AdminUserProfile {
   email: string;
   phone_number?: string;
   full_name: string;
-  role: 'admin' | 'reporter' | 'user';
+  role: 'superadmin' | 'admin' | 'reporter' | 'user';
   plan: string;
   created_at: string;
   last_sign_in_at?: string;
@@ -36,25 +36,25 @@ export const LOCAL_LOGOS_KEY = 'spotnews_admin_publication_logos';
 
 export const DEFAULT_PUBLICATION_LOGOS: PublicationLogo[] = [
   {
-    id: 'pub_spot_news_24x7',
-    name: 'Spot News 24x7',
-    logo_url: recoveredLogo,
-    publication_code: 'spot_news_24x7',
-    is_active: true,
-    created_at: '2026-01-01T00:00:00.000Z',
-  },
-  {
     id: 'pub_rti_express',
     name: 'RTI Express',
     logo_url: rtiExpressLogo,
     publication_code: 'rti_express',
+    is_active: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'pub_spot_news_24x7',
+    name: 'Spot News 24x7',
+    logo_url: recoveredLogo,
+    publication_code: 'spot_news_24x7',
     is_active: true,
     created_at: '2026-01-02T00:00:00.000Z',
   },
   {
     id: 'pub_bharath_reporter',
     name: 'Bharath Reporter',
-    logo_url: rtiExpressLogo,
+    logo_url: recoveredLogo,
     publication_code: 'bharath_reporter',
     is_active: true,
     created_at: '2026-01-03T00:00:00.000Z',
@@ -380,7 +380,7 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
     }
   };
 
-  // 1. Primary: Use Backend auth-users endpoint (returns ALL Supabase Auth users, e.g. 88 accounts)
+  // 1. Primary: Use Backend auth-users endpoint (returns ALL Supabase Auth users + Mobile OTP users)
   try {
     const res = await api.get('/api/v1/admin/auth-users');
     if (Array.isArray(res.data) && res.data.length > 0) {
@@ -391,11 +391,20 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
         const totalGen = Math.max(typeof u.total_generations === 'number' ? u.total_generations : 0, allTimeGenMap[uid] ?? 0);
         const isActiveToday = activeUserIdsToday.has(uid) || isSignInToday || genToday > 0;
 
+        const isPhoneUser = Boolean(
+          u.provider === 'phone' ||
+          (u.email && u.email.endsWith('@phone.user')) ||
+          (!u.email && u.phone_number)
+        );
+        const defaultName = isPhoneUser
+          ? (u.phone_number ? `User (${u.phone_number})` : 'Mobile User')
+          : (u.email ? u.email.split('@')[0] : 'User');
+
         return {
           id: uid,
           email: u.email || '',
           phone_number: u.phone_number || '',
-          full_name: u.full_name || u.name || (u.email ? u.email.split('@')[0] : 'User'),
+          full_name: u.full_name || u.name || defaultName,
           role: u.role || 'user',
           plan: u.plan || 'free',
           created_at: u.created_at || '',
@@ -425,11 +434,20 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
         const totalGen = Math.max(typeof u.total_generations === 'number' ? u.total_generations : 0, allTimeGenMap[uid] ?? 0);
         const isActiveToday = activeUserIdsToday.has(uid) || isSignInToday || genToday > 0;
 
+        const isPhoneUser = Boolean(
+          u.provider === 'phone' ||
+          (u.email && u.email.endsWith('@phone.user')) ||
+          (!u.email && u.phone_number)
+        );
+        const defaultName = isPhoneUser
+          ? (u.phone_number ? `User (${u.phone_number})` : 'Mobile User')
+          : (u.email ? u.email.split('@')[0] : 'User');
+
         return {
           id: uid,
           email: u.email || '',
           phone_number: u.phone_number || '',
-          full_name: u.full_name || u.name || (u.email ? u.email.split('@')[0] : 'User'),
+          full_name: u.full_name || u.name || defaultName,
           role: u.role || 'user',
           plan: u.plan || 'free',
           created_at: u.created_at || '',
@@ -526,12 +544,15 @@ export const getAdminUsers = async (): Promise<AdminUserProfile[]> => {
 // ─── Edit User Role / Plan ────────────────────────────────────────────────────
 export const updateUserRole = async (
   userId: string,
-  role: 'admin' | 'reporter' | 'user',
-  phoneNumber?: string
+  role: 'superadmin' | 'admin' | 'reporter' | 'user',
+  phoneNumber?: string,
+  plan?: string
 ): Promise<{ success: boolean; error?: string }> => {
+  const targetPlan = plan || (role === 'superadmin' ? 'superadmin' : (role === 'admin' ? 'admin' : (role === 'reporter' ? 'reporter' : 'free')));
+
   // 1. Primary: Use Backend API (runs with service_role key, safely bypassing RLS)
   try {
-    const payload: any = { role };
+    const payload: any = { role, plan: targetPlan };
     if (phoneNumber && phoneNumber.trim()) {
       payload.phone_number = phoneNumber.trim();
     }
@@ -561,7 +582,7 @@ export const updateUserRole = async (
   try {
     const { error } = await supabase
       .from('profiles')
-      .upsert({ id: userId, role }, { onConflict: 'id' });
+      .upsert({ id: userId, role, plan: targetPlan }, { onConflict: 'id' });
     if (error) return { success: false, error: error.message };
     // Force-refresh the Supabase session for the promoted user
     try {

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop from 'react-image-crop';
 import type { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { X } from 'lucide-react';
@@ -10,45 +10,90 @@ interface ImageCropModalProps {
   onCancel: () => void;
 }
 
-function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
-  return centerCrop(
-    makeAspectCrop(
-      {
-        unit: '%',
-        width: 90,
-      },
-      aspect,
-      mediaWidth,
-      mediaHeight,
-    ),
-    mediaWidth,
-    mediaHeight,
-  )
-}
-
 export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCropComplete, onCancel }) => {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [hasUserDragged, setHasUserDragged] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const [isCropping, setIsCropping] = useState(false);
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-    const { width, height } = e.currentTarget;
-    setCrop(centerAspectCrop(width, height, 16 / 9));
+    setCrop({ unit: '%', x: 0, y: 0, width: 100, height: 100 });
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width || e.currentTarget.width || naturalWidth;
+    const height = rect.height || e.currentTarget.height || naturalHeight;
+    setCompletedCrop({
+      unit: 'px',
+      x: 0,
+      y: 0,
+      width,
+      height
+    });
   }
 
-  const handleConfirm = async () => {
-    if (!completedCrop || !imgRef.current) return;
+  const handleCropChange = (_: Crop, percentCrop: Crop) => {
+    setCrop(percentCrop);
+    setHasUserDragged(true);
+  };
+
+  const handleConfirm = async (forceFullImage: boolean = false) => {
+    if (!imgRef.current) return;
     
     setIsCropping(true);
     try {
       const image = imgRef.current;
       const canvas = document.createElement('canvas');
-      const scaleX = image.naturalWidth / image.width || 1;
-      const scaleY = image.naturalHeight / image.height || 1;
       
-      const cropWidth = Math.round(completedCrop.width * scaleX);
-      const cropHeight = Math.round(completedCrop.height * scaleY);
+      let cropX = 0;
+      let cropY = 0;
+      let cropWidth = image.naturalWidth;
+      let cropHeight = image.naturalHeight;
+
+      if (!forceFullImage && hasUserDragged && completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
+        if ((completedCrop as any).unit === '%') {
+          const cX = completedCrop.x ?? 0;
+          const cY = completedCrop.y ?? 0;
+          const cW = completedCrop.width ?? 100;
+          const cH = completedCrop.height ?? 100;
+
+          cropX = Math.round((cX / 100) * image.naturalWidth);
+          cropY = Math.round((cY / 100) * image.naturalHeight);
+          cropWidth = Math.round((cW / 100) * image.naturalWidth);
+          cropHeight = Math.round((cH / 100) * image.naturalHeight);
+        } else {
+          const rect = image.getBoundingClientRect();
+          const dispW = rect.width || image.width || image.naturalWidth;
+          const dispH = rect.height || image.height || image.naturalHeight;
+          const scaleX = image.naturalWidth / dispW;
+          const scaleY = image.naturalHeight / dispH;
+
+          cropX = Math.round(completedCrop.x * scaleX);
+          cropY = Math.round(completedCrop.y * scaleY);
+          cropWidth = Math.round(completedCrop.width * scaleX);
+          cropHeight = Math.round(completedCrop.height * scaleY);
+        }
+      }
+
+      // Safeguard: If user clicked Full Image, didn't drag, or selection spans near full width/height, enforce 100% full uncropped image bounds
+      const rightEdge = cropX + cropWidth;
+      if (
+        forceFullImage ||
+        !hasUserDragged ||
+        (cropWidth >= image.naturalWidth * 0.90 && cropHeight >= image.naturalHeight * 0.90) ||
+        (cropX <= image.naturalWidth * 0.05 && rightEdge >= image.naturalWidth * 0.95)
+      ) {
+        cropX = 0;
+        cropY = 0;
+        cropWidth = image.naturalWidth;
+        cropHeight = image.naturalHeight;
+      }
+
+      // Bound checks
+      cropX = Math.max(0, Math.min(cropX, image.naturalWidth - 1));
+      cropY = Math.max(0, Math.min(cropY, image.naturalHeight - 1));
+      cropWidth = Math.min(cropWidth, image.naturalWidth - cropX);
+      cropHeight = Math.min(cropHeight, image.naturalHeight - cropY);
 
       canvas.width = cropWidth;
       canvas.height = cropHeight;
@@ -61,14 +106,14 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
 
       ctx.drawImage(
         image,
-        completedCrop.x * scaleX,
-        completedCrop.y * scaleY,
+        cropX,
+        cropY,
         cropWidth,
         cropHeight,
         0,
         0,
         cropWidth,
-        cropHeight,
+        cropHeight
       );
       
       canvas.toBlob((blob) => {
@@ -81,6 +126,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
     } catch (e) {
       console.error(e);
       alert('Failed to crop image');
+      setIsCropping(false);
     }
   };
 
@@ -94,7 +140,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
       <div style={{
         background: '#0D1B2A', 
         width: '100%', 
-        maxWidth: '500px',
+        maxWidth: '520px',
         borderRadius: '16px',
         overflow: 'hidden',
         display: 'flex',
@@ -103,48 +149,68 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({ imageSrc, onCrop
       }}>
         {/* Header */}
         <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>Crop Image</h2>
+          <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>Crop / Full Image</h2>
           <button onClick={onCancel} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
             <X size={24} />
           </button>
         </div>
 
         {/* Cropper Body */}
-        <div style={{ padding: '0 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+        <div style={{ padding: '0 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', overflow: 'auto' }}>
           <ReactCrop
             crop={crop}
-            onChange={(_, percentCrop) => setCrop(percentCrop)}
+            onChange={handleCropChange}
             onComplete={(c) => setCompletedCrop(c)}
-            style={{ width: '100%', maxHeight: '60vh' }}
+            style={{ maxWidth: '100%', maxHeight: '60vh' }}
           >
             <img 
               ref={imgRef} 
               alt="Crop me" 
               src={imageSrc} 
               onLoad={onImageLoad} 
-              style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }} 
+              style={{ display: 'block', maxWidth: '100%', maxHeight: '60vh', width: 'auto', height: 'auto' }} 
             />
           </ReactCrop>
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: '20px', display: 'flex', gap: '10px' }}>
           <button
-            onClick={handleConfirm}
+            onClick={() => handleConfirm(true)}
             disabled={isCropping}
             style={{ 
-              width: '100%', 
+              flex: 1, 
+              background: '#1E293B', 
+              color: '#38BDF8', 
+              border: '1px solid #38BDF8', 
+              padding: '12px 10px', 
+              borderRadius: '12px', 
+              fontWeight: 'bold',
+              fontSize: '14px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Full Image (No Crop)
+          </button>
+          <button
+            onClick={() => handleConfirm(false)}
+            disabled={isCropping}
+            style={{ 
+              flex: 1, 
               background: '#CC1E1E', 
               color: '#fff', 
               border: 'none', 
-              padding: '16px 20px', 
+              padding: '12px 10px', 
               borderRadius: '12px', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               fontWeight: 'bold',
-              fontSize: '18px',
-              opacity: isCropping ? 0.7 : 1
+              fontSize: '14px',
+              cursor: 'pointer',
+              opacity: isCropping ? 0.7 : 1,
+              whiteSpace: 'nowrap'
             }}
           >
             {isCropping ? 'Processing...' : 'Confirm Crop'}

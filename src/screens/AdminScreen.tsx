@@ -9,13 +9,13 @@ import {
   Calendar, FileText, ExternalLink,
   UploadCloud, Edit2, CheckCircle2
 } from 'lucide-react';
-import { useAuthStore, isAdminUser, isSuperAdminUser } from '@/store';
+import { useAuthStore, isAdminUser, isSuperAdminUser, isRootSuperAdminUser } from '@/store';
 import { supabase } from '@/lib/supabase';
 import {
   getAdminStats, getAdminUsers, getPublicationLogos,
   addPublicationLogo, updatePublicationLogo, uploadLogoImage,
   removePublicationLogo, toggleLogoActive,
-  updateUserRole, updateUserPlan, banUser, deleteUser,
+  updateUserRole, banUser, deleteUser,
   getAdminClippings,
   type AdminStats, type AdminUserProfile, type PublicationLogo, type AdminClippingLog
 } from '@/services/admin.service';
@@ -110,6 +110,8 @@ function StatCard({ icon: Icon, label, value, sub, color, bg }: {
 
 function PlanBadge({ plan }: { plan: string }) {
   const map: Record<string, { label: string; color: string; bg: string }> = {
+    superadmin: { label: '👑 SUPERADMIN', color: '#7C3AED', bg: '#F5F3FF' },
+    super_admin:{ label: '👑 SUPERADMIN', color: '#7C3AED', bg: '#F5F3FF' },
     admin:      { label: 'ADMIN',      color: '#B45309', bg: '#FEF3C7' },
     pro:        { label: 'PRO',        color: '#4338CA', bg: '#EEF2FF' },
     enterprise: { label: 'ENTERPRISE', color: '#047857', bg: '#ECFDF5' },
@@ -187,10 +189,12 @@ export const AdminScreen = () => {
         try {
           const { data: prof } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, plan')
             .eq('id', user.id)
             .single();
-          if (prof?.role === 'admin') {
+          if (prof?.role === 'admin' || prof?.role === 'superadmin' || prof?.plan === 'superadmin') {
+            const roleVal = prof.role === 'superadmin' || prof.plan === 'superadmin' ? 'superadmin' : 'admin';
+            useAuthStore.getState().updateUser({ role: roleVal, plan: prof.plan || roleVal });
             setHasAccess(true);
             setAccessChecked(true);
             return true;
@@ -204,7 +208,7 @@ export const AdminScreen = () => {
         const token = raw ? JSON.parse(raw)?.state?.token : null;
         if (token) {
           const res = await fetch(
-            'https://news-backend-sjw6.onrender.com/api/v1/admin/stats',
+            'https://news-backend-dummy.onrender.com/api/v1/admin/stats',
             { headers: { Authorization: 'Bearer ' + token } }
           );
           if (res.status === 200) {
@@ -237,10 +241,24 @@ export const AdminScreen = () => {
   }, [user, navigate]);
 
   // ── State ─────────────────────────────────────────────────────────────────
-  const isSuperAdmin = isSuperAdminUser(user);
+  const [users, setUsers] = useState<AdminUserProfile[]>([]);
+  const currentAdminProfile = users.find(
+    (u) =>
+      (user?.id && String(u.id) === String(user.id)) ||
+      (user?.email && u.email?.toLowerCase() === user.email.toLowerCase())
+  );
+
+  const isSuperAdmin =
+    isSuperAdminUser(user) ||
+    Boolean(
+      currentAdminProfile && (
+        currentAdminProfile.role === 'superadmin' ||
+        currentAdminProfile.plan === 'superadmin' ||
+        isSuperAdminUser(currentAdminProfile)
+      )
+    );
   const [activeTab, setActiveTab] = useState<'overview' | 'clippings' | 'users' | 'logos'>('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [users, setUsers] = useState<AdminUserProfile[]>([]);
   const [logos, setLogos] = useState<PublicationLogo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -303,6 +321,16 @@ export const AdminScreen = () => {
       setStats(statsData);
       setUsers(usersData);
       setLogos(logosData);
+
+      // Refresh current user's role from fresh server users list
+      const myProfile = usersData.find(
+        (usr) =>
+          (user?.id && String(usr.id) === String(user.id)) ||
+          (user?.email && usr.email?.toLowerCase() === user.email.toLowerCase())
+      );
+      if (myProfile && (myProfile.role === 'superadmin' || myProfile.plan === 'superadmin')) {
+        useAuthStore.getState().updateUser({ role: 'superadmin', plan: 'superadmin' });
+      }
     } catch {
       showToast('Error loading admin dashboard data', 'error');
     } finally {
@@ -387,9 +415,14 @@ export const AdminScreen = () => {
   };
 
   // User Actions
+  const getUserIdentifier = (u: AdminUserProfile) => {
+    if (u.email && !u.email.endsWith('@phone.user')) return u.email;
+    return u.phone_number || u.full_name || 'User';
+  };
+
   const startEdit = (u: AdminUserProfile) => {
-    if (isSuperAdminUser(u.email)) {
-      showToast('Superadmin account is protected.', 'error');
+    if (isRootSuperAdminUser(u)) {
+      showToast('Founding superadmin account is protected.', 'error');
       return;
     }
     setEditingUserId(u.id);
@@ -401,57 +434,52 @@ export const AdminScreen = () => {
   const cancelEdit = () => { setEditingUserId(null); };
 
   const saveEdit = async (u: AdminUserProfile) => {
-    if (isSuperAdminUser(u.email)) {
-      showToast('Superadmin account cannot be modified.', 'error');
+    if (isRootSuperAdminUser(u)) {
+      showToast('Founding superadmin account cannot be modified.', 'error');
       setEditingUserId(null);
       return;
     }
-    if (editRole === 'admin' && !isSuperAdmin) {
-      showToast('Only superadmin can grant admin role.', 'error');
+    if ((editRole === 'admin' || editRole === 'superadmin' || editPlan === 'superadmin') && !isSuperAdmin) {
+      showToast('Only superadmin can grant admin or superadmin role.', 'error');
       return;
     }
     setEditSaving(true);
-    let roleSuccess = true;
-    let planSuccess = true;
-    let errorMsg: string | undefined;
 
-    if (editRole !== u.role || editPhone !== (u.phone_number ?? '')) {
-      const r1 = await updateUserRole(u.id, editRole as any, editPhone.trim() || u.phone_number);
-      if (!r1.success) {
-        roleSuccess = false;
-        errorMsg = r1.error;
-      }
+    let targetRole = (editRole || u.role || 'user') as 'superadmin' | 'admin' | 'reporter' | 'user';
+    let targetPlan = editPlan || u.plan || 'free';
+    if (targetPlan === 'superadmin' || targetRole === 'superadmin') {
+      targetRole = 'superadmin';
+      targetPlan = 'superadmin';
+    } else if (targetRole === 'admin' && (targetPlan === 'free' || !targetPlan)) {
+      targetPlan = 'admin';
     }
-    if (editPlan !== u.plan && editRole !== 'admin') {
-      const r2 = await updateUserPlan(u.id, editPlan);
-      if (!r2.success) {
-        planSuccess = false;
-        errorMsg = errorMsg ?? r2.error;
-      }
-    }
+
+    const r1 = await updateUserRole(u.id, targetRole, editPhone.trim() || u.phone_number, targetPlan);
 
     setEditSaving(false);
     setEditingUserId(null);
 
-    if (roleSuccess && planSuccess) {
-      showToast(`Updated ${u.email} successfully`, 'success');
+    const label = getUserIdentifier(u);
+    if (r1.success) {
+      showToast(`Updated ${label} to ${targetRole.toUpperCase()} successfully!`, 'success');
       fetchAll(fromDate || undefined, toDate || undefined);
     } else {
-      showToast(errorMsg ?? 'Failed to update user', 'error');
+      showToast(r1.error ?? 'Failed to update user', 'error');
     }
   };
 
   const handleBanToggle = async (u: AdminUserProfile) => {
-    if (isSuperAdminUser(u.email)) {
-      showToast('Superadmin cannot be blocked.', 'error');
+    if (isRootSuperAdminUser(u)) {
+      showToast('Founding superadmin cannot be blocked.', 'error');
       return;
     }
+    const label = getUserIdentifier(u);
     setActionLoadingId(u.id);
     const duration = u.is_banned ? 'none' : '876600h';
     const res = await banUser(u.id, duration);
     setActionLoadingId(null);
     if (res.success) {
-      showToast(u.is_banned ? `Unblocked ${u.email}` : `Blocked ${u.email}`, 'success');
+      showToast(u.is_banned ? `Unblocked ${label}` : `Blocked ${label}`, 'success');
       fetchAll(fromDate || undefined, toDate || undefined);
     } else {
       showToast(res.error ?? 'Action failed', 'error');
@@ -459,22 +487,23 @@ export const AdminScreen = () => {
   };
 
   const handleDeleteUser = async (u: AdminUserProfile) => {
-    if (isSuperAdminUser(u.email)) {
-      showToast('Superadmin cannot be deleted.', 'error');
+    if (isRootSuperAdminUser(u)) {
+      showToast('Founding superadmin cannot be deleted.', 'error');
       return;
     }
     if (!isSuperAdmin) {
       showToast('Only superadmin can delete users.', 'error');
       return;
     }
-    if (!window.confirm(`Are you sure you want to permanently delete user ${u.email}? This action cannot be undone.`)) {
+    const label = getUserIdentifier(u);
+    if (!window.confirm(`Are you sure you want to permanently delete user ${label}? This action cannot be undone.`)) {
       return;
     }
     setActionLoadingId(u.id);
     const res = await deleteUser(u.id);
     setActionLoadingId(null);
     if (res.success) {
-      showToast(`User ${u.email} deleted successfully.`, 'success');
+      showToast(`User ${label} deleted successfully.`, 'success');
       fetchAll(fromDate || undefined, toDate || undefined);
     } else {
       showToast(res.error ?? 'Failed to delete user.', 'error');
@@ -725,7 +754,7 @@ export const AdminScreen = () => {
             <div className="flex items-center gap-2 truncate">
               <Crown className="w-3.5 h-3.5 text-amber-300 shrink-0" />
               <span className="truncate">
-                Admin: <strong className="text-white font-bold">{user?.email}</strong>
+                {isSuperAdmin ? 'Superadmin:' : 'Admin:'} <strong className="text-white font-bold">{user?.email}</strong>
               </span>
             </div>
             <span className="text-[11px] text-white/60 shrink-0">
@@ -1294,8 +1323,16 @@ export const AdminScreen = () => {
             {/* Users List */}
             <div className="space-y-2.5">
               {filteredUsers.map((u) => {
-                const isSuper = isSuperAdminUser(u.email);
-                const isSelf = user?.email?.toLowerCase() === u.email?.toLowerCase();
+                const isSuper = isSuperAdminUser(u);
+                const isRootSuper = isRootSuperAdminUser(u);
+                const isSelf = Boolean(
+                  (user?.email && u.email && user.email.toLowerCase() === u.email.toLowerCase()) ||
+                  (user?.phone_number && u.phone_number && user.phone_number === u.phone_number)
+                );
+                const isPhoneAccount = Boolean(
+                  (u.email && u.email.endsWith('@phone.user')) ||
+                  (!u.email && u.phone_number)
+                );
                 return (
                   <div
                     key={u.id}
@@ -1306,7 +1343,7 @@ export const AdminScreen = () => {
                         {u.avatar_url ? (
                           <img src={u.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
                         ) : (
-                          (u.full_name || u.email || 'U').substring(0, 2).toUpperCase()
+                          (u.full_name && !u.full_name.startsWith('User ') ? u.full_name : (u.phone_number ? u.phone_number.slice(-4) : (u.email || 'U'))).substring(0, 2).toUpperCase()
                         )}
                         {u.is_active_today && (
                           <span
@@ -1319,7 +1356,7 @@ export const AdminScreen = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-sm font-bold text-[#0A2540] truncate">
-                            {u.full_name || 'Reporter'}
+                            {u.full_name || (u.phone_number ? `User (${u.phone_number})` : 'Reporter')}
                           </h4>
                           <RoleBadge role={isSuper ? 'superadmin' : u.role} />
                           <PlanBadge plan={u.plan} />
@@ -1344,7 +1381,13 @@ export const AdminScreen = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                          <p className="text-xs text-[#6B7A90] truncate">{u.email}</p>
+                          {isPhoneAccount ? (
+                            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              📱 Mobile OTP
+                            </span>
+                          ) : (
+                            <p className="text-xs text-[#6B7A90] truncate">{u.email}</p>
+                          )}
                           {u.phone_number && (
                             <span className="text-[11px] font-semibold text-[#015BB3] bg-[#E8F2FC] border border-[#D0E2F7] px-2 py-0.5 rounded-md">
                               📞 {u.phone_number}
@@ -1366,11 +1409,11 @@ export const AdminScreen = () => {
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        setClippingsSearch(u.email);
+                        setClippingsSearch(isPhoneAccount ? (u.phone_number || u.full_name || '') : u.email);
                         setActiveTab('clippings');
                       }}
                       className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 text-[#015BB3] hover:border-[#015BB3] hover:shadow-xs transition-all cursor-pointer group shrink-0 self-start md:self-center"
-                      title={`View clippings generated by ${u.full_name || u.email}`}
+                      title={`View clippings generated by ${u.full_name || u.email || u.phone_number}`}
                     >
                       <div className="w-8 h-8 rounded-lg bg-[#015BB3] text-white flex items-center justify-center shrink-0 shadow-2xs">
                         <Newspaper className="w-4 h-4" />
@@ -1397,7 +1440,7 @@ export const AdminScreen = () => {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 self-end md:self-center">
-                      {!isSuper && (
+                      {!isRootSuper && (
                         <>
                           <button
                             onClick={() => startEdit(u)}
@@ -1667,12 +1710,25 @@ export const AdminScreen = () => {
                       <label className="block text-xs font-bold text-[#0A2540] mb-1">Role</label>
                       <select
                         value={editRole}
-                        onChange={(e) => setEditRole(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditRole(val);
+                          if (val === 'superadmin') {
+                            setEditPlan('superadmin');
+                          } else if (val === 'admin') {
+                            setEditPlan('admin');
+                          } else if (val === 'reporter') {
+                            setEditPlan('reporter');
+                          } else {
+                            setEditPlan('free');
+                          }
+                        }}
                         className="w-full bg-[#E8F2FC] border border-[#D0E2F7] rounded-xl px-3 py-2 text-xs font-bold text-[#0A2540] focus:outline-none"
                       >
                         <option value="user">User</option>
                         <option value="reporter">Reporter</option>
                         {isSuperAdmin && <option value="admin">Administrator</option>}
+                        {isSuperAdmin && <option value="superadmin">👑 Super Administrator</option>}
                       </select>
                     </div>
 
@@ -1680,7 +1736,17 @@ export const AdminScreen = () => {
                       <label className="block text-xs font-bold text-[#0A2540] mb-1">Subscription Plan</label>
                       <select
                         value={editPlan}
-                        onChange={(e) => setEditPlan(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditPlan(val);
+                          if (val === 'superadmin') {
+                            setEditRole('superadmin');
+                          } else if (val === 'admin') {
+                            setEditRole('admin');
+                          } else if (val === 'reporter') {
+                            setEditRole('reporter');
+                          }
+                        }}
                         className="w-full bg-[#E8F2FC] border border-[#D0E2F7] rounded-xl px-3 py-2 text-xs font-bold text-[#0A2540] focus:outline-none"
                       >
                         <option value="free">Free</option>
@@ -1688,6 +1754,7 @@ export const AdminScreen = () => {
                         <option value="pro">Pro</option>
                         <option value="enterprise">Enterprise</option>
                         <option value="admin">Admin Plan</option>
+                        {isSuperAdmin && <option value="superadmin">👑 Superadmin Plan (Unlimited)</option>}
                       </select>
                     </div>
 

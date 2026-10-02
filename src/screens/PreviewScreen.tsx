@@ -233,8 +233,9 @@ export const PreviewScreen = () => {
     setIsShareSheetOpen(false);
 
     try {
-      const title = generation.config?.headline || 'RTI EXPRESS';
-      const text = `${generation.config?.headline || ''}\n\nRTI EXPRESS – India’s First Breaking News App.`;
+      const pubName = generation.config?.publicationName || 'Spot News 24x7';
+      const title = generation.config?.headline || pubName;
+      const text = `${generation.config?.headline || ''}\n\n${pubName} – Digital News App.`;
 
       // Fetch image blob
       const res = await fetch(generation.png_url);

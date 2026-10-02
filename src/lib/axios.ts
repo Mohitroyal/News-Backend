@@ -1,9 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "@/store";
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}`
-  : "https://news-backend-sjw6.onrender.com";
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "https://news-backend-sjw6.onrender.com";
 
 /**
  * Axios instance.
@@ -68,7 +66,11 @@ api.interceptors.response.use(
       if (!isPolling && typeof window !== "undefined") {
         console.warn("[API] 401 received — logging out and redirecting to login.");
         useAuthStore.getState().logout();
-        window.location.href = "/login";
+        
+        // Let React-Router handle the redirection smoothly via the App.tsx
+        // isAuthenticated check, rather than a hard reload which can break in Capacitor.
+        // Return an empty promise so the calling component doesn't show an error modal.
+        return new Promise(() => {}); 
       } else {
         console.warn("[API] 401 received during generation polling — ignoring redirect.");
       }

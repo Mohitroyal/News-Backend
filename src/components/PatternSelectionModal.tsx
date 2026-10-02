@@ -67,11 +67,11 @@ export const PATTERN_GROUPS = [
 ];
 
 export const PATTERN_TO_TEMPLATE_ID: Record<string, string> = {
-  A: 'bharath_reporter',
+  A: 'rti_express',
   B: 'rti_express',
   C: 'national_news',
   D: 'extra_news',
-  E: 'bharath_reporter',
+  E: 'rti_express',
   F: 'extra_news',
   G: 'rti_express',
 };

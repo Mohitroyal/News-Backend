@@ -69,4 +69,25 @@ export const authService = {
       data: undefined
     };
   },
+
+  async deleteAccount(): Promise<ApiResponse<void>> {
+    let resData: any = null;
+    try {
+      const res = await api.delete("/api/v1/auth/me");
+      resData = res.data;
+    } catch (err: any) {
+      // Fallback: If network or proxy blocks HTTP DELETE (405 Method Not Allowed), retry via POST
+      if (err.response?.status === 405 || err.response?.status === 404) {
+        console.warn("[AuthService] DELETE /me returned", err.response?.status, "- attempting POST fallback");
+        const res = await api.post("/api/v1/auth/delete-account");
+        resData = res.data;
+      } else {
+        throw err;
+      }
+    }
+    try {
+      await supabase.auth.signOut();
+    } catch (_) {}
+    return resData;
+  },
 };

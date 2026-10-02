@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore, useUIStore, useGenerationStore, getReporterPhoto, getReporterName, isAdminUser, isSuperAdminUser } from '@/store';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, User as UserIcon, UserCircle, ChevronRight, FileText, History, Crown } from 'lucide-react';
+import { Bell, Moon, Trash2, Shield, Check, QrCode, LogOut, AlertTriangle, User as UserIcon, UserCircle, ChevronRight, FileText, History, Crown, Loader2, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { useTranslation } from '@/lib/i18n';
+import { authService } from '@/services/auth.service';
 
 function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
   return (
@@ -75,30 +76,27 @@ export const SettingsScreen = () => {
   // ── Admin check (checks super admin, user metadata, Supabase profiles table & backend API) ──
   const [isAdminAccess, setIsAdminAccess] = useState(
     isAdminUser(user) ||
+    isSuperAdminUser(user) ||
     (user as any)?.role === 'admin' ||
+    (user as any)?.role === 'superadmin' ||
     (user as any)?.app_metadata?.role === 'admin' ||
-    (user as any)?.user_metadata?.role === 'admin'
+    (user as any)?.app_metadata?.role === 'superadmin' ||
+    (user as any)?.user_metadata?.role === 'admin' ||
+    (user as any)?.user_metadata?.role === 'superadmin'
   );
   useEffect(() => {
-    if (
-      isAdminUser(user) ||
-      (user as any)?.role === 'admin' ||
-      (user as any)?.app_metadata?.role === 'admin' ||
-      (user as any)?.user_metadata?.role === 'admin'
-    ) {
-      setIsAdminAccess(true);
-      return;
-    }
     if (!user?.id) return;
     (async () => {
       try {
         // 1. Check Supabase profiles table
         const { data: prof } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, plan')
           .eq('id', user.id)
           .single();
-        if (prof?.role === 'admin') {
+        if (prof?.role === 'superadmin' || prof?.plan === 'superadmin' || prof?.role === 'admin') {
+          const roleVal = prof.role === 'superadmin' || prof.plan === 'superadmin' ? 'superadmin' : 'admin';
+          useAuthStore.getState().updateUser({ role: roleVal, plan: prof.plan || roleVal });
           setIsAdminAccess(true);
           return;
         }
@@ -108,7 +106,7 @@ export const SettingsScreen = () => {
         const token = raw ? JSON.parse(raw)?.state?.token : null;
         if (token) {
           const res = await fetch(
-            'https://news-backend-sjw6.onrender.com/api/v1/admin/stats',
+            'https://news-backend-dummy.onrender.com/api/v1/admin/stats',
             { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(6000) }
           );
           if (res.status === 200) setIsAdminAccess(true);
@@ -252,11 +250,41 @@ export const SettingsScreen = () => {
     }
   };
 
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
   const handleTfaToggle = () => {
     if (tfaEnabled) {
       setTfaEnabled(false);
     } else {
       setIsTfaModalOpen(true);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationText !== "DELETE") return;
+    setIsDeletingAccount(true);
+    setDeleteError("");
+    try {
+      await authService.deleteAccount();
+      // Reset local store data
+      useGenerationStore.getState().resetConfig();
+      if (user?.email) {
+        localStorage.removeItem(`newscraft_reporter_name_${user.email}`);
+        localStorage.removeItem(`newscraft_reporter_photo_${user.email}`);
+      }
+      setIsDeleteModalOpen(false);
+      setDeleteConfirmationText("");
+      logout();
+      showToast("Account and all generated content deleted permanently.", "success");
+      navigate('/login');
+    } catch (err: any) {
+      console.error("Delete account error:", err);
+      const msg = err.response?.data?.detail || err.message || "Failed to delete account";
+      setDeleteError(msg);
+      showToast(msg, "error");
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -294,7 +322,7 @@ export const SettingsScreen = () => {
                 </h3>
                 {isAdminAccess ? (
                   <span className="bg-amber-500/15 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 border border-amber-400/30">
-                    <Crown className="w-2.5 h-2.5 text-amber-600" /> Admin
+                    <Crown className="w-2.5 h-2.5 text-amber-600" /> {isSuperAdminUser(user) ? 'Superadmin' : 'Admin'}
                   </span>
                 ) : (
                   <span className="bg-[#CC1E1E]/10 text-[#CC1E1E] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
@@ -467,6 +495,31 @@ export const SettingsScreen = () => {
             control={<ToggleSwitch enabled={tfaEnabled} onToggle={handleTfaToggle} />}
           />
         </SettingsSection>
+
+        {/* ── Contact Us Button ──────────────────────────────────────────────── */}
+        <button
+          id="contact-us-btn"
+          onClick={async () => {
+            try {
+              const { Browser } = await import('@capacitor/browser');
+              await Browser.open({ url: 'https://mohitroyal.github.io/spotnews/contact-us' });
+            } catch (e) {
+              window.open('https://mohitroyal.github.io/spotnews/contact-us', '_blank');
+            }
+          }}
+          className="w-full flex items-center justify-between px-5 py-4 bg-[#F3F6FB] border border-[#DCE6F0] rounded-2xl shadow-sm active:scale-[0.98] transition-all duration-200 group mb-3"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-9 h-9 rounded-xl bg-[#D6E9FF] flex items-center justify-center transition-colors">
+              <HelpCircle className="w-4 h-4 text-[#015BB3]" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-[#0A2540]">Contact Us</p>
+              <p className="text-xs text-[#6B7A90] mt-0.5">Support, feedback & inquiries</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-[#6B7A90]" />
+        </button>
 
         {/* ── Professional Logout Button ─────────────────────────────────────── */}
         <button
@@ -690,44 +743,72 @@ export const SettingsScreen = () => {
         )}
 
         {isDeleteModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#F3F6FB] rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-red-100"
+              className="bg-[#F3F6FB] rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl border border-red-200"
             >
-              <div className="p-6 border-b border-red-50">
-                <h3 className="text-lg font-bold text-red-600">Delete Account?</h3>
+              <div className="p-6 border-b border-red-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-red-600">Delete Account & Content?</h3>
+                  <p className="text-xs text-red-400 font-semibold">Permanent & Irreversible</p>
+                </div>
               </div>
               <div className="p-6 space-y-4">
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  This action is irreversible. Type <span className="font-bold text-red-600">DELETE</span> to confirm.
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  This will permanently delete your account, authentication credentials, and <strong>all generated newspaper clippings, posts, articles, and media</strong> from our servers.
                 </p>
-                <input
-                  type="text"
-                  value={deleteConfirmationText}
-                  onChange={(e) => setDeleteConfirmationText(e.target.value)}
-                  className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-900 focus:outline-none focus:border-red-500 font-mono"
-                />
-                <div className="flex gap-3 pt-4">
+
+                {deleteError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
+                    {deleteError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Type <span className="text-red-600">DELETE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmationText}
+                    disabled={isDeletingAccount}
+                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                    placeholder="DELETE"
+                    className="w-full bg-white border border-red-200 rounded-xl px-4 py-3 text-sm text-red-900 focus:outline-none focus:border-red-500 font-mono"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
                   <button
-                    onClick={() => { setIsDeleteModalOpen(false); setDeleteConfirmationText(""); }}
-                    className="px-4 py-3 text-sm font-bold text-[#6B7A90] bg-[#EBF1FA] rounded-xl w-full"
+                    disabled={isDeletingAccount}
+                    onClick={() => {
+                      setIsDeleteModalOpen(false);
+                      setDeleteConfirmationText("");
+                      setDeleteError("");
+                    }}
+                    className="px-4 py-3 text-sm font-bold text-[#6B7A90] bg-[#EBF1FA] rounded-xl w-full disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
-                    disabled={deleteConfirmationText !== "DELETE"}
-                    onClick={() => {
-                      alert("Account deleted.");
-                      setIsDeleteModalOpen(false);
-                      logout();
-                      navigate('/login');
-                    }}
-                    className="px-4 py-3 text-sm font-bold text-white bg-red-600 rounded-xl w-full disabled:opacity-50 transition-colors"
+                    disabled={deleteConfirmationText !== "DELETE" || isDeletingAccount}
+                    onClick={handleDeleteAccount}
+                    className="px-4 py-3 text-sm font-bold text-white bg-red-600 rounded-xl w-full disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                   >
-                    Delete
+                    {isDeletingAccount ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      <span>Delete All</span>
+                    )}
                   </button>
                 </div>
               </div>

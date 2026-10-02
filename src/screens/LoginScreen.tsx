@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Loader2, Mail, Lock, Camera, Phone, User as UserIcon } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 import logoUrl from '@/assets/rti_express_logo.png';
 import watermarkLogo from '@/assets/rti_express_watermark.png';
 
@@ -121,6 +122,21 @@ export const LoginScreen = () => {
       setLoading(true);
       setError('');
       
+      if (!Capacitor.isNativePlatform()) {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            }
+          },
+        });
+        if (error) throw error;
+        return;
+      }
+
       const response = await GoogleAuth.signIn();
 
       if (response && response.authentication) {

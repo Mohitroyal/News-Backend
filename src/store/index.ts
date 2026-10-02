@@ -186,7 +186,7 @@ interface GenerationStore {
 }
 
 const defaultConfig: Partial<GenerationConfig> = {
-  language: "en",
+  language: "te",
   tone: "formal",
   templateId: "rti_express",
   publicationName: "RTI Express",
@@ -200,8 +200,8 @@ const defaultConfig: Partial<GenerationConfig> = {
   imageUrls: [],
   fontFamily: "playfair",
   layoutPattern: "A",
-  borderColour: "#cc2222",
-  headingBgColour: "#cc2222",
+  borderColour: "#1d70b8",
+  headingBgColour: "#ffffff",
 };
 
 export const useGenerationStore = create<GenerationStore>()(
@@ -240,7 +240,10 @@ export const useGenerationStore = create<GenerationStore>()(
       setGenerations: (generations) => set({ generations: generations.slice(0, 50) }),
       setGenerating: (value) => set({ isGenerating: value }),
     }),
-    { name: "newscraft-generations" }
+    {
+      name: "newscraft-generations",
+      partialize: (state) => ({ generations: state.generations }),
+    }
   )
 );
 
@@ -294,11 +297,11 @@ export const SUPER_ADMIN_PHONES = [
 export const SUPER_ADMIN_EMAIL = 'mohithroyal16450@gmail.com';
 
 /**
- * Returns true if the user is a superadmin:
+ * Returns true if the user is one of the 2 founding/root superadmins:
  * - Emails: mohithroyal16450@gmail.com or baba.journilist@gmail.com
  * - Phones: 9346843889 or 7668886666
  */
-export const isSuperAdminUser = (userOrEmail?: any): boolean => {
+export const isRootSuperAdminUser = (userOrEmail?: any): boolean => {
   if (!userOrEmail) return false;
 
   // Check phone number
@@ -323,6 +326,47 @@ export const isSuperAdminUser = (userOrEmail?: any): boolean => {
   }
 
   return SUPER_ADMIN_EMAILS.some((e) => e.toLowerCase() === email);
+};
+
+/**
+ * Returns true if the user is a superadmin:
+ * - Either one of the 2 root superadmins
+ * - Or any user granted the 'superadmin' role in Supabase / Auth metadata / DB
+ */
+export const isSuperAdminUser = (userOrEmail?: any): boolean => {
+  if (!userOrEmail) return false;
+
+  // 1. Root superadmins check
+  if (isRootSuperAdminUser(userOrEmail)) return true;
+
+  // 2. Check granted role attribute across all common user object structures
+  if (typeof userOrEmail === 'object') {
+    const role = (
+      userOrEmail?.role ||
+      (userOrEmail as any)?.app_metadata?.role ||
+      (userOrEmail as any)?.user_metadata?.role ||
+      (userOrEmail as any)?.user_metadata?.role_name ||
+      ''
+    ).toString().toLowerCase().trim();
+
+    if (role === 'superadmin' || role === 'super_admin') {
+      return true;
+    }
+
+    const plan = (
+      userOrEmail?.plan ||
+      (userOrEmail as any)?.subscription_plan ||
+      (userOrEmail as any)?.app_metadata?.plan ||
+      (userOrEmail as any)?.user_metadata?.plan ||
+      ''
+    ).toString().toLowerCase().trim();
+
+    if (plan === 'superadmin' || plan === 'super_admin') {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 /**

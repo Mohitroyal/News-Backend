@@ -11,11 +11,6 @@ const config: CapacitorConfig = {
       forceCodeForRefreshToken: true,
     },
   },
-  server: {
-    androidScheme: 'https',
-    hostname: 'news-frount.vercel.app',
-    cleartext: true
-  }
 };
 
 export default config;

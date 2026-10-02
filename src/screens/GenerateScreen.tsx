@@ -3,9 +3,12 @@ import { useGenerationStore, useUIStore, useAuthStore, getReporterPhoto, getRepo
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Image as ImageIcon, X, ArrowLeft, Newspaper, CheckCircle2, Notebook, FileText, Pencil, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { generationService, compressImage } from '@/services/generation.service';
+import { validateImageFile } from '@/utils/imageValidation';
+import { compressImageToFit } from '@/utils/imageCompressor';
 import { TEMPLATES_LIST } from '@/lib/constants';
 import { getActivePublicationLogos, type PublicationLogo } from '@/services/admin.service';
 import { ImageCropModal } from '@/components/ImageCropModal';
+import { ImageWarningModal } from '@/components/ImageWarningModal';
 import type { Language } from '@/types';
 import { LiveNewspaperPreview } from '@/components/LiveNewspaperPreview';
 import { PatternSelectionModal } from '@/components/PatternSelectionModal';
@@ -102,6 +105,27 @@ export const GenerateScreen = () => {
   const [cropImageMime, setCropImageMime] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Warning Popup Modal state
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [warningTitle, setWarningTitle] = useState('Image Limit Warning');
+  const [canCompressWarning, setCanCompressWarning] = useState(false);
+  const [pendingFileForCompression, setPendingFileForCompression] = useState<File | null>(null);
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
+
+  const showImageWarning = (
+    message: string,
+    title = 'Image Limit Warning',
+    canCompress = false,
+    fileToCompress: File | null = null
+  ) => {
+    setWarningTitle(title);
+    setWarningMessage(message);
+    setCanCompressWarning(canCompress);
+    setPendingFileForCompression(fileToCompress);
+    setWarningModalOpen(true);
+  };
+
   // Check for restored image on mount
   useEffect(() => {
     if (pendingCropImageSrc) {
@@ -117,8 +141,8 @@ export const GenerateScreen = () => {
   const [logosLoading, setLogosLoading] = useState(true);
 
   const selectedPattern = currentConfig.layoutPattern || 'A';
-  const selectedBorderColour = currentConfig.borderColour || '#cc2222';
-  const selectedHeadingBgColour = currentConfig.headingBgColour || '#fff3f3';
+  const selectedBorderColour = currentConfig.borderColour || '#15a850';
+  const selectedHeadingBgColour = currentConfig.headingBgColour || '#ffffff';
   const selectedTemplateId = currentConfig.templateId || 'rti_express';
 
   // Load active publication logos from backend / local storage
@@ -132,7 +156,8 @@ export const GenerateScreen = () => {
           (l) => l.publication_code === selectedTemplateId || l.id === selectedTemplateId
         );
         if (!currentIsActive) {
-          setConfig({ templateId: logos[0].publication_code as any });
+          const rtiLogo = logos.find(l => l.publication_code === 'rti_express');
+          setConfig({ templateId: (rtiLogo ? rtiLogo.publication_code : 'rti_express') as any });
         }
       } else {
         setActiveLogos([]);
@@ -168,8 +193,8 @@ export const GenerateScreen = () => {
     if (selectedTemplateId === 'rti_express') {
       useUIStore.getState().setLogoMode(true);
       setConfig({
-        borderColour: '#cc2222',
-        headingBgColour: '#cc2222'
+        borderColour: '#1d70b8',
+        headingBgColour: '#ffffff'
       });
     }
   }, [selectedTemplateId, setConfig]);
@@ -200,17 +225,45 @@ export const GenerateScreen = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Ensure it's an image even though we accept */*
-    if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file (jpeg, png, etc).');
+    // Check if file is larger than 50MB
+    if (file.size > 50 * 1024 * 1024) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      showImageWarning(
+        `Selected file size is ${sizeMb} MB. Maximum allowed limit is 50 MB. 50MB is the strict limit.`,
+        'File Size Limit Exceeded',
+        true,
+        file
+      );
+      e.target.value = '';
       return;
     }
 
-    const mimeType = file.type;
+    // Strict client-side validation against dimensions (4096px), formats (JPEG/PNG/WEBP), min size
+    const validation = await validateImageFile(file);
+    if (!validation.valid) {
+      const isDimensionIssue = validation.error?.toLowerCase().includes('dimension') ||
+        validation.error?.toLowerCase().includes('density') ||
+        validation.error?.toLowerCase().includes('exceed');
+
+      if (isDimensionIssue) {
+        showImageWarning(
+          validation.error || 'Image dimensions exceed maximum allowed limit of 4096x4096px.',
+          'Image Dimension Limit Exceeded',
+          true,
+          file
+        );
+      } else {
+        showImageWarning(validation.error || 'Invalid image file.', 'Image Limit Warning', false, null);
+      }
+      e.target.value = '';
+      return;
+    }
+
+    const mimeType = file.type || 'image/jpeg';
     const url = URL.createObjectURL(file);
     setCropImageMime(mimeType);
     setCropImageSrc(url);
@@ -219,12 +272,44 @@ export const GenerateScreen = () => {
     e.target.value = '';
   };
 
+  const handleProceedCompress = async () => {
+    if (!pendingFileForCompression) return;
+    setIsCompressingImage(true);
+    try {
+      const result = await compressImageToFit(pendingFileForCompression);
+      setWarningModalOpen(false);
+      setPendingFileForCompression(null);
+      setCanCompressWarning(false);
+      setCropImageMime('image/jpeg');
+      setCropImageSrc(result.dataUrl);
+    } catch (err: any) {
+      console.error('Image compression failed:', err);
+      showImageWarning(
+        `Failed to compress image: ${err.message || 'Unknown error'}. Please choose a standard JPEG or PNG image.`,
+        'Compression Error',
+        false,
+        null
+      );
+    } finally {
+      setIsCompressingImage(false);
+    }
+  };
+
   const handleCropComplete = async (croppedBlob: Blob) => {
     setCropImageSrc(null);
     setLoading(true);
     try {
+      if (croppedBlob.size === 0) {
+        showImageWarning('Empty file uploaded. File must be greater than 0 bytes.');
+        return;
+      }
+      if (croppedBlob.size > 50 * 1024 * 1024) {
+        showImageWarning('File exceeds maximum allowed size of 50MB. 50MB is the limit.');
+        return;
+      }
+
       const mimeType = cropImageMime || 'image/jpeg';
-      const extension = mimeType === 'image/png' ? 'png' : 'jpeg';
+      const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpeg';
       const rawFile = new File([croppedBlob], `upload.${extension}`, { type: mimeType });
       const compressed = await compressImage(rawFile, 1600, 0.82);
       const uploadRes = await generationService.uploadImage(compressed);
@@ -234,14 +319,27 @@ export const GenerateScreen = () => {
         if (finalUrl.includes('onrender.com')) finalUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
         setImageUrls(prev => [...prev, finalUrl].slice(0, maxImages));
       } else {
-        alert(`Upload Failed: ${(uploadRes as any).error || 'Unknown error'}`);
+        showImageWarning(`Upload Failed: ${(uploadRes as any).error || 'Unknown error'}`);
       }
     } catch (err: any) {
-      alert(`Upload Error\n\n${err.message || 'Unknown error'}`);
+      showImageWarning(`Upload Error\n\n${err.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
+
+  // Always start with clean image state and RTI Express template for new clipping creation
+  useEffect(() => {
+    setImageUrls([]);
+    setConfig({
+      templateId: 'rti_express',
+      publicationName: 'RTI Express',
+      imageUrls: [],
+      imageUrl: '',
+      borderColour: '#1d70b8',
+      headingBgColour: '#ffffff',
+    });
+  }, []);
 
   const handleGenerate = async () => {
     if (!headline || !content) return;
@@ -259,12 +357,21 @@ export const GenerateScreen = () => {
       const reporterName = getReporterName(user?.email) || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user?.full_name || user?.firstName || 'Reporter';
       const reporterImage = getReporterPhoto(user?.email) || user?.avatarUrl || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || '';
 
+      const validImageUrls = imageUrls.filter(u => u && typeof u === 'string' && u.trim());
+      const hasNoImages = validImageUrls.length === 0;
+
+      const effectiveTemplateId = hasNoImages ? 'rti_express' : (selectedTemplateId || 'rti_express');
+      const effectivePubName = hasNoImages ? 'RTI Express' : (selectedTemplateDetails?.name || 'RTI Express');
+      const effectiveLogoId = hasNoImages ? 'rti_express' : (logoMode ? selectedTemplateId : 'rti_express');
+
       const configToSave = {
         ...currentConfig, headline, articleContent: content, language, fontFamily,
-        layoutColumns, imageUrls, imageUrl: imageUrls[0] || '',
-        templateId: selectedTemplateId,
-        publicationName: selectedTemplateDetails.name,
-        logoId: logoMode ? selectedTemplateId : undefined,
+        layoutColumns,
+        imageUrls: validImageUrls,
+        imageUrl: validImageUrls[0] || '',
+        templateId: effectiveTemplateId,
+        publicationName: effectivePubName,
+        logoId: effectiveLogoId,
         showWatermark: logoMode,
         showInnerBorders: showInnerBorders ?? true,
         publicationDate: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
@@ -277,8 +384,14 @@ export const GenerateScreen = () => {
         ...configToSave,
         language,
         articleContent: content,
-        imageUrls,
-        imageUrl: imageUrls[0] || '',
+        imageUrls: validImageUrls,
+        imageUrl: validImageUrls[0] || '',
+        templateId: effectiveTemplateId,
+        template_id: effectiveTemplateId,
+        logoId: effectiveLogoId,
+        logo_id: effectiveLogoId,
+        publicationName: effectivePubName,
+        publication_name: effectivePubName,
         generateHeadline: false,
         generate_headline: false,
         autoGenerateHeadline: false,
@@ -454,7 +567,7 @@ export const GenerateScreen = () => {
               <UploadCloud style={{ width: 20, height: 20, color: '#0F487F', opacity: 0.8 }} strokeWidth={2.2} />
               <span style={{ color: '#475569', fontSize: '12.5px', fontWeight: 600 }}>Tap to upload image</span>
               <span style={{ color: '#94A3B8', fontSize: '10.5px' }}>
-                {maxImages - imageUrls.length} remaining · auto-compressed
+                {maxImages - imageUrls.length} remaining · Max 10MB (JPEG, PNG, WebP)
               </span>
             </button>
           )}
@@ -502,8 +615,25 @@ export const GenerateScreen = () => {
         type="file"
         ref={fileInputRef}
         style={{ display: 'none' }}
-        accept="*/*"
+        accept="image/jpeg,image/png,image/webp"
         onChange={handleFileChange}
+      />
+
+      {/* Warning Popup Modal */}
+      <ImageWarningModal
+        isOpen={warningModalOpen}
+        onClose={() => {
+          if (!isCompressingImage) {
+            setWarningModalOpen(false);
+            setPendingFileForCompression(null);
+            setCanCompressWarning(false);
+          }
+        }}
+        title={warningTitle}
+        errorMessage={warningMessage}
+        canCompress={canCompressWarning}
+        onProceedCompress={handleProceedCompress}
+        isCompressing={isCompressingImage}
       />
 
       <PatternSelectionModal

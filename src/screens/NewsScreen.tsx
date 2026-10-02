@@ -123,8 +123,9 @@ export const NewsScreen: React.FC = () => {
                   <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                     <div>
                       {/* Active Logo Tag */}
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <span className="px-2 py-0.5 rounded-md bg-[#0d4a8f] text-white text-[10px] font-extrabold uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-[#6B7A90]">
+                        Source/Publisher:
+                        <span className="px-2 py-0.5 rounded-md bg-[#0d4a8f] text-white font-extrabold uppercase tracking-wider ml-1">
                           {activeLogo}
                         </span>
                       </div>
@@ -139,7 +140,7 @@ export const NewsScreen: React.FC = () => {
                     <div className="flex items-center justify-between text-[11px] text-[#6B7A90] mt-2 pt-2 border-t border-[#D0E2F7]/60">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-[#0d4a8f]" />
-                        <span>{pubDate}</span>
+                        <span>Published: {pubDate}</span>
                       </div>
                       <ChevronRight className="w-4 h-4 text-[#0d4a8f]" />
                     </div>
@@ -158,9 +159,11 @@ export const NewsScreen: React.FC = () => {
             {/* Modal Header */}
             <div className="bg-[#0d4a8f] px-5 py-4 flex items-center justify-between text-white">
               <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[10px] uppercase text-white/70 tracking-wider">Source/Publisher:</span>
                 <span className="px-2.5 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider">
                   {selectedGen?.config?.publicationName || 'RTI Express'}
                 </span>
+                <span className="ml-2 text-[10px] uppercase text-white/70 tracking-wider">Published:</span>
                 <span className="text-xs text-white/70 truncate">
                   {formatDate(selectedGen?.createdAt)}
                 </span>

@@ -19,7 +19,7 @@ import { VerifyOtpScreen } from './screens/VerifyOtpScreen';
 import { CreatePasswordScreen } from './screens/CreatePasswordScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
 import { AdminScreen } from './screens/AdminScreen';
-import { useAuthStore, useUIStore, getReporterPhoto, getReporterName, isAdminUser } from './store';
+import { useAuthStore, useUIStore, getReporterPhoto, getReporterName, isAdminUser, isSuperAdminUser } from './store';
 import { supabase } from './lib/supabase';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -264,9 +264,13 @@ function App() {
   const isAdmin =
     isAdminVerified ||
     isAdminUser(user) ||
+    isSuperAdminUser(user) ||
     (user as any)?.role === 'admin' ||
+    (user as any)?.role === 'superadmin' ||
     (user as any)?.app_metadata?.role === 'admin' ||
-    (user as any)?.user_metadata?.role === 'admin';
+    (user as any)?.app_metadata?.role === 'superadmin' ||
+    (user as any)?.user_metadata?.role === 'admin' ||
+    (user as any)?.user_metadata?.role === 'superadmin';
 
   useEffect(() => {
     const checkAdminRole = async () => {
@@ -274,34 +278,41 @@ function App() {
         setIsAdminVerified(false);
         return;
       }
+
+      // Check current Supabase profiles role & plan to catch superadmin promotions
+      try {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('role, plan')
+          .eq('id', user.id)
+          .single();
+        if (prof?.role === 'admin' || prof?.role === 'superadmin' || prof?.plan === 'superadmin') {
+          const roleVal = prof.role === 'superadmin' || prof.plan === 'superadmin' ? 'superadmin' : 'admin';
+          updateUser({ role: roleVal, plan: prof.plan || roleVal } as any);
+          setIsAdminVerified(true);
+          return;
+        }
+      } catch { /* silent */ }
+
       if (
         isAdminUser(user) ||
+        isSuperAdminUser(user) ||
         (user as any)?.role === 'admin' ||
+        (user as any)?.role === 'superadmin' ||
         (user as any)?.app_metadata?.role === 'admin' ||
-        (user as any)?.user_metadata?.role === 'admin'
+        (user as any)?.app_metadata?.role === 'superadmin' ||
+        (user as any)?.user_metadata?.role === 'admin' ||
+        (user as any)?.user_metadata?.role === 'superadmin'
       ) {
         setIsAdminVerified(true);
         return;
       }
 
       try {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        if (prof?.role === 'admin') {
-          updateUser({ role: 'admin' } as any);
-          setIsAdminVerified(true);
-          return;
-        }
-      } catch { /* silent */ }
-
-      try {
         const token = useAuthStore.getState().token;
         if (token) {
           const res = await fetch(
-            'https://news-backend-sjw6.onrender.com/api/v1/admin/stats',
+            'https://news-backend-dummy.onrender.com/api/v1/admin/stats',
             { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(6000) }
           );
           const isDbAdmin = res.status === 200;
