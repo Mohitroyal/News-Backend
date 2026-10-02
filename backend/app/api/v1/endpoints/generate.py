@@ -212,8 +212,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
 
                 # Standard brand template folder mapping
                 has_user_images = bool(safe_image_urls or safe_image_url)
-                if not has_user_images and (not normalized_id or normalized_id in ["default", "classic"]):
-                    # Default no-image content: use RTI Express template structure & default logo graphic
+                if not has_user_images:
+                    # Whenever publishing without a user photo, ALWAYS force RTI Express template & branding
                     template_id = "rti_express"
                     clipping.template_id = "rti_express"
                     clipping.logo_id = "rti_express"

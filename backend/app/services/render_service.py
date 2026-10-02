@@ -159,10 +159,16 @@ class RenderService:
             data["summary"] = str(data["summary"])[:375].rsplit(' ', 1)[0] + "..."
 
         # 4. Logo/template safety fallback & brand resolution
+        def is_clipping_output_url(u: str) -> bool:
+            if not u or not isinstance(u, str):
+                return False
+            clean_u = u.lower().strip()
+            return "/clippings/" in clean_u or "clipping_" in clean_u or "clipping-" in clean_u
+
         image_urls_raw = data.get("image_urls") or []
         image_url_raw = data.get("image_url") or ""
-        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
-        if not valid_imgs and image_url_raw and str(image_url_raw).strip():
+        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip() and not is_clipping_output_url(u)]
+        if not valid_imgs and image_url_raw and str(image_url_raw).strip() and not is_clipping_output_url(image_url_raw):
             valid_imgs = [str(image_url_raw).strip()]
 
         raw_t_name = str(template_name).replace(".html", "").lower().strip()
@@ -205,6 +211,13 @@ class RenderService:
                     brand_key = "extra_news"
                 else:
                     brand_key = raw_logo_id
+
+        if not valid_imgs:
+            template_key = "rti_express"
+            brand_key = "rti_express"
+            data["publication_name"] = "RTI Express"
+            data["template_id"] = "rti_express"
+            data["logo_id"] = "rti_express"
 
         data["logo_id"] = brand_key
         data["template_id"] = template_key
@@ -286,8 +299,8 @@ class RenderService:
         # 3. Default image fallback resolution (RTI Express Logo PNG)
         image_urls_raw = data.get("image_urls") or []
         image_url_raw = data.get("image_url") or ""
-        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip()]
-        if not valid_imgs and image_url_raw and str(image_url_raw).strip():
+        valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip() and not is_clipping_output_url(u)]
+        if not valid_imgs and image_url_raw and str(image_url_raw).strip() and not is_clipping_output_url(image_url_raw):
             valid_imgs = [str(image_url_raw).strip()]
         if not valid_imgs:
             import base64
