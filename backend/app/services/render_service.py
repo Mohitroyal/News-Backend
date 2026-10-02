@@ -654,6 +654,11 @@ class RenderService:
             const container = document.querySelector('.newspaper-container');
             if (!container) return;
 
+            if (data.template_id === 'rti_express' || data.template_id === 'pub_rti_express') {
+                window.__LAYOUT_DONE__ = true;
+                return;
+            }
+
             const totalChars = (data.sections || []).reduce((s, p) => s + p.length, 0);
             console.log('[LAYOUT] Article length:', totalChars, 'chars,', (data.sections||[]).length, 'sections');
 
