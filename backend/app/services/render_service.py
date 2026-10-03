@@ -1262,7 +1262,7 @@ class RenderService:
                         imgEl.style.left = `${obs.x}px`;
                         imgEl.style.top = `${obs.y}px`;
                         imgEl.style.width = `${obs.w}px`;
-                        imgEl.style.height = 'auto';
+                        imgEl.style.height = `${obs.h}px`;
                         imgEl.style.boxSizing = 'border-box';
                         imgEl.style.border = 'none';
                         imgEl.style.padding = '0';
@@ -2207,7 +2207,7 @@ class RenderService:
                                 if (computedAttr) {
                                     realMaxY = parseFloat(computedAttr);
                                 } else {
-                                    canvas.querySelectorAll('img, p, .image-caption, .nc-image-caption').forEach(el => {
+                                    canvas.querySelectorAll('.nc-absolute-image, img, p, .image-caption, .nc-image-caption, .nc-text-region-box, .obstacle-placeholder').forEach(el => {
                                         const rect = el.getBoundingClientRect();
                                         const canvasRect = canvas.getBoundingClientRect();
                                         const bottom = rect.bottom - canvasRect.top;
