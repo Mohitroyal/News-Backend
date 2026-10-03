@@ -472,8 +472,17 @@ class RenderService:
             (is_single_img and not is_explicit_other_template)
         )
 
+        # Force master layout if user explicitly requested a double/pattern layout or uploaded multiple images
+        force_master = ("pattern" in raw_image_layout or "double" in raw_image_layout or "two" in raw_image_layout or "dual" in raw_image_layout or len(_img_urls) >= 2)
+        
+        template_candidates = []
+        if force_master:
+            template_candidates = ["master_layout.html"]
+        else:
+            template_candidates = [f"{template_key}/template.html", f"{template_key}.html", "rti_express/template.html", "master_layout.html"]
+
         template = None
-        for candidate in [f"{template_key}/template.html", f"{template_key}.html", "rti_express/template.html", "master_layout.html"]:
+        for candidate in template_candidates:
             try:
                 tmpl = self.env.get_template(candidate)
                 test_str = tmpl.render(**data)
