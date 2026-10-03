@@ -725,6 +725,13 @@ async def create_clipping(
 
     req_pub = clipping_in.publication_name or "RTI Express"
 
+    final_image_url = clipping_in.image_url if clipping_in.image_url else ""
+    final_image_urls = clipping_in.image_urls or []
+    if not final_image_urls and final_image_url and "," in final_image_url:
+        final_image_urls = [u.strip() for u in final_image_url.split(",") if u.strip()]
+        if final_image_urls:
+            final_image_url = final_image_urls[0]
+
     clipping = Clipping(
         user_id=current_user.id,
         headline=clipping_in.headline,
@@ -733,8 +740,8 @@ async def create_clipping(
         tone=clipping_in.tone,
         template_id=req_tpl,
         logo_id=req_logo,
-        image_url=clipping_in.image_url if clipping_in.image_url else "",
-        image_urls=clipping_in.image_urls or [],
+        image_url=final_image_url,
+        image_urls=final_image_urls,
         publication_name=req_pub,
         publication_date=clipping_in.publication_date,
         layout_columns=0 if str(clipping_in.layout_columns).lower() in ["auto", "0", "none"] else (int(clipping_in.layout_columns) if str(clipping_in.layout_columns).isdigit() else 0),

@@ -850,7 +850,7 @@ class RenderService:
                     if (isCustom || rawLayout === "default" || rawLayout === "" || rawLayout === "auto") {
                         isPatternB = true;
                     }
-                    const isDoublePatternB = (urls.length === 2) && (rawLayout.includes('patternb') || rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout === "default" || rawLayout === "" || rawLayout === "auto");
+                    const isDoublePatternB = (urls.length === 2) && (rawLayout.includes('patternb') || rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout.includes('double') || rawLayout.includes('two') || rawLayout.includes('dual') || rawLayout === "default" || rawLayout === "" || rawLayout === "auto");
                     const isTriplePatternB = isPatternB && urls.length >= 3;
 
                     const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
