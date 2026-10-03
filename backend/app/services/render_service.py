@@ -8,10 +8,45 @@ import psutil
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import async_playwright
 import asyncio
+import hashlib
+from urllib.parse import urlparse
 from typing import Dict, Any, Optional
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+def is_clipping_output_url(u: Any) -> bool:
+    if not u or not isinstance(u, str):
+        return False
+    clean = u.strip()
+    if not clean:
+        return False
+    try:
+        path = urlparse(clean).path.lower()
+        if "/clippings/" in path and (path.endswith(".png") or path.endswith(".pdf")):
+            return True
+    except Exception:
+        pass
+    return False
+
+def _safe_media_repr(val: Any) -> str:
+    """Bounded, token-free diagnostic string for media URL or Data URI."""
+    if not val:
+        return "<empty>"
+    if isinstance(val, list):
+        if not val:
+            return "[]"
+        return "[" + ", ".join(_safe_media_repr(x) for x in val) + "]"
+    s = str(val).strip()
+    if not s:
+        return "<empty>"
+    if s.startswith("data:"):
+        prefix = s[:30]
+        content_bytes = s.encode("utf-8")
+        sha = hashlib.sha256(content_bytes).hexdigest()[:12]
+        return f"DataURI({prefix}..., len={len(s)}, sha256={sha})"
+    clean_url = s.split("?")[0]
+    return clean_url
 
 
 def _get_peak_memory() -> float:
@@ -291,12 +326,12 @@ class RenderService:
         valid_imgs = [u for u in image_urls_raw if u and isinstance(u, str) and u.strip() and not is_clipping_output_url(u)]
         if not valid_imgs and image_url_raw and str(image_url_raw).strip() and not is_clipping_output_url(image_url_raw):
             valid_imgs = [str(image_url_raw).strip()]
+
         if not valid_imgs:
             import base64
             logo_png_paths = [
                 os.path.join(os.path.dirname(__file__), "..", "static", "logos", "rti_express_logo.png"),
                 os.path.join(os.path.dirname(__file__), "..", "static", "default.png"),
-                r"C:\Users\MOHIT\Desktop\newscraft-mobile\SPOT NEWS NEW (2)\newscraft-mobile (1)\newscraft-mobile\src\assets\rti_express_logo.png",
             ]
             default_img = None
             for p_cand in logo_png_paths:
@@ -329,6 +364,14 @@ class RenderService:
         else:
             data["image_url"] = valid_imgs[0]
             data["image_urls"] = valid_imgs
+
+        # Stage 5 Diagnostic Log (Final Resolved Hero Source AFTER all fallbacks and immediately before rendering)
+        commit_sha = os.getenv("RENDER_GIT_COMMIT", os.getenv("GIT_COMMIT", "dev-local"))
+        final_hero_repr = _safe_media_repr(data.get("image_url"))
+        print(f"[DIAGNOSTICS - RENDER {data.get('id')}] Executing Commit: {commit_sha}")
+        print(f"[DIAGNOSTICS - RENDER {data.get('id')}] Template Path: app/templates/{template_name}")
+        print(f"[DIAGNOSTICS - RENDER {data.get('id')}] Stage 5 (Final Resolved Hero Source): {final_hero_repr}")
+        sys.stdout.flush()
         lang_map = {
             "en": "English",  "te": "Telugu",   "hi": "Hindi",
             "kn": "Kannada",  "ta": "Tamil",    "ml": "Malayalam",

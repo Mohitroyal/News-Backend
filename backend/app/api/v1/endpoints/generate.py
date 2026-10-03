@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from typing import Any, List
@@ -21,7 +21,27 @@ import asyncio
 import re
 import gc
 import psutil
+import hashlib
 from datetime import datetime, timedelta
+
+def _safe_media_repr(val: Any) -> str:
+    """Bounded, token-free diagnostic string for media URL or Data URI."""
+    if not val:
+        return "<empty>"
+    if isinstance(val, list):
+        if not val:
+            return "[]"
+        return "[" + ", ".join(_safe_media_repr(x) for x in val) + "]"
+    s = str(val).strip()
+    if not s:
+        return "<empty>"
+    if s.startswith("data:"):
+        prefix = s[:30]
+        content_bytes = s.encode("utf-8")
+        sha = hashlib.sha256(content_bytes).hexdigest()[:12]
+        return f"DataURI({prefix}..., len={len(s)}, sha256={sha})"
+    clean_url = s.split("?")[0]
+    return clean_url
 
 # Concurrency control – Render free tier supports only one generation at a time
 MAX_CONCURRENT_GENERATIONS = 1
@@ -646,11 +666,28 @@ async def _background_process_clipping(clipping_id: Any):
 @router.post("/", response_model=dict)
 async def create_clipping(
     *,
+    request: Request,
     db: Session = Depends(get_db),
     clipping_in: ClippingCreate,
     current_user: User = Depends(get_current_active_user),
     background_tasks: BackgroundTasks
 ) -> Any:
+    raw_body = {}
+    try:
+        raw_body = await request.json()
+    except Exception:
+        pass
+
+    # Stage 1: All four incoming raw media fields
+    inc_urls = _safe_media_repr(raw_body.get("imageUrls"))
+    inc_url = _safe_media_repr(raw_body.get("imageUrl"))
+    inc_snake_urls = _safe_media_repr(raw_body.get("image_urls"))
+    inc_snake_url = _safe_media_repr(raw_body.get("image_url"))
+
+    # Stage 2: Parsed Pydantic model media values
+    mdl_urls = _safe_media_repr(clipping_in.image_urls)
+    mdl_url = _safe_media_repr(clipping_in.image_url)
+
     # 1. Premium template authorization check
     premium_templates = ["tabloid", "magazine"]
     if clipping_in.template_id in premium_templates and current_user.subscription_plan not in ["pro", "enterprise"]:
@@ -718,6 +755,17 @@ async def create_clipping(
     db.add(clipping)
     db.commit()
     db.refresh(clipping)
+
+    # Stage 3: Media values saved to database clipping record
+    db_saved_urls = _safe_media_repr(clipping.image_urls)
+    db_saved_url = _safe_media_repr(clipping.image_url)
+
+    commit_sha = os.getenv("RENDER_GIT_COMMIT", os.getenv("GIT_COMMIT", "dev-local"))
+    print(f"\n[DIAGNOSTICS - REQ {clipping.id}] Executing Commit: {commit_sha}")
+    print(f"[DIAGNOSTICS - REQ {clipping.id}] Stage 1 (Raw HTTP Incoming): imageUrls={inc_urls}, imageUrl={inc_url}, image_urls={inc_snake_urls}, image_url={inc_snake_url}")
+    print(f"[DIAGNOSTICS - REQ {clipping.id}] Stage 2 (Pydantic Parsed): image_urls={mdl_urls}, image_url={mdl_url}")
+    print(f"[DIAGNOSTICS - REQ {clipping.id}] Stage 3 (DB Record Saved): image_urls={db_saved_urls}, image_url={db_saved_url}")
+    sys.stdout.flush()
 
     background_tasks.add_task(_background_process_clipping, clipping.id)
 
