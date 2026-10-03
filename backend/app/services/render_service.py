@@ -407,6 +407,23 @@ class RenderService:
             else:
                 data["publication_date_time"] = f"{pub_date} | {data['publication_time']}"
 
+        # Resolve publication logo_url for watermark if missing
+        if not data.get("logo_url"):
+            logo_id_norm = str(data.get("logo_id") or data.get("template_id") or "rti_express").lower()
+            if "rti" in logo_id_norm:
+                data["logo_url"] = _rewrite_to_absolute("/static/logos/rti_express_watermark.png")
+            elif "bharath" in logo_id_norm:
+                data["logo_url"] = _rewrite_to_absolute("/static/logos/bharath_reporter.svg")
+            elif "national" in logo_id_norm:
+                data["logo_url"] = _rewrite_to_absolute("/static/logos/national_news.svg")
+            elif "extra" in logo_id_norm:
+                data["logo_url"] = _rewrite_to_absolute("/static/logos/extra_news.svg")
+            else:
+                data["logo_url"] = _rewrite_to_absolute("/static/logos/rti_express_watermark.png")
+
+        if not data.get("image_display_mode"):
+            data["image_display_mode"] = str(data.get("image_mode") or data.get("imageDisplayMode") or data.get("imageMode") or "cover").lower()
+
         # ── Per-language primary font for logging ─────────────────────────────
         _lang_font_map = {
             "en": ("Playfair Display / Merriweather", "Latin + full Unicode"),
@@ -833,7 +850,7 @@ class RenderService:
                     if (isCustom || rawLayout === "default" || rawLayout === "" || rawLayout === "auto") {
                         isPatternB = true;
                     }
-                    const isDoublePatternB = (isPatternB && urls.length === 2) && (rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout === "default");
+                    const isDoublePatternB = (urls.length === 2) && (rawLayout.includes('patternb') || rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout === "default" || rawLayout === "" || rawLayout === "auto");
                     const isTriplePatternB = isPatternB && urls.length >= 3;
 
                     const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
