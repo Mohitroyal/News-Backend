@@ -2,273 +2,80 @@
 <html lang="{{ language }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ headline }}</title>
+    <title>Intersection</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;600;700;800&family=Noto+Serif+Telugu:wght@400;600;700;800&display=swap');
-        
-        * {
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased !important;
-            -moz-osx-font-smoothing: grayscale !important;
-            text-rendering: optimizeLegibility !important;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            background: #F0F2F5;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-        }
-        .newspaper-container {
-            width: 540px;
-            background: #FFFFFF;
-            margin: 0 auto;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            font-family: 'Gautami', 'Noto Sans Telugu', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            position: relative;
-        }
-        .hero-image-wrapper {
-            position: relative;
-            width: 100%;
-            min-height: 340px;
-            max-height: 480px;
-            background: #0F172A;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .hero-img {
-            width: 100%;
-            height: auto;
-            max-height: 480px;
-            object-fit: cover;
-            display: block;
-        }
-        .image-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            min-height: 50px;
-            background: linear-gradient(transparent, rgba(0,0,0,0.85));
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            padding: 8px 12px;
-            box-sizing: border-box;
-            z-index: 2;
-        }
-        .reporter-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-            min-width: 0;
-        }
-        .reporter-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            border: 1.5px solid #FFFFFF;
-            object-fit: cover;
-            display: block;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-            background: #333333;
-            flex-shrink: 0;
-        }
-        .reporter-avatar-fallback {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            border: 1.5px solid #FFFFFF;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #1d70b8, #0f3d68);
-            color: #FFFFFF;
-            font-size: 16px;
-            font-weight: 700;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-            flex-shrink: 0;
-        }
-        .reporter-meta {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-width: 0;
-        }
-        .reporter-name {
-            color: #FFFFFF;
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-        }
-        .reporter-date {
-            color: #D1D5DB;
-            font-size: 11px;
-            font-weight: 500;
-            line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-        }
-        .watermark-badge {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            flex-shrink: 0;
-        }
-        .watermark-badge img {
-            max-height: 34px;
-            width: auto;
-            object-fit: contain;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
-        }
-        .article-content {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .article-headline {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 800;
-            color: #111827;
-            line-height: 1.35;
-        }
-        .article-body {
-            font-size: 15px;
-            line-height: 1.65;
-            color: #374151;
-            text-align: justify;
-        }
-        .article-body p {
-            margin: 0 0 10px 0;
-        }
-        .article-body p:last-child {
-            margin-bottom: 0;
-        }
-        .footer-banner {
-            background: #111827;
-            color: #FFFFFF;
-            padding: 8px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            margin-top: auto;
-        }
-        .footer-banner-text {
-            color: #F9FAFB;
-        }
-        .footer-reporters-text {
-            color: #E5E7EB;
-        }
+        {% include 'rti_express/styles.css' %}
     </style>
-    {% if font_family_css %}
-        <style>{{ font_family_css }}</style>
-    {% endif %}
 </head>
 <body>
     <div class="newspaper-container">
-        <!-- Top Hero Image Section -->
-        <div class="hero-image-wrapper">
-            {% if image_urls and image_urls|length == 2 %}
-                <div style="display: flex; width: 100%; height: 100%;">
-                    <img class="hero-img" style="width: 50%; height: 100%; object-fit: cover; border-right: 2px solid #FFFFFF;" src="{{ image_urls[0] }}" alt="News Photo 1" />
-                    <img class="hero-img" style="width: 50%; height: 100%; object-fit: cover;" src="{{ image_urls[1] }}" alt="News Photo 2" />
-                </div>
-            {% elif image_urls and image_urls|length >= 3 %}
-                <div style="display: flex; width: 100%; height: 100%;">
-                    <img class="hero-img" style="width: 33.33%; height: 100%; object-fit: cover; border-right: 2px solid #FFFFFF;" src="{{ image_urls[0] }}" alt="News Photo 1" />
-                    <img class="hero-img" style="width: 33.33%; height: 100%; object-fit: cover; border-right: 2px solid #FFFFFF;" src="{{ image_urls[1] }}" alt="News Photo 2" />
-                    <img class="hero-img" style="width: 33.33%; height: 100%; object-fit: cover;" src="{{ image_urls[2] }}" alt="News Photo 3" />
-                </div>
-            {% else %}
-                <img class="hero-img" src="{{ image_url }}" alt="News Photo" />
+        <!-- Reporter Info Badge (Top Left Corner) -->
+        {% if reporter_name or reporter_image %}
+        <div class="reporter-badge" style="position: absolute; top: 12px; left: 16px; z-index: 15; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none;">
+            {% if reporter_image %}
+                <img src="{{ reporter_image }}" alt="Reporter" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-color, #111111); display: block; margin: 0 auto 3px auto; box-shadow: 0 2px 6px rgba(0,0,0,0.15);" />
             {% endif %}
-            <div class="image-overlay">
-                <!-- Reporter Badge -->
-                <div class="reporter-badge">
-                    {% if reporter_image %}
-                        <img class="reporter-avatar" src="{{ reporter_image }}" alt="Reporter" />
-                    {% else %}
-                        <div class="reporter-avatar-fallback">{{ (reporter_name or "R")[0].upper() }}</div>
-                    {% endif %}
-                    <div class="reporter-meta">
-                        <span class="reporter-name">{{ reporter_name or "Mohithroyal Pokkala" }}</span>
-                        <span class="reporter-date">{{ publication_date_time or publication_date }}</span>
-                    </div>
-                </div>
-                <!-- Watermark Badge -->
-                <div class="watermark-badge">
-                    {% if logo_url %}
-                        <img src="{{ logo_url }}" alt="RTI Express Watermark" />
-                    {% endif %}
-                </div>
-            </div>
+            {% if reporter_name %}
+                <span class="reporter-name" style="font-size: 11px; font-weight: 700; color: var(--text-color, #111111); font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.15; max-width: 90px; text-align: center; word-break: break-word;">{{ reporter_name }}</span>
+            {% endif %}
         </div>
+        {% endif %}
 
-        <!-- Article Content Area -->
-        <div class="article-content">
-            <h1 class="article-headline">{{ headline }}</h1>
-            <div class="article-body">
-                {% if sections and sections|length > 0 %}
-                    {% for sec in sections %}
-                        <p>{{ sec }}</p>
-                    {% endfor %}
+        <!-- Watermark -->
+        {% if show_watermark and show_watermark != false and show_watermark|string|lower != 'false' %}
+        <div class="watermark" style="position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%) scale(1.0); opacity: 0.05; pointer-events: none; z-index: 0; width: 65%; display: flex; justify-content: center; align-items: center; filter: none !important;">
+            {% set current_logo = logo_id if logo_id else template_id %}
+            {% if current_logo == 'bharath_reporter' %}
+                {% include 'bharath_reporter/logo.svg' %}
+            {% elif current_logo == 'rti_express' %}
+                {% include 'rti_express/logo.svg' %}
+            {% elif current_logo == 'national_news' %}
+                {% include 'national_news/logo.svg' %}
+            {% else %}
+                {% if logo_url %}
+                    <img src="{{ logo_url }}" alt="Logo" style="width: 100%; height: auto; object-fit: contain;">
                 {% else %}
-                    <p>{{ article_content or article_text or raw_content }}</p>
+                    <h1 style="font-size: 150px; margin: 0; text-transform: uppercase; text-align: center;">{{ publication_name }}</h1>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- ZONE 1: Logo Zone (Height: 90px) -->
+        <div class="logo-zone" style="position: relative; z-index: 2; height: 90px; display: flex; justify-content: center; align-items: center; box-sizing: border-box; {% if show_inner_borders %}border-bottom: 1px solid var(--border-color, #111111);{% endif %} margin: 0; padding: 0; overflow: hidden; width: 100%; background: var(--paper-color);">
+            <div class="logo-container" style="margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
+                {% set current_logo = logo_id if logo_id else template_id %}
+                {% if current_logo == 'bharath_reporter' %}
+                    {% include 'bharath_reporter/logo.svg' %}
+                {% elif current_logo == 'rti_express' %}
+                    {% include 'rti_express/logo.svg' %}
+                {% elif current_logo == 'national_news' %}
+                    {% include 'national_news/logo.svg' %}
+                {% else %}
+                    {% if logo_url %}
+                        <img src="{{ logo_url }}" alt="Logo" style="max-height: 75px; width: auto; object-fit: contain; margin: 0 auto; display: block;">
+                    {% else %}
+                        <h1 style="font-size: 50px; margin: 0; text-transform: uppercase;">{{ publication_name }}</h1>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
 
-        <!-- Bottom Footer Banner -->
-        <div class="footer-banner">
-            <span class="footer-banner-text">RTI EXPRESS – India’s First Breaking News App.</span>
-            <span class="footer-reporters-text">WANTED REPORTERS: 7668886666</span>
+        <!-- ZONE 2: Metadata Zone -->
+        <div class="metadata-zone" style="position: relative; z-index: 2; width: 100%; height: auto; padding: 5px 0; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; {% if show_inner_borders %}border-bottom: 1px solid var(--border-color, #111111);{% endif %} margin: 0; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap; background: var(--paper-color);">
+            <span>{{ publication_name }} - {{ publication_date }}</span>
+            <span>WANTED REPORTERS: 7668886666</span>
         </div>
-    </div>
 
-    <script>
-        function signalWhenReady() {
-            const images = Array.from(document.querySelectorAll('img'));
-            if (images.length === 0) {
-                window.__LAYOUT_DONE__ = true;
-                return;
-            }
-            let loadedCount = 0;
-            const total = images.length;
-            const markReady = () => { window.__LAYOUT_DONE__ = true; };
-            const onImgFinish = () => {
-                loadedCount++;
-                if (loadedCount >= total) markReady();
-            };
-            images.forEach(img => {
-                if (img.complete && img.naturalWidth > 0) {
-                    onImgFinish();
-                } else {
-                    img.addEventListener('load', onImgFinish, { once: true });
-                    img.addEventListener('error', onImgFinish, { once: true });
-                }
-            });
-            setTimeout(markReady, 7000);
-        }
-        if (document.readyState === 'complete') { signalWhenReady(); }
-        else { window.addEventListener('load', signalWhenReady); }
-    </script>
+        <!-- ZONE 3: Headline Zone (Height: Auto, Min-height: 100px) -->
+        <div class="headline-zone" style="position: relative; z-index: 2; min-height: 100px; height: auto; padding: 15px 0 10px 0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; {% if show_inner_borders %}border-bottom: 1px solid var(--border-color, #111111);{% endif %} margin-bottom: 15px; width: 100%;">
+            <div class="headline-section" style="margin: 0; padding: {% if heading_bg %}15px{% else %}5px 0{% endif %}; {% if heading_bg %}background-color: {{ heading_bg }}; border: 2px solid {{ border_color if border_color else '#CC2222' }};{% else %}background: transparent; border: none;{% endif %} text-align: center; box-sizing: border-box;">
+                <h1 class="headline" style="font-size: 52px; font-weight: bold; margin: 0; line-height: 1.15; text-align: center; width: 100%; box-sizing: border-box; color: {{ '#FFFFFF' if heading_bg else '#111111' }};">{{ headline }}</h1>
+            </div>
+        </div>
+
+        <div id="compositor-canvas"></div>
+
+    </div>
 </body>
 </html>

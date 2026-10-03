@@ -192,8 +192,7 @@ def root():
 @app.head("/health", include_in_schema=False)
 def health_check():
     """Render health-check endpoint."""
-    commit_sha = os.getenv("RENDER_GIT_COMMIT", os.getenv("GIT_COMMIT", "dev-local"))
-    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v4_bulletproof", "commit": commit_sha}
+    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v4_bulletproof"}
 
 
 @app.get("/health/generator")

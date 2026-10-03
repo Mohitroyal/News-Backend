@@ -10,6 +10,7 @@ services:
       mkdir -p /opt/render/project/.playwright
       PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright pip install -r requirements.txt
       PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright python -m playwright install chromium
+      PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright python -m playwright install-deps chromium
       python download_fonts.py
 
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT

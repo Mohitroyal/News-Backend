@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from typing import Any, List
@@ -21,27 +21,7 @@ import asyncio
 import re
 import gc
 import psutil
-import hashlib
 from datetime import datetime, timedelta
-
-def _safe_media_repr(val: Any) -> str:
-    """Bounded, token-free diagnostic string for media URL or Data URI."""
-    if not val:
-        return "<empty>"
-    if isinstance(val, list):
-        if not val:
-            return "[]"
-        return "[" + ", ".join(_safe_media_repr(x) for x in val) + "]"
-    s = str(val).strip()
-    if not s:
-        return "<empty>"
-    if s.startswith("data:"):
-        prefix = s[:30]
-        content_bytes = s.encode("utf-8")
-        sha = hashlib.sha256(content_bytes).hexdigest()[:12]
-        return f"DataURI({prefix}..., len={len(s)}, sha256={sha})"
-    clean_url = s.split("?")[0]
-    return clean_url
 
 # Concurrency control – Render free tier supports only one generation at a time
 MAX_CONCURRENT_GENERATIONS = 1
@@ -221,52 +201,14 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 normalized_id = original_template_id.lower().replace(" ", "").replace("_", "").replace("-", "")
 
                 # Map missing frontend templates or layout-name mixups back to the correct template
-                valid_templates = [
-                    "classic", "rti_express", "pub_rti_express", "rti",
-                    "bharath_reporter", "pub_bharath_reporter",
-                    "national_news", "pub_national_news",
-                    "extra_news", "pub_extra_news",
-                    "spot_news_24x7", "hero-image", "hero_image", "modern", "custom",
-                    "pattern_a", "pattern_b", "pattern_c", "pattern_d", "pattern_e", "pattern_f", "pattern_g"
-                ]
-
-                # Standard brand template folder mapping
-                has_user_images = bool(safe_image_urls or safe_image_url)
-                if not normalized_id or normalized_id in ["default", "classic"]:
-                    template_id = "rti_express"
-                    clipping.template_id = "rti_express"
-                    clipping.logo_id = "rti_express"
-                    clipping.publication_name = "RTI Express"
-                    try:
-                        db.commit()
-                    except Exception:
-                        pass
-                elif "rti" in normalized_id:
-                    template_id = "rti_express"
-                    clipping.template_id = "rti_express"
-                    clipping.logo_id = "rti_express"
-                elif "bharath" in normalized_id:
-                    template_id = "bharath_reporter"
-                    clipping.template_id = "bharath_reporter"
-                elif "national" in normalized_id:
-                    template_id = "national_news"
-                    clipping.template_id = "national_news"
-                elif "extra" in normalized_id:
-                    template_id = "extra_news"
-                    clipping.template_id = "extra_news"
-                elif original_template_id not in valid_templates and normalized_id not in valid_templates:
+                valid_templates = ["classic", "rti_express", "bharath_reporter", "national_news", "hero-image", "hero_image", "modern", "custom", "pattern_b"]
+                
+                # If it's NOT a valid template folder, the frontend definitely sent a layout name or ID by mistake
+                if original_template_id not in valid_templates and normalized_id not in valid_templates:
                     intended_template = "rti_express"
                     if clipping.logo_id:
                         norm_lid = str(clipping.logo_id).lower().replace(" ", "").replace("_", "").replace("-", "")
-                        if "rti" in norm_lid:
-                            intended_template = "rti_express"
-                        elif "bharath" in norm_lid:
-                            intended_template = "bharath_reporter"
-                        elif "national" in norm_lid:
-                            intended_template = "national_news"
-                        elif "extra" in norm_lid:
-                            intended_template = "extra_news"
-                        elif clipping.logo_id in valid_templates or norm_lid in valid_templates:
+                        if clipping.logo_id in valid_templates or norm_lid in valid_templates:
                             intended_template = clipping.logo_id
                     clipping.template_id = intended_template
                     template_id = intended_template
@@ -294,23 +236,22 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                         elif "single" in normalized_id or "hero" in normalized_id:
                             clipping.custom_layout["image_layout"] = "single_image"
                         else:
-                            clipping.custom_layout["image_layout"] = "pattern_b"
+                            clipping.custom_layout["image_layout"] = "pattern_b" # default fallback for weird layout strings
                 
-                # Safety check for active codes in publication_logos
+                # Ensure requested template or logo is active in publication_logos
                 try:
                     admin_sb = get_supabase_admin_client()
                     logos_check = admin_sb.table("publication_logos").select("publication_code, is_active").execute()
                     if logos_check.data:
                         disabled_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is False]
                         active_codes = [l["publication_code"] for l in logos_check.data if l.get("is_active") is not False]
-                        # ONLY fallback if explicitly disabled in database and NOT rti_express
-                        if template_id in disabled_codes and active_codes and "rti" not in template_id:
+                        if (template_id in disabled_codes or clipping.logo_id in disabled_codes) and active_codes:
                             fallback_logo = active_codes[0]
-                            print(f"[LOGO DISABLED] {template_id} was disabled by admin. Falling back to {fallback_logo}")
+                            print(f"[LOGO DISABLED] {template_id} or {clipping.logo_id} was disabled by admin. Falling back to {fallback_logo}")
                             template_id = fallback_logo
                             clipping.template_id = fallback_logo
-                        if clipping.logo_id in disabled_codes and active_codes and "rti" not in str(clipping.logo_id):
-                            clipping.logo_id = active_codes[0]
+                            if clipping.logo_id in disabled_codes:
+                                clipping.logo_id = fallback_logo
                 except Exception as logo_err:
                     print(f"[LOGO CHECK WARNING] {logo_err}")
 
@@ -347,8 +288,14 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 resolved_image_layout = custom.get("image_layout") or getattr(clipping, "image_layout", "default")
                 total_imgs = len(safe_image_urls) if safe_image_urls else (1 if safe_image_url else 0)
                 
-                # Keep user requested template_id and determine image_layout
-                if not resolved_image_layout or resolved_image_layout in ["default", "auto"]:
+                # Single-image default model: Route to hero-image for all standard templates
+                if total_imgs <= 1 and original_tid not in ["custom"]:
+                    template_id = "hero-image"
+                    clipping.template_id = "hero-image"
+                    resolved_image_layout = "pattern_g"
+                elif total_imgs <= 1 and template_id not in ["bharath_reporter", "national_news", "custom"]:
+                    resolved_image_layout = "pattern_b"
+                elif not resolved_image_layout or resolved_image_layout in ["default", "auto"]:
                     if "patternc" in normalized_id:
                         resolved_image_layout = "pattern_c"
                     elif "patternd" in normalized_id:
@@ -364,37 +311,6 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     elif "patternb" in normalized_id:
                         resolved_image_layout = "pattern_b"
 
-                # Resolve effective_logo_id and effective_pub_name preserving user choice
-                norm_logo_id = str(clipping.logo_id or template_id or "").lower().replace(" ", "_").replace("-", "_")
-
-                if "rti" in norm_logo_id or template_id == "rti_express":
-                    effective_logo_id = "rti_express"
-                    effective_pub_name = clipping.publication_name or "RTI Express"
-                elif "bharath" in norm_logo_id:
-                    effective_logo_id = "bharath_reporter"
-                    effective_pub_name = clipping.publication_name or "Bharath Reporter"
-                elif "national" in norm_logo_id:
-                    effective_logo_id = "national_news"
-                    effective_pub_name = clipping.publication_name or "National News Reporter"
-                elif "extra" in norm_logo_id:
-                    effective_logo_id = "extra_news"
-                    effective_pub_name = clipping.publication_name or "The Extra News"
-                elif template_id == "bharath_reporter":
-                    effective_logo_id = "bharath_reporter"
-                    effective_pub_name = clipping.publication_name or "Bharath Reporter"
-                elif template_id == "national_news":
-                    effective_logo_id = "national_news"
-                    effective_pub_name = clipping.publication_name or "National News Reporter"
-                elif template_id == "extra_news":
-                    effective_logo_id = "extra_news"
-                    effective_pub_name = clipping.publication_name or "The Extra News"
-                elif template_id == "rti_express":
-                    effective_logo_id = "rti_express"
-                    effective_pub_name = clipping.publication_name or "RTI Express"
-                else:
-                    effective_logo_id = clipping.logo_id or template_id
-                    effective_pub_name = clipping.publication_name or "News Edition"
-
                 render_data = {
                     **formatted,
                     "id": str(clipping_id),
@@ -404,14 +320,14 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     "raw_content": clipping.article_content,
                     "article_content": clipping.article_content,
                     "headline": clipping.headline if clipping.headline else formatted.get("headline"),
-                    "publication_name": effective_pub_name,
+                    "publication_name": clipping.publication_name,
                     "publication_date": clipping.publication_date,
                     "image_url": safe_image_url,
                     "image_urls": safe_image_urls,
                     "language": clipping.language,
                     "layout_columns": custom.get("layout_columns") or custom.get("layoutColumns") or (clipping.layout_columns if clipping.layout_columns is not None else "auto"),
                     "font_family": clipping.font_family or "playfair",
-                    "logo_id": effective_logo_id or template_id,
+                    "logo_id": clipping.logo_id or clipping.template_id,
                     "is_premium": is_premium,
                     "show_watermark": clipping.show_watermark if clipping.show_watermark is not None else True,
                     "show_inner_borders": getattr(clipping, "show_inner_borders", True),
@@ -666,28 +582,11 @@ async def _background_process_clipping(clipping_id: Any):
 @router.post("/", response_model=dict)
 async def create_clipping(
     *,
-    request: Request,
     db: Session = Depends(get_db),
     clipping_in: ClippingCreate,
     current_user: User = Depends(get_current_active_user),
     background_tasks: BackgroundTasks
 ) -> Any:
-    raw_body = {}
-    try:
-        raw_body = await request.json()
-    except Exception:
-        pass
-
-    # Stage 1: All four incoming raw media fields
-    inc_urls = _safe_media_repr(raw_body.get("imageUrls"))
-    inc_url = _safe_media_repr(raw_body.get("imageUrl"))
-    inc_snake_urls = _safe_media_repr(raw_body.get("image_urls"))
-    inc_snake_url = _safe_media_repr(raw_body.get("image_url"))
-
-    # Stage 2: Parsed Pydantic model media values
-    mdl_urls = _safe_media_repr(clipping_in.image_urls)
-    mdl_url = _safe_media_repr(clipping_in.image_url)
-
     # 1. Premium template authorization check
     premium_templates = ["tabloid", "magazine"]
     if clipping_in.template_id in premium_templates and current_user.subscription_plan not in ["pro", "enterprise"]:
@@ -715,34 +614,17 @@ async def create_clipping(
             detail=f"Monthly clipping generation limit reached ({generations_count}/{limit}). You have used all 4000 clippings allowed per account."
         )
 
-    req_tpl = str(clipping_in.template_id or "").strip()
-    if not req_tpl or req_tpl.lower() in ["default", "classic"]:
-        req_tpl = "rti_express"
-
-    req_logo = str(clipping_in.logo_id or "").strip()
-    if not req_logo or req_logo.lower() in ["default", "classic"]:
-        req_logo = "rti_express"
-
-    req_pub = clipping_in.publication_name or "RTI Express"
-
-    final_image_url = clipping_in.image_url if clipping_in.image_url else ""
-    final_image_urls = clipping_in.image_urls or []
-    if not final_image_urls and final_image_url and "," in final_image_url:
-        final_image_urls = [u.strip() for u in final_image_url.split(",") if u.strip()]
-        if final_image_urls:
-            final_image_url = final_image_urls[0]
-
     clipping = Clipping(
         user_id=current_user.id,
         headline=clipping_in.headline,
         article_content=clipping_in.article_content,
         language=clipping_in.language,
         tone=clipping_in.tone,
-        template_id=req_tpl,
-        logo_id=req_logo,
-        image_url=final_image_url,
-        image_urls=final_image_urls,
-        publication_name=req_pub,
+        template_id=clipping_in.template_id,
+        logo_id=clipping_in.logo_id or clipping_in.template_id,
+        image_url=clipping_in.image_url,
+        image_urls=clipping_in.image_urls or [],
+        publication_name=clipping_in.publication_name,
         publication_date=clipping_in.publication_date,
         layout_columns=0 if str(clipping_in.layout_columns).lower() in ["auto", "0", "none"] else (int(clipping_in.layout_columns) if str(clipping_in.layout_columns).isdigit() else 0),
         font_family=clipping_in.font_family or "playfair",
@@ -762,17 +644,6 @@ async def create_clipping(
     db.add(clipping)
     db.commit()
     db.refresh(clipping)
-
-    # Stage 3: Media values saved to database clipping record
-    db_saved_urls = _safe_media_repr(clipping.image_urls)
-    db_saved_url = _safe_media_repr(clipping.image_url)
-
-    commit_sha = os.getenv("RENDER_GIT_COMMIT", os.getenv("GIT_COMMIT", "dev-local"))
-    print(f"\n[DIAGNOSTICS - REQ {clipping.id}] Executing Commit: {commit_sha}")
-    print(f"[DIAGNOSTICS - REQ {clipping.id}] Stage 1 (Raw HTTP Incoming): imageUrls={inc_urls}, imageUrl={inc_url}, image_urls={inc_snake_urls}, image_url={inc_snake_url}")
-    print(f"[DIAGNOSTICS - REQ {clipping.id}] Stage 2 (Pydantic Parsed): image_urls={mdl_urls}, image_url={mdl_url}")
-    print(f"[DIAGNOSTICS - REQ {clipping.id}] Stage 3 (DB Record Saved): image_urls={db_saved_urls}, image_url={db_saved_url}")
-    sys.stdout.flush()
 
     background_tasks.add_task(_background_process_clipping, clipping.id)
 
