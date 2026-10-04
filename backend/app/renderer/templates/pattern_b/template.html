@@ -312,10 +312,24 @@
                 }
             };
             images.forEach(img => {
-                if (img.complete && img.naturalWidth > 0) {
+                const handleImgLoad = () => {
+                    if (img.classList.contains('hero-img') && img.naturalHeight > 0) {
+                        const aspectRatio = img.naturalWidth / img.naturalHeight;
+                        if (aspectRatio > 1.125) {
+                            const newWidth = Math.max(540, 480 * aspectRatio);
+                            const finalWidth = Math.min(newWidth, 1000);
+                            const container = document.querySelector('.newspaper-container');
+                            if (container) {
+                                container.style.width = finalWidth + 'px';
+                            }
+                        }
+                    }
                     onImgFinish();
+                };
+                if (img.complete && img.naturalWidth > 0) {
+                    handleImgLoad();
                 } else {
-                    img.addEventListener('load', onImgFinish, { once: true });
+                    img.addEventListener('load', handleImgLoad, { once: true });
                     img.addEventListener('error', onImgFinish, { once: true });
                 }
             });
