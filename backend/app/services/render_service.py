@@ -168,8 +168,10 @@ class RenderService:
             valid_imgs = [image_url_raw.strip()]
 
         if not valid_imgs:
-            data["image_url"] = ""
-            data["image_urls"] = []
+            from app.renderer.default_image import get_default_image_data_url
+            default_icon = get_default_image_data_url()
+            data["image_url"] = default_icon
+            data["image_urls"] = [default_icon] if default_icon else []
         else:
             data["image_url"] = valid_imgs[0]
             data["image_urls"] = valid_imgs
