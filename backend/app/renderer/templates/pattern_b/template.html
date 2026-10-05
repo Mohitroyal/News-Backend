@@ -323,9 +323,7 @@
             <h1 class="article-headline">{{ headline }}</h1>
             <div class="article-body">
                 {% if sections and sections|length > 0 %}
-                    {% for sec in sections %}
-                        <p>{{ sec }}</p>
-                    {% endfor %}
+                    <p>{{ sections | join(' ') }}</p>
                 {% else %}
                     <p>{{ article_text if article_text else (raw_content if raw_content else '') }}</p>
                 {% endif %}
