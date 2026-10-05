@@ -350,11 +350,13 @@
                     const dynamicWidth = Math.max(defaultWidth, Math.round(baseHeight * aspectRatio));
                     const container = document.querySelector('.newspaper-container');
                     if (container) {
-                        container.style.width = dynamicWidth + 'px';
+                        container.style.setProperty('width', dynamicWidth + 'px', 'important');
+                        container.style.setProperty('max-width', dynamicWidth + 'px', 'important');
+                        container.style.setProperty('min-width', dynamicWidth + 'px', 'important');
                     }
                     const wrapper = document.querySelector('.hero-image-wrapper');
                     if (wrapper) {
-                        wrapper.style.height = baseHeight + 'px';
+                        wrapper.style.setProperty('height', baseHeight + 'px', 'important');
                     }
                 }
             }
