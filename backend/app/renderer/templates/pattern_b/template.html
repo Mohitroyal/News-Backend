@@ -34,15 +34,17 @@
         .hero-image-wrapper {
             position: relative;
             width: 100%;
-            height: 480px;
-            background: #1A1A1A;
+            background: #111827;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .hero-img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top center;
+            height: auto;
+            max-height: 540px;
+            object-fit: contain;
             display: block;
         }
         .image-overlay {
@@ -350,17 +352,6 @@
             };
             images.forEach(img => {
                 const handleImgLoad = () => {
-                    if (img.classList.contains('hero-img') && img.naturalHeight > 0) {
-                        const aspectRatio = img.naturalWidth / img.naturalHeight;
-                        if (aspectRatio > 1.125) {
-                            const newWidth = Math.max(540, 480 * aspectRatio);
-                            const finalWidth = Math.min(newWidth, 1000);
-                            const container = document.querySelector('.newspaper-container');
-                            if (container) {
-                                container.style.width = finalWidth + 'px';
-                            }
-                        }
-                    }
                     onImgFinish();
                 };
                 if (img.complete && img.naturalWidth > 0) {
