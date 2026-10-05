@@ -8,8 +8,8 @@ def get_default_image_data_url() -> str:
     global _cached_data_url
     if _cached_data_url is None:
         possible_paths = [
-            r"C:\Users\MOHIT\Desktop\newscraft-mobile\SPOT NEWS NEW (2)\newscraft-mobile (1)\newscraft-mobile\assets\up-logo.jpeg",
             os.path.join(os.path.dirname(__file__), "assets", "up-logo.jpeg"),
+            r"C:\Users\MOHIT\Desktop\newscraft-mobile\SPOT NEWS NEW (2)\newscraft-mobile (1)\newscraft-mobile\assets\up-logo.jpeg",
         ]
         for p in possible_paths:
             if os.path.exists(p):
