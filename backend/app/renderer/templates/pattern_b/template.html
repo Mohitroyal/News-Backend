@@ -34,6 +34,7 @@
         .hero-image-wrapper {
             position: relative;
             width: 100%;
+            height: 480px;
             background: #111827;
             overflow: hidden;
             display: flex;
@@ -42,9 +43,9 @@
         }
         .hero-img {
             width: 100%;
-            height: auto;
-            max-height: 540px;
-            object-fit: contain;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
             display: block;
         }
         .image-overlay {
@@ -237,7 +238,7 @@
         {% if has_hero_image %}
         <div class="hero-image-wrapper">
             {% set img_src = image_urls[0] if (image_urls and image_urls|length > 0) else image_url %}
-            <img class="hero-img" src="{{ img_src }}" alt="Hero Image" />
+            <img class="hero-img" src="{{ img_src }}" alt="Hero Image" onload="applyDynamicWidth()" />
             
             <div class="image-overlay">
                 <!-- Bottom Left: Reporter Avatar, Name & Date/Time -->
@@ -326,50 +327,87 @@
 
         <!-- Bottom Footer Banner -->
         <div class="footer-banner">
-            <span class="footer-banner-text">RTI EXPRESS – India’s First Breaking News App.</span>
+            <span class="footer-banner-text">{{ publication_name|upper if publication_name else 'RTI EXPRESS' }} – India’s First Breaking News App.</span>
             <span class="footer-reporters-text">WANTED REPORTERS: 7668886666</span>
         </div>
     </div>
 
     <script>
-        // Signal layout readiness ONLY when DOM and all images are fully loaded & decoded
+        function applyDynamicWidth() {
+            const heroImg = document.querySelector('.hero-img');
+            if (!heroImg) return;
+            const naturalW = heroImg.naturalWidth;
+            const naturalH = heroImg.naturalHeight;
+            if (naturalH > 0 && naturalW > 0) {
+                const aspectRatio = naturalW / naturalH;
+                const baseHeight = 480;
+                const defaultWidth = 540;
+                const defaultAspect = defaultWidth / baseHeight; // 1.125
+                
+                // When image width increases beyond the default limit width ratio (1.125):
+                // Instead of chopping the original image, increase the width of the clipping dynamically
+                if (aspectRatio > defaultAspect) {
+                    const dynamicWidth = Math.max(defaultWidth, Math.round(baseHeight * aspectRatio));
+                    const container = document.querySelector('.newspaper-container');
+                    if (container) {
+                        container.style.width = dynamicWidth + 'px';
+                    }
+                    const wrapper = document.querySelector('.hero-image-wrapper');
+                    if (wrapper) {
+                        wrapper.style.height = baseHeight + 'px';
+                    }
+                }
+            }
+        }
+
+        // Run immediately if ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyDynamicWidth);
+        } else {
+            applyDynamicWidth();
+        }
+
+        window.addEventListener('load', () => {
+            applyDynamicWidth();
+            window.__LAYOUT_DONE__ = true;
+        });
+
+        // Readiness notifier for Playwright screenshot capture
         function signalWhenReady() {
             const images = Array.from(document.querySelectorAll('img'));
-            if (images.length === 0) {
-                window.__LAYOUT_DONE__ = true;
-                return;
-            }
-            let loadedCount = 0;
-            const total = images.length;
             const markReady = () => {
+                applyDynamicWidth();
                 window.__LAYOUT_DONE__ = true;
             };
-            const onImgFinish = () => {
-                loadedCount++;
-                if (loadedCount >= total) {
+
+            if (images.length === 0) {
+                markReady();
+                return;
+            }
+
+            let finished = 0;
+            const total = images.length;
+            const checkDone = () => {
+                finished++;
+                if (finished >= total) {
                     markReady();
                 }
             };
+
             images.forEach(img => {
-                const handleImgLoad = () => {
-                    onImgFinish();
-                };
-                if (img.complete && img.naturalWidth > 0) {
-                    handleImgLoad();
+                if (img.complete) {
+                    checkDone();
                 } else {
-                    img.addEventListener('load', handleImgLoad, { once: true });
-                    img.addEventListener('error', onImgFinish, { once: true });
+                    img.addEventListener('load', checkDone, { once: true });
+                    img.addEventListener('error', checkDone, { once: true });
                 }
             });
-            // 7s fallback in case an external image times out
-            setTimeout(markReady, 7000);
+
+            // 3-second safety net timeout
+            setTimeout(markReady, 3000);
         }
 
-        if (document.readyState === 'complete') {
-            signalWhenReady();
-        } else {
-            window.addEventListener('load', signalWhenReady);
-        }
+        signalWhenReady();
     </script>
 </body>
 </html>

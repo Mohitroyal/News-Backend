@@ -306,10 +306,10 @@ class RenderService:
 
         if is_pattern_b:
             try:
-                template = self.env.get_template("pattern_b/template.html")
+                template = self.env.get_template("hero-image/template.html")
             except Exception:
                 try:
-                    template = self.env.get_template("hero-image/template.html")
+                    template = self.env.get_template("pattern_b/template.html")
                 except Exception:
                     template = self.env.get_template("master_layout.html")
         else:
@@ -1941,7 +1941,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=3.2)
+                        page = await browser.new_page(viewport={"width": 2400, "height": 2400}, device_scale_factor=3.2)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
@@ -2006,6 +2006,15 @@ class RenderService:
 
                         try:
                             await page.evaluate("""() => {
+                                if (typeof applyDynamicWidth === 'function') {
+                                    applyDynamicWidth();
+                                }
+                            }""")
+                        except Exception:
+                            pass
+
+                        try:
+                            await page.evaluate("""() => {
                                 const imgs = Array.from(document.querySelectorAll('img'));
                                 return Promise.all(imgs.map(img => {
                                     if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -2028,6 +2037,9 @@ class RenderService:
                             pass
 
                         layout_info = await page.evaluate("""() => {
+                            if (typeof applyDynamicWidth === 'function') {
+                                applyDynamicWidth();
+                            }
                             const canvas = document.getElementById('compositor-canvas');
                             const cont = document.querySelector('.newspaper-container');
                             
@@ -2091,7 +2103,7 @@ class RenderService:
                             return { width: 1200, height: document.documentElement.scrollHeight };
                         }""")
                         
-                        await page.set_viewport_size({"width": 1200, "height": layout_info.get("height", 1600) + 20})
+                        await page.set_viewport_size({"width": max(2400, layout_info.get("width", 1060) + 100), "height": max(2400, layout_info.get("height", 1600) + 100)})
 
                         final_h_px = None
                         if png_path:

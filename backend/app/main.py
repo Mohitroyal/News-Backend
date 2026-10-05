@@ -192,7 +192,7 @@ def root():
 @app.head("/health", include_in_schema=False)
 def health_check():
     """Render health-check endpoint."""
-    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v4_hero_fixed_2125", "commit": "6a7141fd"}
+    return {"status": "ok", "service": settings.PROJECT_NAME, "version": "v5_dynamic_width"}
 
 
 @app.get("/health/generator")
