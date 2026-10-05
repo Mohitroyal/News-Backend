@@ -8,16 +8,17 @@ def get_default_image_data_url() -> str:
     global _cached_data_url
     if _cached_data_url is None:
         possible_paths = [
-            os.path.join(os.path.dirname(__file__), "assets", "default_icon.png"),
-            os.path.join(os.path.dirname(__file__), "..", "..", "static", "default_icon.png"),
-            r"C:\Users\MOHIT\Desktop\newscraft-mobile\SPOT NEWS NEW (2)\newscraft-mobile (1)\newscraft-mobile\assets\icon.png",
+            r"C:\Users\MOHIT\Desktop\newscraft-mobile\SPOT NEWS NEW (2)\newscraft-mobile (1)\newscraft-mobile\assets\up-logo.jpeg",
+            os.path.join(os.path.dirname(__file__), "assets", "up-logo.jpeg"),
         ]
         for p in possible_paths:
             if os.path.exists(p):
                 try:
                     with open(p, "rb") as f:
                         b64 = base64.b64encode(f.read()).decode("utf-8")
-                        _cached_data_url = f"data:image/png;base64,{b64}"
+                        ext = p.split('.')[-1].lower()
+                        mime = "image/jpeg" if ext in ["jpg", "jpeg"] else "image/png"
+                        _cached_data_url = f"data:{mime};base64,{b64}"
                         break
                 except Exception:
                     continue
