@@ -1955,6 +1955,9 @@ class RenderService:
                             if r_url.startswith("data:") or r_url.startswith("about:"):
                                 await route.continue_()
                                 return
+                            if r_url.startswith("file://") and ("/static/fonts/" in r_url or "\\static\\fonts\\" in r_url):
+                                await route.continue_()
+                                return
                             try:
                                 from app.core.ssrf import validate_url_for_ssrf
                                 is_safe, reason = validate_url_for_ssrf(r_url)
