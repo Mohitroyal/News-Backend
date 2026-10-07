@@ -340,52 +340,10 @@
     </div>
 
     <script>
-        function applyDynamicWidth() {
-            const heroImg = document.querySelector('.hero-img');
-            if (!heroImg) return;
-            const naturalW = heroImg.naturalWidth;
-            const naturalH = heroImg.naturalHeight;
-            if (naturalH > 0 && naturalW > 0) {
-                const aspectRatio = naturalW / naturalH;
-                const baseHeight = 480;
-                const defaultWidth = 540;
-                const defaultAspect = defaultWidth / baseHeight; // 1.125
-                
-                // When image width increases beyond the default limit width ratio (1.125):
-                // Instead of chopping the original image, increase the width of the clipping dynamically
-                if (aspectRatio > defaultAspect) {
-                    const dynamicWidth = Math.max(defaultWidth, Math.round(baseHeight * aspectRatio));
-                    const container = document.querySelector('.newspaper-container');
-                    if (container) {
-                        container.style.setProperty('width', dynamicWidth + 'px', 'important');
-                        container.style.setProperty('max-width', dynamicWidth + 'px', 'important');
-                        container.style.setProperty('min-width', dynamicWidth + 'px', 'important');
-                    }
-                    const wrapper = document.querySelector('.hero-image-wrapper');
-                    if (wrapper) {
-                        wrapper.style.setProperty('height', baseHeight + 'px', 'important');
-                    }
-                }
-            }
-        }
-
-        // Run immediately if ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', applyDynamicWidth);
-        } else {
-            applyDynamicWidth();
-        }
-
-        window.addEventListener('load', () => {
-            applyDynamicWidth();
-            window.__LAYOUT_DONE__ = true;
-        });
-
         // Readiness notifier for Playwright screenshot capture
         function signalWhenReady() {
             const images = Array.from(document.querySelectorAll('img'));
             const markReady = () => {
-                applyDynamicWidth();
                 window.__LAYOUT_DONE__ = true;
             };
 
