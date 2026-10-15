@@ -422,7 +422,11 @@ class RenderService:
             except ValueError:
                 return False
 
+        template_key = (data.get('template_id') or '').lower().replace('-', '_')
         heading_bg = data.get('heading_bg')
+        if template_key in ['rti_express'] and (not heading_bg or heading_bg.lower() in ['#ffffff', '#fff', 'white']):
+            heading_bg = "#CC2222"
+
         if heading_bg:
             if is_dark_hex(heading_bg):
                 headline_text_color = "#FFFFFF" # Use white for dark backgrounds
