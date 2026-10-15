@@ -681,8 +681,9 @@ class RenderService:
                         gap = 30;
                     }
                     // Bulletproof pattern matching: handles "Pattern B", "pattern_b", "patternB", etc.
+                    let h0 = Math.round(0.58 * W_canvas);
                     const isArticleStyle = rawLayout.includes('articlestyle');
-                    let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || isArticleStyle || isCustom;
+                    let isPatternB = rawLayout.includes('patternb') || rawLayout.includes('patterna') || rawLayout.includes('patternd') || rawLayout.includes('patternc') || rawLayout.includes('patterne') || rawLayout.includes('double') || isArticleStyle || isCustom;
                     const isSinglePatternC = !isCustom && rawLayout.includes('patternc') && urls.length === 1;
                     const isSinglePatternA = !isCustom && rawLayout.includes('patterna') && urls.length === 1;
                     if (isSinglePatternC || isSinglePatternA) {
@@ -691,7 +692,17 @@ class RenderService:
                     if (isCustom || rawLayout === "default" || rawLayout === "" || rawLayout === "auto") {
                         isPatternB = true;
                     }
-                    const isDoublePatternB = (isPatternB && urls.length === 2) && (rawLayout.includes('patternc') || rawLayout.includes('patterna') || rawLayout === "default");
+                    const isDoublePatternB = (urls.length === 2) && (
+                        rawLayout.includes('patternc') ||
+                        rawLayout.includes('patternb') ||
+                        rawLayout.includes('patterna') ||
+                        rawLayout.includes('double') ||
+                        rawLayout.includes('two') ||
+                        rawLayout.includes('dual') ||
+                        rawLayout === "default" ||
+                        rawLayout === "" ||
+                        rawLayout === "auto"
+                    );
                     const isTriplePatternB = isPatternB && urls.length >= 3;
 
                     const isSingleLeft75 = (urls.length === 1) && (rawLayout.includes('patterng') || rawLayout.includes('left75') || rawLayout.includes('pattern75') || rawLayout.includes('75left') || rawLayout.includes('75'));
@@ -702,7 +713,6 @@ class RenderService:
                         let cap0 = String(captions[0] || '').trim();
                         let capAllowance0 = cap0 ? Math.ceil(cap0.length / Math.max(1, Math.floor(w0 / 6.5))) * 15 + 8 : 0;
                         
-                        let h0;
                         if (totalChars <= 1400) {
                             // Short/medium articles: image covers full height of right column
                             h0 = Math.max(200, H_canvas - capAllowance0);
@@ -746,7 +756,7 @@ class RenderService:
                                 obstacles.push({ url: urls[i], caption: captions[i] || '', x: Math.round(i * (w + gap)), y: 0, w: Math.round(w), h: Math.round(maxH), imgH: Math.round(maxH), objectFit: 'contain', objectPosition: 'center center' });
                             }
                         }
-                    } else if (rawLayout.includes('patternd')) {
+                    } else if (rawLayout.includes('patternd') || rawLayout.includes('doubleb') || rawLayout.includes('doubled')) {
                         // Pattern D: 2 images in staggered diagonal newspaper layout
                         // PHOTO 1: Top-Left (Column 0)
                         // PHOTO 2: Bottom-Right (Column 2)
@@ -899,7 +909,7 @@ class RenderService:
                     } else if (urls.length === 1 || rawLayout.includes('patternb') || rawLayout.includes('patternd') || rawLayout.includes('single') || rawLayout.includes('hero') || isSinglePatternC || rawLayout.includes('patternc')) {
                         let dynamicH = Math.round(W_canvas / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.60);
-                        let h0 = Math.min(dynamicH, maxAllowedH);
+                        h0 = Math.min(dynamicH, maxAllowedH);
                         let w0 = Math.round(h0 * aspect0);
                         if (w0 > W_canvas) {
                             w0 = W_canvas;
@@ -966,7 +976,7 @@ class RenderService:
                         let w0 = side_w;
                         let dynamicH = Math.round(w0 / aspect0);
                         let maxAllowedH = Math.round(Math.max(H_canvas, 1200) * 0.55);
-                        let h0 = Math.min(dynamicH, maxAllowedH);
+                        h0 = Math.min(dynamicH, maxAllowedH);
                         if (dynamicH > maxAllowedH) {
                             w0 = Math.round(h0 * aspect0);
                         }
@@ -1894,9 +1904,13 @@ class RenderService:
                     new_img = Image.new(img.mode, (width, new_height))
                     new_img.paste(top_part, (0, 0))
                     new_img.paste(bottom_part, (0, whitespace_start))
-                    new_img.save(image_path, "PNG", optimize=True)
+                    new_img.save(image_path, "PNG")
+                    del top_part, bottom_part, new_img, img, img_rgb, pixels
+                    gc.collect()
                     return new_height
                 
+                del img, img_rgb, pixels
+                gc.collect()
                 return height
         except Exception as e:
             print(f"[CROP ERROR] {e}")
@@ -1905,6 +1919,7 @@ class RenderService:
     async def generate_clipping_assets(self, html_content: str, png_path: str | None = None, pdf_path: str | None = None):
         """Uses Playwright to render HTML and take both a PNG screenshot and/or a PDF print."""
         async with self.semaphore:
+            gc.collect()
             _log_memory("generate_clipping_assets: Enter")
             chrome_path = _get_chromium_executable()
             launch_kwargs = {
@@ -1915,7 +1930,7 @@ class RenderService:
                     "--disable-dev-shm-usage",
                     "--disable-gpu",
                     "--single-process",
-                    "--js-flags=--max-old-space-size=96",
+                    "--js-flags=--max-old-space-size=256",
                     "--renderer-process-limit=1",
                     "--disable-v8-idle-tasks",
                     "--disable-extensions",
@@ -1927,7 +1942,7 @@ class RenderService:
                     "--no-first-run",
                     "--disable-web-security",
                     "--allow-file-access-from-files",
-                    "--force-device-scale-factor=3.2",
+                    "--force-device-scale-factor=2.0",
                     "--high-dpi-support=1",
                     "--enable-use-zoom-for-dsf=true"
                 ],
@@ -1941,7 +1956,7 @@ class RenderService:
                 try:
                     async with async_playwright() as p:
                         browser = await p.chromium.launch(**launch_kwargs)
-                        page = await browser.new_page(viewport={"width": 2400, "height": 2400}, device_scale_factor=3.2)
+                        page = await browser.new_page(viewport={"width": 1200, "height": 1600}, device_scale_factor=2.0)
                         def handle_console(msg):
                             if "net::ERR_UNKNOWN_URL_SCHEME" in msg.text or "Not allowed to load local resource" in msg.text:
                                 return
@@ -2106,7 +2121,9 @@ class RenderService:
                             return { width: 1200, height: document.documentElement.scrollHeight };
                         }""")
                         
-                        await page.set_viewport_size({"width": max(2400, layout_info.get("width", 1060) + 100), "height": max(2400, layout_info.get("height", 1600) + 100)})
+                        target_w = max(1100, layout_info.get("width", 1060) + 40)
+                        target_h = max(1200, layout_info.get("height", 1600) + 40)
+                        await page.set_viewport_size({"width": target_w, "height": target_h})
 
                         final_h_px = None
                         if png_path:

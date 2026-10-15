@@ -237,8 +237,21 @@
         {% set has_hero_image = (image_urls and image_urls|length > 0 and image_urls[0] != '') or (image_url and image_url != '') %}
         {% if has_hero_image %}
         <div class="hero-image-wrapper">
-            {% set img_src = image_urls[0] if (image_urls and image_urls|length > 0) else image_url %}
-            <img class="hero-img" src="{{ img_src }}" alt="Hero Image" onload="applyDynamicWidth()" />
+            {% if image_urls and image_urls|length == 2 %}
+                <div style="display: flex; width: 100%; height: 100%;">
+                    <img class="hero-img" style="width: 50%; height: 100%; object-fit: cover; border-right: 2px solid #FFFFFF;" src="{{ image_urls[0] }}" alt="News Photo 1" />
+                    <img class="hero-img" style="width: 50%; height: 100%; object-fit: cover;" src="{{ image_urls[1] }}" alt="News Photo 2" />
+                </div>
+            {% elif image_urls and image_urls|length >= 3 %}
+                <div style="display: flex; width: 100%; height: 100%;">
+                    <img class="hero-img" style="width: 33.33%; height: 100%; object-fit: cover; border-right: 2px solid #FFFFFF;" src="{{ image_urls[0] }}" alt="News Photo 1" />
+                    <img class="hero-img" style="width: 33.33%; height: 100%; object-fit: cover; border-right: 2px solid #FFFFFF;" src="{{ image_urls[1] }}" alt="News Photo 2" />
+                    <img class="hero-img" style="width: 33.33%; height: 100%; object-fit: cover;" src="{{ image_urls[2] }}" alt="News Photo 3" />
+                </div>
+            {% else %}
+                {% set img_src = image_urls[0] if (image_urls and image_urls|length > 0) else image_url %}
+                <img class="hero-img" src="{{ img_src }}" alt="Hero Image" onload="applyDynamicWidth()" />
+            {% endif %}
             
             
             <div class="image-overlay">

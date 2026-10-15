@@ -296,19 +296,19 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                 elif total_imgs <= 1 and template_id not in ["bharath_reporter", "national_news", "custom"]:
                     resolved_image_layout = "pattern_b"
                 elif not resolved_image_layout or resolved_image_layout in ["default", "auto"]:
-                    if "patternc" in normalized_id:
+                    if "patternc" in normalized_id or "doublea" in normalized_id or total_imgs == 2:
                         resolved_image_layout = "pattern_c"
-                    elif "patternd" in normalized_id:
+                    elif "patternd" in normalized_id or "doubleb" in normalized_id:
                         resolved_image_layout = "pattern_d"
-                    elif "patterne" in normalized_id:
+                    elif "patterne" in normalized_id or "multia" in normalized_id:
                         resolved_image_layout = "pattern_e"
-                    elif "patternf" in normalized_id:
+                    elif "patternf" in normalized_id or "multib" in normalized_id:
                         resolved_image_layout = "pattern_f"
-                    elif "patterng" in normalized_id:
+                    elif "patterng" in normalized_id or "singlec" in normalized_id:
                         resolved_image_layout = "pattern_g"
-                    elif "patterna" in normalized_id:
+                    elif "patterna" in normalized_id or "singlea" in normalized_id:
                         resolved_image_layout = "pattern_a"
-                    elif "patternb" in normalized_id:
+                    elif "patternb" in normalized_id or "singleb" in normalized_id:
                         resolved_image_layout = "pattern_b"
 
                 render_data = {
@@ -401,6 +401,8 @@ async def _async_process_clipping_task(clipping_id: Any, db: Session = None):
                     last_failed_stage = stage
                     print(f"[FAILED] {stage} | {type(pdf_up_err).__name__}: {pdf_up_err}"); sys.stdout.flush()
                     raise pdf_up_err
+
+                gc.collect()
 
                 # --- [13] Database Save (completed) ---
                 stage = "Database Save (completed)"
