@@ -209,12 +209,14 @@
             justify-content: space-between;
             box-sizing: border-box;
             gap: 8px;
+            text-decoration: none;
+            cursor: pointer;
         }
         .footer-banner-text {
             color: #FFFFFF;
             font-size: 11.5px;
             font-weight: 600;
-            font-family: 'Inter', 'Noto Sans Telugu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Noto Sans Telugu', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             letter-spacing: 0.2px;
             line-height: 1.2;
             white-space: nowrap;
@@ -228,6 +230,27 @@
             white-space: nowrap;
             flex-shrink: 0;
             text-transform: uppercase;
+        }
+        .footer-download-btn {
+            background: #CC2222;
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'Noto Sans Telugu', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 3px 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            flex-shrink: 0;
+            cursor: pointer;
+            line-height: 1.2;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .footer-download-btn:hover {
+            background: #E50914;
         }
     </style>
 </head>
@@ -342,10 +365,10 @@
         </div>
 
         <!-- Bottom Footer Banner -->
-        <div class="footer-banner">
-            <span class="footer-banner-text">RTI Spot News: మీ ఊరి వార్తలు, మీ ఊరి ఆరోగ్యం — మీ చేతుల్లో</span>
-            <span class="footer-reporters-text">WANTED REPORTERS: 7668886666</span>
-        </div>
+        <a href="https://play.google.com/store/apps/details?id=com.newscraft.mobile" target="_blank" rel="noopener noreferrer" class="footer-banner" onclick="window.open('https://play.google.com/store/apps/details?id=com.newscraft.mobile', '_blank')">
+            <span class="footer-banner-text">నిరంతర వార్తల కోసం ఇప్పుడే యాప్ను డౌన్లోడ్ చేసుకోండి</span>
+            <span class="footer-download-btn">డౌన్లోడ్</span>
+        </a>
     </div>
 
     <script>
